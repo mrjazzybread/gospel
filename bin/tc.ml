@@ -29,7 +29,7 @@ let type_check load_path name sigs =
   let md = List.fold_left (Typing.type_sig_item penv) md sigs in
   wrap_up_muc md
 
-let run_file config file =
+let run_file_sig config file =
   try
     let ocaml = parse_ocaml_signature file in
     if config.verbose then (
@@ -65,6 +65,40 @@ let run_file config file =
   | e ->
       Location.report_exception Format.err_formatter e;
       false
+
+let run_file_imp config file =
+  try
+    let ocaml = parse_ocaml_structure file in 
+    let () = 
+      if config.verbose 
+        then pp fmt "@[%a@]@." Opprintast.structure ocaml
+        else () in 
+    
+    let module_nm = path2module file in
+    let imps = parse_structure_gospel ~filename:file ocaml module_nm in 
+    let () = 
+      if config.verbose  
+        then pp fmt "@[%a@]@." Upretty_printer.s_strcture_item imps
+        else () in
+    true
+with 
+| Exit -> false
+| Not_found ->
+  let open Format in
+  eprintf "File %s not found.@\nLoad path: @\n%a@\n@." file
+    (pp_print_list ~pp_sep:pp_print_newline pp_print_string)
+    config.load_path;
+  false
+| e ->
+  Location.report_exception Format.err_formatter e;
+  false
+
+let run_file config file =
+  if Filename.extension file = ".mli"
+    then run_file_sig config file 
+  else if Filename.extension file = ".ml"
+    then run_file_imp config file
+  else failwith "Unreachable" 
 
 let run config files =
   List.fold_right (fun file b -> run_file config file && b) files true

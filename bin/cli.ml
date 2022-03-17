@@ -14,9 +14,12 @@ let ocaml_file =
   let parse s =
     match Sys.file_exists s with
     | true ->
-        if Sys.is_directory s || Filename.extension s <> ".mli" then
-          `Error (Printf.sprintf "Error: `%s' is not an OCaml interface file" s)
-        else `Ok s
+        if Sys.is_directory s then
+          `Error (Printf.sprintf "Error: `%s' is a directory" s)
+        else if not (Filename.extension s <> ".mli" || Filename.extension s <> ".ml") then
+          `Error (Printf.sprintf "Error: '%s' is not a .ml or .mli file" s)
+        else 
+          `Ok s
     | false -> `Error (Printf.sprintf "Error: `%s' not found" s)
   in
   (parse, Format.pp_print_string)

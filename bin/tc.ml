@@ -71,15 +71,28 @@ let run_file_imp config file =
     let ocaml = parse_ocaml_structure file in 
     let () = 
       if config.verbose 
-        then pp fmt "@[%a@]@." Opprintast.structure ocaml
+        then 
+          begin
+          pp fmt "@[@\n*******************************@]@.";
+          pp fmt "@[********** Parsed file ********@]@.";
+          pp fmt "@[*******************************@]@.";
+          pp fmt "@[%a@]@." Opprintast.structure ocaml
+          end
         else () in 
     
     let module_nm = path2module file in
     let imps = parse_structure_gospel ~filename:file ocaml module_nm in 
+    (*
     let () = 
       if config.verbose  
-        then pp fmt "@[%a@]@." Upretty_printer.s_strcture_item imps
-        else () in
+        then 
+          begin
+          pp fmt "@[@\n*******************************@]@.";
+          pp fmt "@[****** GOSPEL translation *****@]@.";
+          pp fmt "@[*******************************@]@.";
+          pp fmt "@[%a@]@." Upretty_printer.s_structure imps
+          end
+        else () in *)
     true
 with 
 | Exit -> false

@@ -329,14 +329,14 @@ and s_module_type1 f x =
     | _ -> paren true s_module_type f x
 
 
-    
-let rec s_structure f x = 
+
+let _s_structure f x = 
 
   (* auxiliary functions *)
 
-  let rec s_strcture_item f x =
+  let s_strcture_item f x =
     match x.sstr_desc with 
-    | Str_value (is_rec, binds) ->  assert false
+    | Str_value (_is_rec, _binds) ->  assert false
     |_ -> ignore f; assert false
 
   in

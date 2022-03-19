@@ -81,7 +81,7 @@ let run_file_imp config file =
         else () in 
     
     let module_nm = path2module file in
-    let imps = parse_structure_gospel ~filename:file ocaml module_nm in 
+    let _imps = parse_structure_gospel ~filename:file ocaml module_nm in 
     (*
     let () = 
       if config.verbose  

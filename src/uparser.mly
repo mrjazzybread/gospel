@@ -49,6 +49,7 @@
     sp_writes = [];
     sp_consumes= [];
     sp_variant = [];
+    sp_protocol = None;
     sp_diverge = false;
     sp_pure = false;
     sp_equiv = [];
@@ -63,6 +64,7 @@
     fun_coer = false;
     fun_text = "";
     fun_loc = Location.none;
+    fun_protocol = None
   }
 
   let empty_tspec = {
@@ -93,7 +95,7 @@
 
 (* Spec Tokens *)
 
-%token REQUIRES ENSURES CONSUMES VARIANT
+%token REQUIRES ENSURES CONSUMES VARIANT PROTOCOL
 
 (* keywords *)
 
@@ -206,6 +208,8 @@ nonempty_func_spec:
   { { bd with fun_variant = t :: bd.fun_variant } }
 | COERCION bd=func_spec
   { { bd with fun_coer = true } }
+| PROTOCOL q=qualid bd=func_spec 
+  { { bd with fun_protocol = Some q } }
 ;
 
 type_spec:
@@ -259,6 +263,8 @@ val_spec_body:
   { { bd with sp_equiv = e :: bd.sp_equiv} }
 | VARIANT t = comma_list1(term) bd=val_spec_body
   { { bd with sp_variant = t @ bd.sp_variant } }
+| PROTOCOL q=qualid bd = val_spec_body
+  { {bd with sp_protocol = Some q} }
 ;
 
 with_constraint:

@@ -52,6 +52,7 @@
         "false", FALSE;
         "forall", FORALL;
         "function", FUNCTION;
+        "protocol", PROTOCOL;
         "if", IF;
         "in", IN;
         "invariant", INVARIANT;

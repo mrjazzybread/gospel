@@ -467,6 +467,16 @@ and s_structure_item = {
   sstr_loc : Location.t;
 }
 
+and effect_decl_desc = {
+  name : label;
+  type_ : core_type list;
+}
+
+and effect_decl = {
+  eff_desc : effect_decl_desc;
+  eff_loc : Location.t;
+}
+
 and s_structure_item_desc =
   | Str_eval of s_expression * attributes
   (* E *)
@@ -484,6 +494,8 @@ and s_structure_item_desc =
   | Str_exception of type_exception
   (* exception C of T
      exception C = M.X *)
+  | Str_effect of effect_decl
+    (*type _ eff += E : ... eff*)
   | Str_module of s_module_binding
   (* module X = ME *)
   | Str_recmodule of s_module_binding list

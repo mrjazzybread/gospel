@@ -105,6 +105,11 @@ type val_spec = {
   sp_loc : Location.t;
 }
 
+type handler_spec = {
+  sp_handle_post : term list;
+  sp_handle_loc : Location.t; 
+}
+
 type field = {
   f_loc : Location.t;
   f_preid : Preid.t;
@@ -343,6 +348,9 @@ and s_expression_desc =
 
      Invariant: n > 0
   *)
+  | Sexp_handler of s_expression * s_expression * handler_spec
+  (* try_with (fun x -> E1) arg {effc = (fun e -> E2)} 
+  (*@ ensures Q *) *)
   | Sexp_match of s_expression * s_case list
   (* match E0 with P1 -> E1 | ... | Pn -> En *)
   | Sexp_try of s_expression * s_case list
@@ -467,16 +475,6 @@ and s_structure_item = {
   sstr_loc : Location.t;
 }
 
-and effect_decl_desc = {
-  name : label;
-  type_ : core_type list;
-}
-
-and effect_decl = {
-  eff_desc : effect_decl_desc;
-  eff_loc : Location.t;
-}
-
 and s_structure_item_desc =
   | Str_eval of s_expression * attributes
   (* E *)
@@ -535,4 +533,14 @@ and s_module_binding = {
   spmb_expr : s_module_expr;
   spmb_attributes : attributes;
   spmb_loc : Location.t;
+}
+
+and effect_decl_desc = {
+  name : label;
+  type_ : core_type list;
+}
+
+and effect_decl = {
+  eff_desc : effect_decl_desc;
+  eff_loc : Location.t;
 }

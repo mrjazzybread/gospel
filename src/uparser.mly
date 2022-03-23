@@ -223,22 +223,22 @@ nonempty_func_spec:
 
 
 protocol:
-| PROTOCOL COLON name=lident protocol=protocol_def
-{ { protocol with pro_name=name }}
-
-nonempty_protocol_def:
-| REQUIRES t=term p=protocol
-  { {p with pro_pre = t :: p.pro_pre} }
-| ENSURES t=term p=protocol
-  { {p with pro_post = t :: p.pro_post} }
-| REPLY_TYPE t=typ p=protocol
-  { match p.pro_return with |None -> {p with pro_return = Some t} |Some _ -> failwith "More than one reply_type clause"  }
-| MODIFIES wr=separated_list(COMMA, term) p=protocol 
-  { {p with pro_writes = p.pro_writes @ wr} }
+| PROTOCOL name=lident COLON protocol=protocol_def
+{  {protocol with pro_name=name } }
 
 protocol_def:
 | EOF { empty_protocol }
 | nonempty_protocol_def EOF { $1 }
+
+nonempty_protocol_def:
+| REQUIRES t=term p=protocol_def
+  { {p with pro_pre = t :: p.pro_pre} }
+| ENSURES t=term p=protocol_def
+  { {p with pro_post = t :: p.pro_post} }
+| REPLY_TYPE t=typ p=protocol_def
+  { match p.pro_return with |None -> {p with pro_return = Some t} |Some _ -> failwith "More than one reply_type clause"  }
+| MODIFIES wr=separated_list(COMMA, term) p=protocol_def
+  { {p with pro_writes = p.pro_writes @ wr} }
 
 type_spec:
 | EOF { empty_tspec }

@@ -1,9 +1,8 @@
 
-let add x y = x + y
-(*@ ensures result = x + y
-    requires x = y*)
+[@@@gospel {| protocol exp : ensures true|}]
 
-let something x = Some x
-(*@ 
-ensurs true
-*)
+[@@@gospel {| protocol exp : requires false|}]
+
+[@@@gospel {| protocol exp : modifies x|}]
+
+[@@@gospel {| protocol exp : reply_type unit|}]

@@ -201,7 +201,10 @@ let floating_spec_str ~filename a =
     else Str_function fun_
   with Syntax_error _ -> (
     try Str_prop (snd (parse_gospel ~filename Uparser.prop a))
-    with Syntax_error _ -> ghost_spec_str ~filename a)
+    with Syntax_error _ -> 
+      try 
+      Str_protocol (snd (parse_gospel ~filename Uparser.protocol a))
+      with Syntax_error _ -> ghost_spec_str ~filename a)
 
 let with_constraint c =
   let no_spec_type_decl t =

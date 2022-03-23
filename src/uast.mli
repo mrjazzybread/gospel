@@ -523,6 +523,7 @@ and s_structure_item_desc =
   (* [%%id] *)
   (* Specific to specification *)
   | Str_protocol of protocol
+  (* protocol NAME : ...*)
   | Str_function of function_
   | Str_prop of prop
   | Str_ghost_type of rec_flag * s_type_declaration list

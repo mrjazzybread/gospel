@@ -149,6 +149,15 @@ type function_ = {
   fun_text : string;
 }
 
+type protocol = {
+  pro_name : Preid.t;
+  pro_post : term list;
+  pro_pre : term list;
+  pro_writes : term list;
+  pro_return : core_type;
+  pro_loc : Location.t;
+}
+
 type axiom = {
   ax_name : Preid.t;
   ax_term : term;
@@ -513,6 +522,7 @@ and s_structure_item_desc =
   | Str_extension of extension * attributes
   (* [%%id] *)
   (* Specific to specification *)
+  | Str_protocol of protocol
   | Str_function of function_
   | Str_prop of prop
   | Str_ghost_type of rec_flag * s_type_declaration list

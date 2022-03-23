@@ -79,9 +79,9 @@ let run_file_imp config file =
           pp fmt "@[%a@]@." Opprintast.structure ocaml
           end
         else () in 
-    
     let module_nm = path2module file in
     let _imps = parse_structure_gospel ~filename:file ocaml module_nm in 
+    let () = print_string "parsing successfull\n" in
     (*
     let () = 
       if config.verbose  

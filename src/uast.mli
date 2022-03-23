@@ -154,7 +154,7 @@ type protocol = {
   pro_post : term list;
   pro_pre : term list;
   pro_writes : term list;
-  pro_return : core_type;
+  pro_return : pty option;
   pro_loc : Location.t;
 }
 

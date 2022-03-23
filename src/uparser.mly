@@ -75,6 +75,15 @@
     ty_loc = Location.none;
   }
 
+  let empty_protocol = {
+    pro_name = Preid.create "" ~loc:Location.none;
+    pro_post = [];
+    pro_pre = [];
+    pro_writes = [];
+    pro_return = None;
+    pro_loc = Location.none
+  }
+
   let loc_of_qualid = function Qpreid pid | Qdot (_, pid) -> pid.pid_loc
 
   let qualid_preid = function Qpreid p | Qdot (_, p) -> p
@@ -95,7 +104,7 @@
 
 (* Spec Tokens *)
 
-%token REQUIRES ENSURES CONSUMES VARIANT PROTOCOL
+%token REQUIRES ENSURES CONSUMES VARIANT PROTOCOL REPLY_TYPE
 
 (* keywords *)
 
@@ -155,7 +164,7 @@
 %start <Uast.loop_spec> loop_spec
 %start <Uast.prop> prop
 %start <Uast.s_with_constraint list> with_constraint
-
+%start <Uast.protocol> protocol
 %%
 
 val_spec:
@@ -211,6 +220,25 @@ nonempty_func_spec:
 | PROTOCOL q=qualid bd=func_spec 
   { { bd with fun_protocol = Some q } }
 ;
+
+
+protocol:
+| PROTOCOL COLON name=lident protocol=protocol_def
+{ { protocol with pro_name=name }}
+
+nonempty_protocol_def:
+| REQUIRES t=term p=protocol
+  { {p with pro_pre = t :: p.pro_pre} }
+| ENSURES t=term p=protocol
+  { {p with pro_post = t :: p.pro_post} }
+| REPLY_TYPE t=typ p=protocol
+  { match p.pro_return with |None -> {p with pro_return = Some t} |Some _ -> failwith "More than one reply_type clause"  }
+| MODIFIES wr=separated_list(COMMA, term) p=protocol 
+  { {p with pro_writes = p.pro_writes @ wr} }
+
+protocol_def:
+| EOF { empty_protocol }
+| nonempty_protocol_def EOF { $1 }
 
 type_spec:
 | EOF { empty_tspec }

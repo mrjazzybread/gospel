@@ -358,7 +358,7 @@ and s_expression_desc =
      Invariant: n > 0
   *)
   | Sexp_handler of s_expression * s_expression * handler_spec
-  (* try_with (fun x -> E1) arg {effc = (fun e -> E2)} 
+  (* try_with (fun x -> E1) arg {effc = fun e -> E2} 
   (*@ ensures Q *) *)
   | Sexp_match of s_expression * s_case list
   (* match E0 with P1 -> E1 | ... | Pn -> En *)

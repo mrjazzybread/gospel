@@ -14,6 +14,11 @@ open Uast
 
 let is_spec attr = attr.attr_name.txt = "gospel"
 
+let is_deep_handler expr arg_list = 
+  match expr, arg_list with
+  |{pexp_desc=Pexp_ident {txt = Lident "try_with"};_}, [_; _] -> true
+  |_ -> false 
+
 let rec get_spec_attr = function
   | [] -> (None, [])
   | h :: t when is_spec h -> (Some h, t)
@@ -133,6 +138,8 @@ let ghost_spec ~filename attr =
   | [ { psig_desc = Psig_open od; _ } ] ->
       Sig_ghost_open { od with popen_loc = attr.attr_loc }
   | _ -> assert false
+
+
 
 let floating_spec ~filename a =
   try
@@ -318,9 +325,9 @@ and s_expression ~filename expr =
   let case { pc_lhs; pc_guard; pc_rhs } =
     let spc_lhs = pc_lhs in
     let spc_guard = Option.map s_expression pc_guard in
-    let spc_rhs = s_expression pc_rhs in
+    let spc_rhs = s_expression pc_rhs in 
     { spc_lhs; spc_guard; spc_rhs }
-  in
+  in 
   let spexp_desc = function
     | Pexp_ident id -> Sexp_ident id
     | Pexp_constant c -> Sexp_constant c
@@ -337,8 +344,10 @@ and s_expression ~filename expr =
         let expr_arg = Option.map s_expression expr_arg in
         let expr_body = s_expression expr_body in
         Sexp_fun (arg, expr_arg, pat, expr_body, fun_spec)
-    | Pexp_apply (expr, arg_list) ->
-        Sexp_apply (s_expression expr, List.map lbl_expr arg_list)
+    | Pexp_apply (expr, arg_list) -> 
+        if is_deep_handler expr arg_list
+          then failwith "working as intended"
+          else Sexp_apply (s_expression expr, List.map lbl_expr arg_list)
     | Pexp_match (expr, case_list) ->
         Sexp_match (s_expression expr, List.map case case_list)
     | Pexp_try (expr, case_list) ->

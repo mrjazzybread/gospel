@@ -16,7 +16,7 @@ let is_spec attr = attr.attr_name.txt = "gospel"
 
 let is_deep_handler expr arg_list = 
   match expr, arg_list with
-  |{pexp_desc=Pexp_ident {txt = Lident "try_with"};_}, [_; _] -> true
+  |{pexp_desc = Pexp_ident {txt = Lident "try_with"};_}, [Nolabel, _; Nolabel, _; Nolabel, _] -> true
   |_ -> false 
 
 let rec get_spec_attr = function
@@ -233,6 +233,7 @@ let with_constraint c =
   | Pwith_typesubst (l, t) -> Wtypesubst (l, no_spec_type_decl t)
   | Pwith_modsubst (l1, l2) -> Wmodsubst (l1, l2)
 
+
 let rec signature_item_desc ~filename = function
   | Psig_value v -> Sig_val (val_description ~filename v)
   | Psig_type (r, tl) -> Sig_type (r, List.map (type_declaration ~filename) tl)
@@ -346,7 +347,7 @@ and s_expression ~filename expr =
         Sexp_fun (arg, expr_arg, pat, expr_body, fun_spec)
     | Pexp_apply (expr, arg_list) -> 
         if is_deep_handler expr arg_list
-          then failwith "working as intended"
+          then handler (List.map lbl_expr arg_list)
           else Sexp_apply (s_expression expr, List.map lbl_expr arg_list)
     | Pexp_match (expr, case_list) ->
         Sexp_match (s_expression expr, List.map case case_list)
@@ -411,8 +412,86 @@ and s_expression ~filename expr =
     | Pexp_letop letop -> Sexp_letop letop
     | Pexp_extension extension -> Sexp_extension extension
     | Pexp_unreachable -> Sexp_unreachable
-  in
+  in let _ = (<) in 
   mk_s_expression (spexp_desc expr.pexp_desc) loc loc_stack attributes
+
+(**Used when we encounter an expression with a call to the {!try_with} function from the Obj 
+module of OCaml 5.0.0. A few important details about how we translate calls to this function:
+
+- Partial applications (e.g {!let f = try_with (fun x -> x) in f () h }) are translated as normal function calls.
+In other words, they will not be translated using the {!const:Sexp_handler} constructor)
+
+- The expressions used as the third argument (i.e. the handler) must obey the following syntax
+{!\{effc = fun e -> match e with |E1 -> Some (fun k -> ...) |E2(...) -> Some (fun k -> ...) |_ -> None \}}. variable naming being allowed to differ.
+
+- In regards to the pattern matching of the effects, GOSPEL asserts that programs are correct if they never reach the wildcard case.
+
+@param tw_args the arguments {!try_with} receives.
+
+@return {!Sexp_handler(expr, case_list)}. Assuming the call {!try_with f arg \{effc = fun e -> match e with |Effect1 -> Some (fun k -> expr1) ... |_ -> None \}}, 
+the first argument the constructor receives is {!f} applied to {!arg} and the {!case_list} will match each effect constructor to the body of each lambda. In the special case that
+{!f} is an anonymous function {!try_with (fun a -> expr) arg ...}, the first argument the constructor will recieve will be the expression {!let a = arg in expr} 
+ *)
+and handler tw_args = 
+match tw_args with 
+|[_, ({spexp_desc;_} as expr); _, arg; _, handler] ->  
+  let expr_desc =  
+    begin match spexp_desc with
+    |Sexp_fun (Nolabel, None, ({ppat_desc= Ppat_var _ ;_} as p), fun_exp, None) -> 
+      Sexp_let(Nonrecursive, [mk_svb p arg [] None Location.none], fun_exp)
+    |_ -> Sexp_apply(expr, [Nolabel, arg])
+  end in
+  let try_expr = {expr with spexp_desc=expr_desc} in 
+  let handler = extract_handler handler
+   in Sexp_handler(try_expr, handler, None)
+|_-> failwith "expression is not a valid handler"
+
+
+  (** Converts an expression with the following format
+  
+  {!\{effc=fun e -> match e with |E1 -> Some (fun k -> ...) |E2 -> Some (fun k -> ...)\}}
+  
+  into a list that corresponds each constructor with its corresponding lambda. If the constructor corresponds to None, it will not be added to the list
+  
+  @param the expression with the handler as a record
+  @return a list of cases matching each constructor to its corresponding expression*)
+  and extract_handler handler = 
+    
+    let check_exp exp name = match exp with
+    |Sexp_ident {txt = Lident n} -> n = name
+    |_ -> false in
+  
+    let match_case_to_effect effect = 
+      match effect with
+      |{spc_lhs={ppat_desc= Ppat_variant(txt, pat);_}; spc_guard = None; spc_rhs=exp} -> 
+        let pat_list = begin match pat with
+        |None -> []
+        |Some ({ppat_desc = Ppat_tuple(l);_}) -> l
+        |_ -> failwith "invalid case" end in  
+        
+        begin match exp.spexp_desc with 
+        |Sexp_construct({txt = Lident "None"}, None) -> None
+        |Sexp_construct({txt = Lident "Some"}, Some {spexp_desc=Sexp_fun (Nolabel, None, ({ppat_desc = Ppat_var _;_} as p) , exp, None)}) -> 
+          Some {s_effect=txt, p::pat_list; s_expr = exp}
+        |_ -> failwith "invalid case"
+      end
+      |_ -> failwith "invalid case"
+    in
+  
+    let cases =
+      match handler.spexp_desc with
+      |Sexp_record ([{txt=Lident "effc"}, exp], None) ->
+        begin match exp.spexp_desc with
+        |Sexp_fun(Nolabel, None, {ppat_desc = Ppat_var {txt=name};_}, exp, None) ->
+          begin match exp.spexp_desc with
+          | Sexp_match (exp, cases) when check_exp exp.spexp_desc name -> cases
+          |_ -> failwith "Expression is not a valid handler"
+          end
+        |_ -> failwith "Expression is not a valid handler"
+        end
+      |_ -> failwith "Expression is not a valid handler" in
+    List.filter_map match_case_to_effect cases
+  
 
 and s_module_expr ~filename { pmod_desc; pmod_loc; pmod_attributes } =
   let spmod_desc =

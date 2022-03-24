@@ -54,7 +54,7 @@ rule scan = parse
   | "(*@"
       (space*
        ("function" | "type" | "predicate" | "axiom" |
-        "lemma"    | "val"  | "open" ) as k)
+        "lemma"    | "val"  | "open" | "protocol" ) as k)
       {
         push ();
         Buffer.add_string buf k;

@@ -228,7 +228,7 @@ protocol:
 
 protocol_def:
 | EOF { empty_protocol }
-| nonempty_protocol_def EOF { $1 }
+| pot = nonempty_protocol_def EOF { pot }
 
 nonempty_protocol_def:
 | REQUIRES t=term p=protocol_def

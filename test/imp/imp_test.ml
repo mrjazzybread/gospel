@@ -1,19 +1,7 @@
-[@@@gospel {| protocol exp : ensures true|}]
+(*@ protocol exp : ensures true *)
 
-[@@@gospel {| protocol exp : requires false|}]
+(*@ protocol exp : requires true *)
 
-[@@@gospel {| protocol exp : modifies x|}]
+(*@ protocol exp : modifies x *)
 
-[@@@gospel {| protocol exp : reply_type unit|}]
-
-let x = try_with 0 1
-
-(*
-
-let () =
-    try_with (fun x -> x) () {effc = fun e -> E }
-
-
-    match let x = () in x with
-    |Result r -> r
-    |Effect e -> E*)
+(*@ protocol exp : reply_type unit *)

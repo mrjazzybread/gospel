@@ -437,7 +437,7 @@ match tw_args with
 |[_, ({spexp_desc;_} as expr); _, arg; _, handler] ->  
   let expr_desc =  
     begin match spexp_desc with
-    |Sexp_fun (Nolabel, None, ({ppat_desc= Ppat_var _ ;_} as p), fun_exp, None) -> 
+    |Sexp_fun (Nolabel, None, p, fun_exp, None) -> 
       Sexp_let(Nonrecursive, [mk_svb p arg [] None Location.none], fun_exp)
     |_ -> Sexp_apply(expr, [Nolabel, arg])
   end in
@@ -457,12 +457,23 @@ match tw_args with
   @return a list of cases matching each constructor to its corresponding expression*)
   and extract_handler handler = 
     
+    (** Checks if {!exp} is an expression that evaluates to the identifier {!name}
+      @param exp the expression used in the pattern match
+      @param name the name given to the effect.
+      
+      @return true if and only if exp is an expression of type {!match name with ...}*)
     let check_exp exp name = match exp with
     |Sexp_ident {txt = Lident n} -> n = name
     |_ -> false in
   
-    let match_case_to_effect effect = 
-      match effect with
+    (** Converts a case of the pattern matching between effect constructors and lambda optionals, 
+      into an record of type {!s_effect_case}
+      
+      @param effect_branch the pattern matching case we will convert
+      @return an !{!s_effect_case} branch that has contains the caught effect, its parameters and continuation, 
+      as well as *)
+    let match_case_to_effect effect_branch = 
+      match effect_branch with
       |{spc_lhs={ppat_desc= Ppat_variant(txt, pat);_}; spc_guard = None; spc_rhs=exp} -> 
         let pat_list = begin match pat with
         |None -> []
@@ -471,8 +482,9 @@ match tw_args with
         
         begin match exp.spexp_desc with 
         |Sexp_construct({txt = Lident "None"}, None) -> None
-        |Sexp_construct({txt = Lident "Some"}, Some {spexp_desc=Sexp_fun (Nolabel, None, ({ppat_desc = Ppat_var _;_} as p) , exp, None)}) -> 
-          Some {s_effect=txt, p::pat_list; s_expr = exp}
+        |Sexp_construct({txt = Lident "Some"}, 
+         Some {spexp_desc=Sexp_fun (Nolabel, None, kont, exp, None)}) -> 
+          Some {s_effect=txt, kont::pat_list; s_expr = exp}
         |_ -> failwith "invalid case"
       end
       |_ -> failwith "invalid case"

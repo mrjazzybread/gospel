@@ -347,7 +347,13 @@ and s_expression ~filename expr =
         Sexp_fun (arg, expr_arg, pat, expr_body, fun_spec)
     | Pexp_apply (expr, arg_list) -> 
         if is_deep_handler expr arg_list
-          then handler (List.map lbl_expr arg_list)
+          then 
+            let try_expr, handle = handler (List.map lbl_expr arg_list) in
+            let spec, _ = get_spec_attr attributes in 
+            let handler_spec = 
+              Option.map (parse_gospel ~filename Uparser.handler_spec) spec
+                |> Option.map snd in
+            Sexp_handler(try_expr, handle, handler_spec)
           else Sexp_apply (s_expression expr, List.map lbl_expr arg_list)
     | Pexp_match (expr, case_list) ->
         Sexp_match (s_expression expr, List.map case case_list)
@@ -443,7 +449,7 @@ match tw_args with
   end in
   let try_expr = {expr with spexp_desc=expr_desc} in 
   let handler = extract_handler handler
-   in Sexp_handler(try_expr, handler, None)
+   in try_expr, handler
 |_-> failwith "expression is not a valid handler"
 
 

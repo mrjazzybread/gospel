@@ -502,7 +502,7 @@ and s_structure_item_desc =
   | Str_exception of type_exception
   (* exception C of T
      exception C = M.X *)
-  | Str_effect of effect_decl
+  | Str_effect of type_exception
     (*type _ eff += E : ... eff*)
   | Str_module of s_module_binding
   (* module X = ME *)

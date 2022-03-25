@@ -104,7 +104,7 @@
 
 (* Spec Tokens *)
 
-%token REQUIRES ENSURES CONSUMES VARIANT PROTOCOL REPLY_TYPE
+%token REQUIRES ENSURES CONSUMES VARIANT PROTOCOL REPLY_TYPE TRY_ENSURES
 
 (* keywords *)
 
@@ -165,6 +165,7 @@
 %start <Uast.prop> prop
 %start <Uast.s_with_constraint list> with_constraint
 %start <Uast.protocol> protocol
+%start <Uast.handler_spec> handler_spec
 %%
 
 val_spec:
@@ -221,6 +222,11 @@ nonempty_func_spec:
   { { bd with fun_protocol = Some q } }
 ;
 
+handler_spec:
+| TRY_ENSURES t=term spec =handler_spec
+  { {spec with sp_handle_post=t::spec.sp_handle_post} }
+| TRY_ENSURES t=term EOF
+  { {sp_handle_post = [t]; sp_handle_loc=Location.none} }
 
 protocol:
 | PROTOCOL name=lident COLON protocol=protocol_def
@@ -228,7 +234,7 @@ protocol:
 
 protocol_def:
 | EOF { empty_protocol }
-| pot = nonempty_protocol_def EOF { pot }
+| prot=nonempty_protocol_def EOF { prot }
 
 nonempty_protocol_def:
 | REQUIRES t=term p=protocol_def

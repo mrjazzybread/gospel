@@ -72,6 +72,7 @@
         "raises", RAISES;
         "rec", REC;
         "requires", REQUIRES;
+        "try_ensures", TRY_ENSURES;
         "variant", VARIANT;
         "modifies", MODIFIES;
         "equivalent", EQUIVALENT;

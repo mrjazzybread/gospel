@@ -357,7 +357,7 @@ and s_expression_desc =
 
      Invariant: n > 0
   *)
-  | Sexp_handler of s_expression * (s_effect_case list) * handler_spec option
+  | Sexp_handler of s_expression * ((Parsetree.pattern * s_case) list) * handler_spec option
   (* try_with (fun x -> E1) arg {effc = fun e -> match e with |E1 ... -> Some (fun k -> ...) ... |_ -> None} 
   (*@ ensures Q *) *)
 
@@ -454,13 +454,6 @@ and s_expression_desc =
   (* [%id] *)
   | Sexp_unreachable
 (* . *)
-
-and s_effect_case = {
-  s_effect : label * (Parsetree.pattern list);
-  (*name of the effect plus the arguments the constructor receives. The first is always the continuation*)
-  s_expr : s_expression
-  (*the expression that corresponds to the effect*)
-}
 
 and s_case = {
   (* (P -> E) or (P when E0 -> E) *)

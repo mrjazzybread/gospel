@@ -470,24 +470,18 @@ match tw_args with
       into an record of type {!s_effect_case}
       
       @param effect_branch the pattern matching case we will convert
-      @return an !{!s_effect_case} branch that has contains the caught effect, its parameters and continuation, 
-      as well as *)
+      @return an !{!s_effect_case} optional that contains the caught effect, its parameters and continuation, 
+      as well as the expression to execute. Note that in case there is no lambda (i.e it is {!None}) we simply return {!None}*)
     let match_case_to_effect effect_branch = 
       match effect_branch with
-      |{spc_lhs={ppat_desc= Ppat_variant(txt, pat);_}; spc_guard = None; spc_rhs=exp} -> 
-        let pat_list = begin match pat with
-        |None -> []
-        |Some ({ppat_desc = Ppat_tuple(l);_}) -> l
-        |_ -> failwith "invalid case" end in  
-        
+      |{spc_rhs=exp;_} -> 
         begin match exp.spexp_desc with 
         |Sexp_construct({txt = Lident "None"}, None) -> None
         |Sexp_construct({txt = Lident "Some"}, 
          Some {spexp_desc=Sexp_fun (Nolabel, None, kont, exp, None)}) -> 
-          Some {s_effect=txt, kont::pat_list; s_expr = exp}
+          Some (kont, {effect_branch with spc_rhs=exp})
         |_ -> failwith "invalid case"
       end
-      |_ -> failwith "invalid case"
     in
   
     let cases =

@@ -357,9 +357,11 @@ and s_expression_desc =
 
      Invariant: n > 0
   *)
-  | Sexp_handler of s_expression * ((Parsetree.pattern * s_case) list) * handler_spec option
+  | Sexp_handler of s_expression * ((label * s_case) list) * handler_spec option
   (* try_with (fun x -> E1) arg {effc = fun e -> match e with |E1 ... -> Some (fun k -> ...) ... |_ -> None} 
-  (*@ ensures Q *) *)
+  (*@ ensures Q *)
+  Note that the list of cases also has a label, which represents the name of the continuation in that branch
+  *)
 
   | Sexp_match of s_expression * s_case list
   (* match E0 with P1 -> E1 | ... | Pn -> En *)

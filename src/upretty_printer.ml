@@ -60,6 +60,14 @@ let spec_header fmt h =
     (list ~sep:sp labelled_arg)
     h.sp_hd_args
 
+let handler_spec f hspec =
+  match hspec with
+  |None -> ()
+  |Some hspec -> 
+    spec 
+      (fun f hspec ->
+        (pp f "@[%a @]" (list_keyword "try_ensures ...") hspec.sp_handle_post)) f hspec
+
 let val_spec fmt vspec =
   match vspec with
   | None -> ()
@@ -351,21 +359,49 @@ let rec print_exp f exp =
     pp f "@ %a" print_exp exp  
   in
 
-  
+  let print_constant f c =
+    match c with 
+    | Pconst_integer (s, _) -> pp f "%s" s  
+    | Pconst_char char -> pp f "'%c'" char
+    | Pconst_string (s, _, _) -> pp f "\"%s\"" s
+    | Pconst_float (s, _) -> pp f "%s" s 
+  in
+
+  let print_case f (kont, c) =
+    pp f "@[<v0>|effect @[<hov2>%s@ %a ->@ %a@]@,@]"
+      kont
+      Ppxlib.Pprintast.pattern c.spc_lhs
+      print_exp c.spc_rhs
+  in
+
+  let print_handler exp cases spec =
+    pp f "@[<v0>try %a with@,%a@,%a@]"
+    print_exp exp
+    (fun f l -> (List.iter (print_case f) l)) cases
+    handler_spec spec
+  in
+
   match exp.spexp_desc with
   |Sexp_ident id -> longident_loc f id 
   |Sexp_apply (exp, args) -> 
-    pp f "@[%a%a@]" 
+    pp f "@[<hov2>%a%a@]" 
       print_exp exp
       (fun f args -> List.iter (print_arg f) args) args
+  |Sexp_handler (exp, cases, spec) -> 
+    print_handler exp cases spec
+  |Sexp_constant c -> print_constant f c 
+  |Sexp_let(rec_flag, binds, exp) -> 
+    print_values f rec_flag binds;
+    pp f "@[<hov2>@ in@ %a@]" print_exp exp 
   |_ -> assert false
 
 
 
-let print_arg f (label, exp_opt, pat) =
+and print_arg f (label, exp_opt, pat) =
   let () = match label with 
     |Nolabel -> ()
-    |Labelled s | Optional s -> pp f "~%s:" s in 
+    |Labelled s -> pp f "~%s:" s
+    | Optional s -> pp f "?%s:" s in 
   match exp_opt with
   |None -> pp f "%a@ " Ppxlib.Pprintast.pattern pat
   |Some exp -> 
@@ -378,7 +414,7 @@ let print_arg f (label, exp_opt, pat) =
   @param intro the string that will preceed the value binding
   @param bind the binding we want to print. If the binding is a function, 
   it will be printed non-curried *)
-let print_bind f intro bind = 
+and print_bind f intro bind = 
   let rec decompose_fun f =
     match f.spexp_desc with
     |Sexp_fun(label, exp_opt, arg, exp, None) -> 
@@ -386,7 +422,7 @@ let print_bind f intro bind =
       (label, exp_opt, arg)::args, body
     |_ -> [], f in 
   let args, body = decompose_fun bind.spvb_expr in 
-  pp f "@[%s %a@ %a= %a@]\n%a\n" 
+  pp f "@[<hov2>%s %a@ %a=@ %a@]%a" 
     intro
     Ppxlib.Pprintast.pattern bind.spvb_pat
     (fun f args -> List.iter (print_arg f) args) args 
@@ -399,7 +435,7 @@ let print_bind f intro bind =
   @param intro the string that will preceed the first binding.
   @param binds list of value definitions (non empty)
 *)
-let rec print_bind_list f intro binds = 
+and print_bind_list f intro binds = 
   match binds with 
   |[] -> failwith "print_bind_list : List of bindings is empty"
   |[bind] -> print_bind f intro bind 
@@ -412,7 +448,7 @@ let rec print_bind_list f intro binds =
   @param f Formatter
   @param is_rec Recursion flag
   @param binds list of value definitions*)
-let print_str_value f is_rec binds =
+and print_values f is_rec binds =
   let intro = if is_rec = Recursive then "let rec" else "let" in
   print_bind_list f intro binds 
 
@@ -421,7 +457,7 @@ let print_str_value f is_rec binds =
 @param x the top level expression*)
   let s_strcture_item f x =
     match x.sstr_desc with 
-    | Str_value (is_rec, binds) ->  print_str_value f is_rec binds
+    | Str_value (is_rec, binds) ->  print_values f is_rec binds
     | Str_protocol _protocol -> ()
     |_ -> ()
   

@@ -484,8 +484,8 @@ match tw_args with
         begin match exp.spexp_desc with 
         |Sexp_construct({txt = Lident "None"}, None) -> None
         |Sexp_construct({txt = Lident "Some"}, 
-         Some {spexp_desc=Sexp_fun (Nolabel, None, kont, exp, None)}) -> 
-          Some (kont, {effect_branch with spc_rhs=exp})
+         Some {spexp_desc=Sexp_fun (Nolabel, None, {ppat_desc =Ppat_var kont;_}, exp, None)}) -> 
+          Some (kont.txt, {effect_branch with spc_rhs=exp})
         |_ -> failwith "invalid case"
       end
     in

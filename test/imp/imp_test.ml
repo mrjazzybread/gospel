@@ -1,3 +1,3 @@
 
-let x f = f
+let x f = f 4
 (*@ ensures result = f*)

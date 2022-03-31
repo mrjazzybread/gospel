@@ -338,12 +338,29 @@ and s_module_type1 f x =
   | Lghost (pid, _) -> pp fmt "@[[%a : TY]@]" Preid.pp pid
 *)
 
+
+
 (** Prints a single gospel expression*)
-let  print_exp f exp = 
+let rec print_exp f exp = 
+  
+  let print_arg f (label, exp) = 
+    let () = match label with 
+      |Nolabel -> ()
+      |Labelled s -> pp f "~%s:" s 
+      |_ -> assert false in 
+    pp f "@ %a" print_exp exp  
+  in
+
+  
   match exp.spexp_desc with
   |Sexp_ident id -> longident_loc f id 
-  |Sexp_fun _ -> ()
+  |Sexp_apply (exp, args) -> 
+    pp f "@[%a%a@]" 
+      print_exp exp
+      (fun f args -> List.iter (print_arg f) args) args
   |_ -> assert false
+
+
 
 let print_arg f (label, exp_opt, pat) =
   let () = match label with 
@@ -369,7 +386,7 @@ let print_bind f intro bind =
       (label, exp_opt, arg)::args, body
     |_ -> [], f in 
   let args, body = decompose_fun bind.spvb_expr in 
-  pp f "@[%s %a@ %a= %a@]\n%a" 
+  pp f "@[%s %a@ %a= %a@]\n%a\n" 
     intro
     Ppxlib.Pprintast.pattern bind.spvb_pat
     (fun f args -> List.iter (print_arg f) args) args 

@@ -399,19 +399,33 @@ let rec print_exp f exp =
     (fun f l -> List.iter (print_case f) l) cases
   in
 
+  let print_if f guard e1 e2 =
+    pp f "@[<v2>if %a@ then %a@,%a@]"
+    print_exp guard
+    print_exp e1
+    (fun f e2 -> match e2 with |None -> () |Some x -> pp f "else %a" print_exp x) e2
+  in
+
   match exp.spexp_desc with
   |Sexp_ident id -> longident_loc f id 
   |Sexp_apply (exp, args) -> 
-    pp f "%a%a" 
+    pp f "@[%a%a@]" 
       print_exp exp
       (fun f args -> List.iter (print_arg f) args) args
   |Sexp_handler (exp, cases, spec) -> 
     print_handler exp cases spec
   |Sexp_constant c -> print_constant f c 
   |Sexp_let(rec_flag, binds, exp) -> 
-    print_values f rec_flag binds;
-    pp f "@[<hv2>@ in@ %a@]" print_exp exp 
+    pp f "@[<v0>%a in@,%a@]"
+    print_values (rec_flag, binds)
+    print_exp exp 
   |Sexp_match(exp, cases) -> print_match f exp cases
+  |Sexp_ifthenelse(guard, e1, e2) -> print_if f guard e1 e2 
+  |Sexp_construct({txt= Lident "()"}, None) -> pp f "@[()@]"
+  |Sexp_construct(txt, e) -> 
+    pp f "@[%a%a@]"
+    longident_loc txt
+    (fun f e -> Option.iter (print_exp f) e) e  
   |_ -> assert false
 
 
@@ -468,16 +482,20 @@ and print_bind_list f intro binds =
   @param f Formatter
   @param is_rec Recursion flag
   @param binds list of value definitions*)
-and print_values f is_rec binds =
+and print_values f (is_rec, binds) =
   let intro = if is_rec = Recursive then "let rec" else "let" in
   print_bind_list f intro binds 
+
+
+
 
 (** Prints a single top level expression 
 @param f formatter  
 @param x the top level expression*)
   let s_strcture_item f x =
     match x.sstr_desc with 
-    | Str_value (is_rec, binds) ->  print_values f is_rec binds
+    | Str_value (is_rec, binds) ->  print_values f (is_rec, binds)
+    | Str_type (rec_flag, types) -> s_type_declaration_rec_flag f (rec_flag, types)
     | Str_protocol _protocol -> ()
     |_ -> ()
   

@@ -30,9 +30,10 @@ let labelled_arg fmt (l : labelled_arg) =
   | Lghost (pid, _) -> pp fmt "@[[%a : TY]@]" Preid.pp pid
 
 let spec f fmt x = pp fmt "@[(*@@ %a@ *)@]" f x
+(*
 let term fmt _ = pp fmt "@[TERM ... @]"
 let invariant fmt _ = pp fmt "@[INVARIANT ... @]"
-
+*)
 let list_keyword s fmt x =
   match x with
   | [] -> ()
@@ -328,18 +329,86 @@ and s_module_type1 f x =
     | Mod_extension e -> extension reset_ctxt f e
     | _ -> paren true s_module_type f x
 
+(*let labelled_arg fmt l=
+  match l with
+  | Lunit -> pp fmt "()"
+  | Lnone pid -> Preid.pp fmt pid
+  | Loptional pid -> pp fmt "@[?%a@]" Preid.pp pid
+  | Lnamed pid -> pp fmt "@[~%a@]" Preid.pp pid
+  | Lghost (pid, _) -> pp fmt "@[[%a : TY]@]" Preid.pp pid
+*)
+
+(** Prints a single gospel expression*)
+let  print_exp f exp = 
+  match exp.spexp_desc with
+  |Sexp_ident id -> longident_loc f id 
+  |Sexp_fun _ -> ()
+  |_ -> assert false
+
+let print_arg f (label, exp_opt, pat) =
+  let () = match label with 
+    |Nolabel -> ()
+    |Labelled s | Optional s -> pp f "~%s:" s in 
+  match exp_opt with
+  |None -> pp f "%a@ " Ppxlib.Pprintast.pattern pat
+  |Some exp -> 
+    pp f "(%a=%a)@ " 
+    Ppxlib_ast.Pprintast.pattern pat
+    print_exp exp 
+
+(** Prints the {!intro} string, followed by a single value binding.
+  @param f formatter
+  @param intro the string that will preceed the value binding
+  @param bind the binding we want to print. If the binding is a function, 
+  it will be printed non-curried *)
+let print_bind f intro bind = 
+  let rec decompose_fun f =
+    match f.spexp_desc with
+    |Sexp_fun(label, exp_opt, arg, exp, None) -> 
+      let args, body = decompose_fun exp in 
+      (label, exp_opt, arg)::args, body
+    |_ -> [], f in 
+  let args, body = decompose_fun bind.spvb_expr in 
+  pp f "@[%s %a@ %a= %a@]\n%a" 
+    intro
+    Ppxlib.Pprintast.pattern bind.spvb_pat
+    (fun f args -> List.iter (print_arg f) args) args 
+    print_exp body
+    val_spec bind.spvb_vspec
 
 
-let _s_structure f x = 
+(** Prints the {!intro} string, followed by a non empty list of value definitions seperated by the {!and} keyword
+  @param f Formatter
+  @param intro the string that will preceed the first binding.
+  @param binds list of value definitions (non empty)
+*)
+let rec print_bind_list f intro binds = 
+  match binds with 
+  |[] -> failwith "print_bind_list : List of bindings is empty"
+  |[bind] -> print_bind f intro bind 
+  |bind::t -> 
+    print_bind f intro bind; 
+    print_bind_list f "and" t
 
-  (* auxiliary functions *)
+(** Prints a set of value definitions. The starting string will either be 
+    {!let} or {!let rec} depending on the value of the {!is_rec} flag.
+  @param f Formatter
+  @param is_rec Recursion flag
+  @param binds list of value definitions*)
+let print_str_value f is_rec binds =
+  let intro = if is_rec = Recursive then "let rec" else "let" in
+  print_bind_list f intro binds 
 
+(** Prints a single top level expression 
+@param f formatter  
+@param x the top level expression*)
   let s_strcture_item f x =
     match x.sstr_desc with 
-    | Str_value (_is_rec, _binds) ->  assert false
-    |_ -> ignore f; assert false
+    | Str_value (is_rec, binds) ->  print_str_value f is_rec binds
+    | Str_protocol _protocol -> ()
+    |_ -> ()
+  
+  
 
-  in
-  (*  function body  *)
-
-  list ~sep:(newline ++ newline) s_strcture_item f x
+let s_structure x = 
+  list ~sep:(newline ++ newline) s_strcture_item x

@@ -81,9 +81,9 @@ let run_file_imp config file =
         else () in 
     let () = print_string "parsing successfull\n" in
     let module_nm = path2module file in
-    let _imps = parse_structure_gospel ~filename:file ocaml module_nm in 
+    let imps = parse_structure_gospel ~filename:file ocaml module_nm in 
     let () = print_string "parsing successfull\n" in
-    (*
+  
     let () = 
       if config.verbose  
         then 
@@ -93,7 +93,7 @@ let run_file_imp config file =
           pp fmt "@[*******************************@]@.";
           pp fmt "@[%a@]@." Upretty_printer.s_structure imps
           end
-        else () in *)
+        else () in 
     true
 with 
 | Exit -> false

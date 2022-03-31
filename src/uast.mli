@@ -340,7 +340,7 @@ and s_expression_desc =
       * Parsetree.pattern
       * s_expression
       * fun_spec option
-  (* fun P -> E1                          (Simple, None)
+  (* fun P -> E1                          (NoLabel, None)
      fun ~l:P -> E1                       (Labelled l, None)
      fun ?l:P -> E1                       (Optional l, None)
      fun ?l:(P = E0) -> E1                (Optional l, Some E0)

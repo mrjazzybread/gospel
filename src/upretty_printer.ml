@@ -367,24 +367,42 @@ let rec print_exp f exp =
     | Pconst_float (s, _) -> pp f "%s" s 
   in
 
-  let print_case f (kont, c) =
-    pp f "@[<v0>|effect @[<hov2>%s@ %a ->@ %a@]@,@]"
-      kont
+  let print_guard f c = match c with
+    |None -> ()
+    |Some e -> pp f "when %a@ " print_exp e in
+
+  let print_effect_case f (kont, c) =
+    pp f "@[<v0>|effect @[<hov2>(%a)@ %s@ %a->@ %a@]@,@]"
       Ppxlib.Pprintast.pattern c.spc_lhs
+      kont
+      print_guard c.spc_guard
       print_exp c.spc_rhs
   in
 
   let print_handler exp cases spec =
-    pp f "@[<v0>try %a with@,%a@,%a@]"
+    pp f "@[<v0>try %a with@,@]%a%a"
     print_exp exp
-    (fun f l -> (List.iter (print_case f) l)) cases
+    (fun f l -> (List.iter (print_effect_case f) l)) cases
     handler_spec spec
+  in
+
+  let print_case f c = 
+    pp f "@[<v0>|@[<hov2>%a@ %a->@ %a@]@,@]"
+      Ppxlib.Pprintast.pattern c.spc_lhs
+      print_guard c.spc_guard
+      print_exp c.spc_rhs
+  in 
+
+  let print_match f exp cases =
+    pp f "@[<v0>match %a with@,%a@]"
+    print_exp exp
+    (fun f l -> List.iter (print_case f) l) cases
   in
 
   match exp.spexp_desc with
   |Sexp_ident id -> longident_loc f id 
   |Sexp_apply (exp, args) -> 
-    pp f "@[<hov2>%a%a@]" 
+    pp f "%a%a" 
       print_exp exp
       (fun f args -> List.iter (print_arg f) args) args
   |Sexp_handler (exp, cases, spec) -> 
@@ -392,20 +410,22 @@ let rec print_exp f exp =
   |Sexp_constant c -> print_constant f c 
   |Sexp_let(rec_flag, binds, exp) -> 
     print_values f rec_flag binds;
-    pp f "@[<hov2>@ in@ %a@]" print_exp exp 
+    pp f "@[<hv2>@ in@ %a@]" print_exp exp 
+  |Sexp_match(exp, cases) -> print_match f exp cases
   |_ -> assert false
 
 
 
 and print_arg f (label, exp_opt, pat) =
-  let () = match label with 
-    |Nolabel -> ()
-    |Labelled s -> pp f "~%s:" s
-    | Optional s -> pp f "?%s:" s in 
+  let intro = match label with 
+    |Nolabel -> ""
+    |Labelled s -> Printf.sprintf "~%s:" s
+    | Optional s -> Printf.sprintf "?%s:" s in 
   match exp_opt with
-  |None -> pp f "%a@ " Ppxlib.Pprintast.pattern pat
+  |None -> pp f "%s%a@ " intro Ppxlib.Pprintast.pattern pat
   |Some exp -> 
-    pp f "(%a=%a)@ " 
+    pp f "%s(%a=%a)@ " 
+    intro
     Ppxlib_ast.Pprintast.pattern pat
     print_exp exp 
 
@@ -464,4 +484,5 @@ and print_values f is_rec binds =
   
 
 let s_structure x = 
-  list ~sep:(newline ++ newline) s_strcture_item x
+  let f = list ~sep:(newline ++ newline) s_strcture_item x in
+  print_newline(); f 

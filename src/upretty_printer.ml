@@ -487,7 +487,12 @@ and print_values f (is_rec, binds) =
   print_bind_list f intro binds 
 
 
-
+let print_protocol f protocol =
+  pp f "@[<v0>protocol %s:@,%a%a%a%a@]" protocol.pro_name.pid_str
+  (list_keyword "requires ...") protocol.pro_pre
+  (list_keyword "ensures ...") protocol.pro_post
+  (list_keyword "reply_type ...") (match protocol.pro_return with | None -> [] | Some x -> [x])
+  (list_keyword "modifies ...") protocol.pro_writes
 
 (** Prints a single top level expression 
 @param f formatter  
@@ -496,7 +501,7 @@ and print_values f (is_rec, binds) =
     match x.sstr_desc with 
     | Str_value (is_rec, binds) ->  print_values f (is_rec, binds)
     | Str_type (rec_flag, types) -> s_type_declaration_rec_flag f (rec_flag, types)
-    | Str_protocol _protocol -> ()
+    | Str_protocol protocol -> spec print_protocol f protocol
     |_ -> ()
   
   

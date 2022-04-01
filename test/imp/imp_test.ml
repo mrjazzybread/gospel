@@ -1,3 +1,11 @@
+
+
+(*@ protocol exp :
+  requires true  
+  ensures true
+  reply_type unit
+  modifies n*)
+
 type _ effect = Div_by_zero : int effect
 
 type exp = Const of int | Div of exp * exp

@@ -478,31 +478,45 @@ match tw_args with
       @param effect_branch the pattern matching case we will convert
       @return an !{!s_effect_case} optional that contains the caught effect, its parameters and continuation, 
       as well as the expression to execute. Note that in case there is no lambda (i.e it is {!None}) we simply return {!None}*)
-    let match_case_to_effect effect_branch = 
-      match effect_branch with
-      |{spc_rhs=exp;_} -> 
-        begin match exp.spexp_desc with 
+    let match_case_to_effect t ({spc_rhs=exp;_} as effect_branch) = 
+        match exp.spexp_desc with 
         |Sexp_construct({txt = Lident "None"}, None) -> None
         |Sexp_construct({txt = Lident "Some"}, 
-         Some {spexp_desc=Sexp_fun (Nolabel, None, {ppat_desc =Ppat_var kont;_}, exp, None)}) -> 
-          Some (kont.txt, {effect_branch with spc_rhs=exp})
+         Some {spexp_desc=Sexp_fun (Nolabel, None, pat, exp, None)}) -> 
+         begin match pat.ppat_desc with
+            |Ppat_constraint({ppat_desc = Ppat_var kont;_}, 
+              {ptyp_desc = Ptyp_constr ({txt = Lident "continuation";_}, 
+              [{ptyp_desc = Ptyp_constr ({txt = Lident s}, []);_};
+              {ptyp_desc = Ptyp_any;_}])}) when s = t-> Some (kont.txt, {effect_branch with spc_rhs=exp}) 
+            | _ -> failwith "invalid case"
+          end
         |_ -> failwith "invalid case"
-      end
+        
     in
+
+    let get_name pat t =
+      match pat.ppat_desc with
+      |Ppat_constraint({ppat_desc = Ppat_var {txt};_},
+        {ptyp_desc = Ptyp_constr({txt=Lident "eff";_}, [
+          {ptyp_desc= Ptyp_constr({txt=Lident s;_}, [])}
+        ])}) when s = t-> txt
+      |_ -> assert false in
   
-    let cases =
+    let cases, t =
       match handler.spexp_desc with
       |Sexp_record ([{txt=Lident "effc"}, exp], None) ->
         begin match exp.spexp_desc with
-        |Sexp_fun(Nolabel, None, {ppat_desc = Ppat_var {txt=name};_}, exp, None) ->
-          begin match exp.spexp_desc with
-          | Sexp_match (exp, cases) when check_exp exp.spexp_desc name -> cases
-          |_ -> failwith "Expression is not a valid handler"
-          end
-        |_ -> failwith "Expression is not a valid handler"
+          |Sexp_newtype({txt}, exp) -> begin match exp.spexp_desc with 
+            |Sexp_fun(Nolabel, None, pat, exp, None) ->
+              begin match exp.spexp_desc with
+              | Sexp_match (exp, cases) when check_exp exp.spexp_desc (get_name pat txt) -> cases, txt
+              |_ -> failwith "Expression is not a valid handler 1"
+              end
+            |_ -> failwith "Expression is not a valid handler 2" end
+        |_ -> failwith "Expression is not a valid handler 3"
         end
-      |_ -> failwith "Expression is not a valid handler" in
-    List.filter_map match_case_to_effect cases
+      |_ -> failwith "Expression is not a valid handler 4" in
+    List.filter_map (match_case_to_effect t) cases
   
 
 and s_module_expr ~filename { pmod_desc; pmod_loc; pmod_attributes } =
@@ -559,7 +573,7 @@ and structure_item ~filename str_item =
       [ mk_s_structure_item (Str_modtype s_mod_type) ~loc ]
   | Pstr_exception ty_exn -> [ mk_s_structure_item (Str_exception ty_exn) ~loc ]
   | Pstr_primitive _ -> assert false (* TODO *)
-  | Pstr_typext _ -> assert false (* TODO *)
+  | Pstr_typext t -> [mk_s_structure_item (Str_typext t) ~loc]
   | Pstr_recmodule _ -> assert false (* TODO *)
   | Pstr_open popen -> [ mk_s_structure_item (Str_open popen) ~loc ]
   | Pstr_class _ -> assert false (* TODO *)

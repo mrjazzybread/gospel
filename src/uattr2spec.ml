@@ -455,7 +455,10 @@ match tw_args with
 
   (** Converts an expression with the following format
   
-  {!\{effc=fun e -> match e with |E1 -> Some (fun k -> ...) |E2 -> Some (fun k -> ...)\}}
+  {!\{effc=fun (type a) (e : a effect) ->
+     match e with 
+     |E1 -> Some (fun (k : (a, _) continuation) -> ...) 
+     |E2 -> Some (fun (k : (a, _) continuation) -> ...)\}}
   
   into a list that corresponds each constructor with its corresponding lambda. If the constructor corresponds to None, it will not be added to the list
   
@@ -467,7 +470,7 @@ match tw_args with
       @param exp the expression used in the pattern match
       @param name the name given to the effect.
       
-      @return true if and only if exp is an expression of type {!match name with ...}*)
+      @return true if and only if exp is an expression of type {!match Lident with ...}*)
     let check_exp exp name = match exp with
     |Sexp_ident {txt = Lident n} -> n = name
     |_ -> false in
@@ -494,6 +497,13 @@ match tw_args with
         
     in
 
+    (** From an argument {!(name : t_name eff)} gets the {!name} string as well 
+    as checking if {!t} equals the {!t_name} type parameter. If the argument's pattern is invalid, 
+      this function will crash
+      
+    @param pat the argument passed
+    @param t the expected name of the type parameter
+    @return the argument's name*)
     let get_name pat t =
       match pat.ppat_desc with
       |Ppat_constraint({ppat_desc = Ppat_var {txt};_},

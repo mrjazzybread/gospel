@@ -183,6 +183,13 @@ let axiom f x =
   let axiom f _ = pp f "@[axiom ...@]" in
   spec axiom f x
 
+  let print_open f od =
+    pp f "@[<hov2>open%s@ %a@]%a"
+      (override od.popen_override)
+      longident_loc od.popen_expr
+      (item_attributes reset_ctxt)
+      od.popen_attributes
+  
 let rec s_signature_item f x =
   let s_val_description f vd =
     let intro = if vd.vprim = [] then "val" else "external" in
@@ -191,13 +198,7 @@ let rec s_signature_item f x =
       (item_attributes reset_ctxt)
       vd.vattributes val_spec vd.vspec
   in
-  let print_open f od =
-    pp f "@[<hov2>open%s@ %a@]%a"
-      (override od.popen_override)
-      longident_loc od.popen_expr
-      (item_attributes reset_ctxt)
-      od.popen_attributes
-  in
+
   match x.sdesc with
   | Sig_type (rf, l) -> s_type_declaration_rec_flag f (rf, l)
   | Sig_val vd -> s_val_description f vd
@@ -494,6 +495,12 @@ let print_protocol f protocol =
   (list_keyword "reply_type ...") (match protocol.pro_return with | None -> [] | Some x -> [x])
   (list_keyword "modifies ...") protocol.pro_writes
 
+let print_open_decl f {popen_expr={pmod_desc;_};_} =
+  pp f "open ";
+  match pmod_desc with
+  |Pmod_ident l -> longident_loc f l 
+  |_ -> assert false
+
 (** Prints a single top level expression 
 @param f formatter  
 @param x the top level expression*)
@@ -502,6 +509,7 @@ let print_protocol f protocol =
     | Str_value (is_rec, binds) ->  print_values f (is_rec, binds)
     | Str_type (rec_flag, types) -> s_type_declaration_rec_flag f (rec_flag, types)
     | Str_protocol protocol -> spec print_protocol f protocol
+    | Str_open od -> print_open_decl f od 
     |_ -> ()
   
   

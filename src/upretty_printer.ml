@@ -509,8 +509,9 @@ let print_open_decl f {popen_expr={pmod_desc;_};_} =
     | Str_value (is_rec, binds) ->  print_values f (is_rec, binds)
     | Str_type (rec_flag, types) -> s_type_declaration_rec_flag f (rec_flag, types)
     | Str_protocol protocol -> spec print_protocol f protocol
+    | Str_typext te -> type_extension reset_ctxt f te
     | Str_open od -> print_open_decl f od 
-    |_ -> ()
+    |_ -> assert false
   
   
 

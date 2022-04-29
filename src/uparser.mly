@@ -49,7 +49,7 @@
     sp_writes = [];
     sp_consumes= [];
     sp_variant = [];
-    sp_protocol = None;
+    sp_performs = [];
     sp_diverge = false;
     sp_pure = false;
     sp_equiv = [];
@@ -64,7 +64,6 @@
     fun_coer = false;
     fun_text = "";
     fun_loc = Location.none;
-    fun_protocol = None
   }
 
   let empty_tspec = {
@@ -80,7 +79,6 @@
     pro_post = [];
     pro_pre = [];
     pro_writes = [];
-    pro_return = None;
     pro_loc = Location.none
   }
 
@@ -218,8 +216,8 @@ nonempty_func_spec:
   { { bd with fun_variant = t :: bd.fun_variant } }
 | COERCION bd=func_spec
   { { bd with fun_coer = true } }
-| PROTOCOL q=qualid bd=func_spec 
-  { { bd with fun_protocol = Some q } }
+(*| PROTOCOL q=qualid bd=func_spec 
+  { { bd with fun_protocol = Some q } }*)
 ;
 
 handler_spec:
@@ -241,9 +239,9 @@ nonempty_protocol_def:
   { {p with pro_pre = t :: p.pro_pre} }
 | ENSURES t=term p=protocol_def
   { {p with pro_post = t :: p.pro_post} }
-| REPLY_TYPE t=typ p=protocol_def
-  { match p.pro_return with |None -> {p with pro_return = Some t} |Some _ -> failwith "More than one reply_type clause"  }
-| MODIFIES wr=separated_list(COMMA, term) p=protocol_def
+(*| REPLY_TYPE t=typ p=protocol_def
+  { match p.pro_return with |None -> {p with pro_return = Some t} |Some _ -> failwith "More than one reply_type clause"  }*)
+| MODIFIES wr=separated_list(COMMA, lident) p=protocol_def
   { {p with pro_writes = p.pro_writes @ wr} }
 
 type_spec:
@@ -297,8 +295,8 @@ val_spec_body:
   { { bd with sp_equiv = e :: bd.sp_equiv} }
 | VARIANT t = comma_list1(term) bd=val_spec_body
   { { bd with sp_variant = t @ bd.sp_variant } }
-| PROTOCOL q=qualid bd = val_spec_body
-  { {bd with sp_protocol = Some q} }
+(*| PROTOCOL q=qualid bd = val_spec_body
+  { {bd with sp_protocol = Some q} }*)
 ;
 
 with_constraint:

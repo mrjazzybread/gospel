@@ -1,6 +1,7 @@
 {
 type t =
   | Ghost of string
+  | Handler of string
   | Spec of string
   | Other of string
   | Spaces of string
@@ -38,6 +39,7 @@ type t =
     Fmt.str "%s%s%s[@@gospel {|%s|}]%s%s" o sp h s o' (print l)
   | (Other s | Spaces s | LoopHead s) :: l ->
     Fmt.str "%s%s" s (print l)
+  | Handler s :: l -> Fmt.str "[@gospel {|try_ensures %s|}]%s" s (print l) 
   | [] -> ""
 
   let flush () =
@@ -64,6 +66,17 @@ rule scan = parse
         Queue.push (Ghost s) queue;
         scan lexbuf
       }
+  | "(*@"
+      (space*
+        "try_ensures" 
+      ) {
+        comment lexbuf;
+        let s = Buffer.contents buf in
+        Buffer.clear buf;
+        Queue.push (Handler s) queue;
+        scan lexbuf
+      }
+  
   | (("while" | "for") space+) as k
     {
       push ();

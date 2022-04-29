@@ -1,10 +1,9 @@
 
 open Dummy_effect
 
-(*@ protocol exp :
+(*@ protocol div_by_zero :
     requires true  
     ensures true
-    reply_type unit
     modifies n*)
 
 type _ eff += Div_by_zero : int eff 
@@ -25,8 +24,6 @@ let main e =
     match e with 
     |Div_by_zero -> Some (fun (k : (a,_) continuation) -> continue k 1000) 
     |_ -> None} 
-  [@gospel {|try_ensures true|}]
-
-let f = 
+  let f = 
   let x = 0 in
   let y = 0 in x+y

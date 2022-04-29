@@ -97,7 +97,7 @@ type val_spec = {
   sp_writes : term list;
   sp_consumes : term list;
   sp_variant : term list;
-  sp_protocol : qualid option;
+  sp_performs : string list;
   sp_diverge : bool;
   sp_pure : bool;
   sp_equiv : string list;
@@ -129,7 +129,6 @@ type fun_spec = {
   fun_req : term list;
   fun_ens : term list;
   fun_variant : term list;
-  fun_protocol : qualid option;
   fun_coer : bool;
   fun_text : string;
   fun_loc : Location.t;
@@ -153,8 +152,7 @@ type protocol = {
   pro_name : Preid.t;
   pro_post : term list;
   pro_pre : term list;
-  pro_writes : term list;
-  pro_return : pty option;
+  pro_writes : Preid.t list;
   pro_loc : Location.t;
 }
 
@@ -504,8 +502,6 @@ and s_structure_item_desc =
   | Str_exception of type_exception
   (* exception C of T
      exception C = M.X *)
-  | Str_effect of type_exception
-    (*type _ eff += E : ... eff*)
   | Str_module of s_module_binding
   (* module X = ME *)
   | Str_recmodule of s_module_binding list

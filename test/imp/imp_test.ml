@@ -1,7 +1,7 @@
 
 open Dummy_effect
 
-(*@ protocol div_by_zero :
+(*@ protocol Div_by_zero :
     requires true  
     ensures true
     modifies n*)

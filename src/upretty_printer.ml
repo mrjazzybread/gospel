@@ -488,8 +488,19 @@ and print_values f (is_rec, binds) =
   print_bind_list f intro binds 
 
 
+let rec g_pattern f p = 
+  match p.pat_desc with 
+  |Papp(q, l) -> 
+    pp f "@[%a %a@]" 
+    qualid q
+    (fun f l -> List.iter (fun p -> pp f " "; g_pattern f p) l) l
+  |Pvar id ->
+    pp f "@[%s @]" id.pid_str
+  |_ -> assert false  
+
 let print_protocol f protocol =
-  pp f "@[<v0>protocol %s:@,%a%a%a@]" protocol.pro_name.pid_str
+  pp f "@[<v0>protocol %a %a:@,%a%a%a@]" qualid protocol.pro_name
+  (fun f l -> List.iter (g_pattern f) l) protocol.pro_args
   (list_keyword "requires ...") protocol.pro_pre
   (list_keyword "ensures ...") protocol.pro_post
   (*(list_keyword "reply_type ...") (match protocol.pro_return with | None -> [] | Some x -> [x])*)

@@ -149,7 +149,8 @@ type function_ = {
 }
 
 type protocol = {
-  pro_name : Preid.t;
+  pro_name : qualid;
+  pro_args : pattern list;
   pro_post : term list;
   pro_pre : term list;
   pro_writes : Preid.t list;

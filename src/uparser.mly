@@ -75,7 +75,8 @@
   }
 
   let empty_protocol = {
-    pro_name = Preid.create "" ~loc:Location.none;
+    pro_name = Qpreid (Preid.create "" ~loc:Location.none);
+    pro_args = [];
     pro_post = [];
     pro_pre = [];
     pro_writes = [];
@@ -102,7 +103,7 @@
 
 (* Spec Tokens *)
 
-%token REQUIRES ENSURES CONSUMES VARIANT PROTOCOL REPLY_TYPE TRY_ENSURES
+%token REQUIRES ENSURES CONSUMES VARIANT PROTOCOL (*REPLY_TYPE*) TRY_ENSURES
 
 (* keywords *)
 
@@ -227,8 +228,8 @@ handler_spec:
   { {sp_handle_post = [t]; sp_handle_loc=Location.none} }
 
 protocol:
-| PROTOCOL name=lident COLON protocol=protocol_def
-{  {protocol with pro_name=name } }
+| PROTOCOL name=qualid args=pat_arg* COLON protocol=protocol_def
+{  {protocol with pro_name=name; pro_args=args } }
 
 protocol_def:
 | EOF { empty_protocol }

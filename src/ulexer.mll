@@ -53,7 +53,7 @@
         "forall", FORALL;
         "function", FUNCTION;
         "protocol", PROTOCOL;
-        "reply_type", REPLY_TYPE;
+        (*"reply_type", REPLY_TYPE;*)
         "if", IF;
         "in", IN;
         "invariant", INVARIANT;

@@ -232,7 +232,7 @@ let with_constraint c =
   | Pwith_module (l1, l2) -> Wmodule (l1, l2)
   | Pwith_typesubst (l, t) -> Wtypesubst (l, no_spec_type_decl t)
   | Pwith_modsubst (l1, l2) -> Wmodsubst (l1, l2)
-
+  | _ -> assert false
 
 let rec signature_item_desc ~filename = function
   | Psig_value v -> Sig_val (val_description ~filename v)
@@ -251,6 +251,7 @@ let rec signature_item_desc ~filename = function
   | Psig_class_type c -> Sig_class_type c
   | Psig_extension (e, a) -> Sig_extension (e, a)
   | Psig_typesubst _ | Psig_modsubst _ -> assert false
+  | _ -> assert false
 
 (* TODO(@pascutto) *)
 and signature ~filename sigs =

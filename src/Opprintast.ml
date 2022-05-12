@@ -420,7 +420,7 @@ and pattern1 ctxt (f:Format.formatter) (x:pattern) : unit =
     | {ppat_desc =
          Ppat_construct
            ({ txt = Lident("::") ;_},
-            Some ({ppat_desc = Ppat_tuple([pat1; pat2]);_}));
+            Some (_, {ppat_desc = Ppat_tuple([pat1; pat2]);_}));
        ppat_attributes = []}
 
       ->
@@ -438,7 +438,7 @@ and pattern1 ctxt (f:Format.formatter) (x:pattern) : unit =
           pp f "%a" pattern_list_helper x
         else
           (match po with
-           | Some x -> pp f "%a@;%a"  longident_loc li (simple_pattern ctxt) x
+           | Some (_, x) -> pp f "%a@;%a"  longident_loc li (simple_pattern ctxt) x
            | None -> pp f "%a" longident_loc li)
     | _ -> simple_pattern ctxt f x
 
@@ -1056,7 +1056,8 @@ and module_type ctxt f x =
                 ls longident_loc li
                 (type_declaration ctxt) td
           | Pwith_modsubst (li, li2) ->
-             pp f "module %a :=@ %a" longident_loc li longident_loc li2 in
+             pp f "module %a :=@ %a" longident_loc li longident_loc li2
+          |_ -> assert false in
         pp f "@[<hov2>%a@ with@ %a@]"
           (module_type1 ctxt) mt (list with_constraint ~sep:"@ and@ ") l
     | _ -> module_type1 ctxt f x
@@ -1167,6 +1168,7 @@ and signature_item ctxt f x : unit =
   | Psig_extension(e, a) ->
       item_extension ctxt f e;
       item_attributes ctxt f a
+  |_ -> assert false
 
 and module_expr ctxt f x =
   if x.pmod_attributes <> [] then
@@ -1578,7 +1580,7 @@ and constructor_declaration ctxt f (name, args, res, attrs) =
 and extension_constructor ctxt f x =
   (* Cf: #7200 *)
   match x.pext_kind with
-  | Pext_decl(l, r) ->
+  | Pext_decl(_, l, r) ->
       constructor_declaration ctxt f (x.pext_name.txt, l, r, x.pext_attributes)
   | Pext_rebind li ->
       pp f "%s@;=@;%a%a" x.pext_name.txt

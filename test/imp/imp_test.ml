@@ -29,6 +29,8 @@ let main e =
     match e with 
     |Div_by_zero -> Some (fun (k : (a,_) continuation) -> continue k 1000) 
     |_ -> None} 
+(*@ try_ensures true
+    returns int*) 
     
   let f = 
   let x = 0 in

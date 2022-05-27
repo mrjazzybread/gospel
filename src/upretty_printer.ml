@@ -66,7 +66,9 @@ let handler_spec f hspec =
   |Some hspec -> 
     spec 
       (fun f hspec ->
-        (pp f "@[%a @]" (list_keyword "try_ensures ...") hspec.sp_handle_post)) f hspec
+        (pp f "@[%a %a@]" 
+        (list_keyword "try_ensures ...") hspec.sp_handle_post
+        (list_keyword "returns ...") [hspec.sp_returns])) f hspec
 
 let val_spec fmt vspec =
   match vspec with

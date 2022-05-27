@@ -61,6 +61,7 @@
     fun_req = [];
     fun_ens = [];
     fun_variant = [];
+    fun_performs = [];
     fun_coer = false;
     fun_text = "";
     fun_loc = Location.none;
@@ -103,7 +104,7 @@
 
 (* Spec Tokens *)
 
-%token REQUIRES ENSURES CONSUMES VARIANT PROTOCOL (*REPLY_TYPE*) TRY_ENSURES
+%token REQUIRES ENSURES CONSUMES VARIANT PERFORMS PROTOCOL TRY_ENSURES RETURNS
 
 (* keywords *)
 
@@ -217,15 +218,23 @@ nonempty_func_spec:
   { { bd with fun_variant = t :: bd.fun_variant } }
 | COERCION bd=func_spec
   { { bd with fun_coer = true } }
-(*| PROTOCOL q=qualid bd=func_spec 
-  { { bd with fun_protocol = Some q } }*)
+| PERFORMS q=qualid bd=func_spec 
+  { { bd with fun_performs = q::bd.fun_performs } }
 ;
 
 handler_spec:
-| TRY_ENSURES t=term spec =handler_spec
+| EOF
+  { {sp_handle_post=[];
+    sp_returns=PTtuple[]; 
+    sp_handle_loc=Location.none} }
+| spec=non_empty_handler_spec EOF
+  { spec }
+
+non_empty_handler_spec:
+| TRY_ENSURES t=term spec=handler_spec
   { {spec with sp_handle_post=t::spec.sp_handle_post} }
-| TRY_ENSURES t=term EOF
-  { {sp_handle_post = [t]; sp_handle_loc=Location.none} }
+| RETURNS t=typ spec=handler_spec 
+  { {spec with sp_returns=t} }
 
 protocol:
 | PROTOCOL name=qualid args=pat_arg* COLON protocol=protocol_def
@@ -240,8 +249,6 @@ nonempty_protocol_def:
   { {p with pro_pre = t :: p.pro_pre} }
 | ENSURES t=term p=protocol_def
   { {p with pro_post = t :: p.pro_post} }
-(*| REPLY_TYPE t=typ p=protocol_def
-  { match p.pro_return with |None -> {p with pro_return = Some t} |Some _ -> failwith "More than one reply_type clause"  }*)
 | MODIFIES wr=separated_list(COMMA, lident) p=protocol_def
   { {p with pro_writes = p.pro_writes @ wr} }
 
@@ -296,8 +303,8 @@ val_spec_body:
   { { bd with sp_equiv = e :: bd.sp_equiv} }
 | VARIANT t = comma_list1(term) bd=val_spec_body
   { { bd with sp_variant = t @ bd.sp_variant } }
-(*| PROTOCOL q=qualid bd = val_spec_body
-  { {bd with sp_protocol = Some q} }*)
+| PERFORMS q=qualid bd = val_spec_body
+  { {bd with sp_performs = q::bd.sp_performs} }
 ;
 
 with_constraint:

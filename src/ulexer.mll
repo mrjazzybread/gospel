@@ -70,7 +70,9 @@
         "fun", FUN;
         "old", OLD;
         "raises", RAISES;
+        "performs", PERFORMS;
         "rec", REC;
+        "returns", RETURNS;
         "requires", REQUIRES;
         "try_ensures", TRY_ENSURES;
         "variant", VARIANT;

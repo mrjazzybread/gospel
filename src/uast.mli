@@ -97,7 +97,7 @@ type val_spec = {
   sp_writes : term list;
   sp_consumes : term list;
   sp_variant : term list;
-  sp_performs : string list;
+  sp_performs : qualid list;
   sp_diverge : bool;
   sp_pure : bool;
   sp_equiv : string list;
@@ -107,6 +107,7 @@ type val_spec = {
 
 type handler_spec = {
   sp_handle_post : term list;
+  sp_returns: pty;
   sp_handle_loc : Location.t; 
 }
 
@@ -129,6 +130,7 @@ type fun_spec = {
   fun_req : term list;
   fun_ens : term list;
   fun_variant : term list;
+  fun_performs : qualid list;
   fun_coer : bool;
   fun_text : string;
   fun_loc : Location.t;

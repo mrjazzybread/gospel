@@ -343,6 +343,8 @@ and s_expression ~filename expr =
           Option.map (parse_gospel ~filename Uparser.func_spec) spec
           |> Option.map snd
         in
+        begin match fun_spec with |None -> () |Some s ->
+        Printf.printf "%d\n" (List.length s.fun_ens) end;
         let expr_arg = Option.map s_expression expr_arg in
         let expr_body = s_expression expr_body in
         Sexp_fun (arg, expr_arg, pat, expr_body, fun_spec)
@@ -508,7 +510,7 @@ match tw_args with
     let get_name pat t =
       match pat.ppat_desc with
       |Ppat_constraint({ppat_desc = Ppat_var {txt};_},
-        {ptyp_desc = Ptyp_constr({txt=Lident "eff";_}, [
+        {ptyp_desc = Ptyp_constr(_, [
           {ptyp_desc= Ptyp_constr({txt=Lident s;_}, [])}
         ])}) when s = t-> txt
       |_ -> assert false in

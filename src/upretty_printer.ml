@@ -429,6 +429,7 @@ let rec print_exp f exp =
     pp f "@[%a%a@]"
     longident_loc txt
     (fun f e -> Option.iter (print_exp f) e) e  
+  |Sexp_fun _ -> ()
   |_ -> assert false
 
 

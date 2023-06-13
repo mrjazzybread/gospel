@@ -60,7 +60,7 @@ type type_spec = {
   ty_fields : (lsymbol * bool) list;  (** Models (field symbol * mutable) *)
   ty_invariants : vsymbol option * term list;  (** Invariants *)
   ty_text : string;
-      (** String containing the original specificaion as written by the user *)
+      (** String containing the original specification as written by the user *)
   ty_loc : Location.t; [@printer fun fmt _ -> fprintf fmt "<Location.t>"]
       (** Specification location *)
 }

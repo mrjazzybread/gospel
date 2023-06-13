@@ -1,4 +1,4 @@
-type t
-(*@ mutable model view: int seq *)
+type 'a t
+(*@ mutable model view: int sequence *)
 
 

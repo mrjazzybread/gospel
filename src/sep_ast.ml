@@ -23,9 +23,14 @@ type pred_field = {
   f_type : Ttypes.ty;
 }
 
+type type_definition = {
+  t_name : Ident.t;
+  t_args : Ident.t list;
+}
+
 type definition_node = 
   |Pred of Ident.t * pred_field list
-  |Type of type_declaration
+  |Type of type_definition
   |Triple of sep_term * val_description * sep_term 
 
 type definition = {

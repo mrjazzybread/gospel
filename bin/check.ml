@@ -52,7 +52,15 @@ let run_file config file =
       pp fmt "@[********* Typed GOSPEL ********@]@.";
       pp fmt "@[*******************************@]@.";
       pp fmt "@[%a@]@." print_file file);
+    if config.verbose then (
+        pp fmt "@[@\n*******************************@]@.";
+        pp fmt "@[********* Seperation Logic ********@]@.";
+        pp fmt "@[*******************************@]@.";
+        pp fmt "@[%a@]@." Sep_prettyprinter.file (List.concat_map Tast2sep.signature_item file.fl_sigs));
     pp fmt "OK\n";
+
+
+
     true
   with W.Error e ->
     let bt = Printexc.get_backtrace () in

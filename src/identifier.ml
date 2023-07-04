@@ -36,7 +36,7 @@ module Ident = struct
     let current = Hashtbl.create 0 in
     let output = Hashtbl.create 0 in
     let current s =
-      let x = Hashtbl.find_opt current s |> Option.fold ~none:0 ~some:succ in
+      let x = Hashtbl.find_opt current s  |>Option.fold ~none:0 ~some:succ in
       Hashtbl.replace current s x;
       x
     in

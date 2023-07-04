@@ -3,7 +3,6 @@ open Tterm
 open Identifier
 open Tast
 
-
 type sep_term = {
   s_node : sep_node;
   s_loc : Location.t;
@@ -15,8 +14,8 @@ and sep_node =
   |Pure of term
   |App of string * string list
   |Magic of sep_term * sep_term
-  |Forall of Preid.t list * sep_term 
-  |Exists of Preid.t list * sep_term 
+  |Forall of Symbols.vsymbol list * sep_term 
+  |Exists of Symbols.vsymbol list * sep_term 
   |Lambda of Preid.t * sep_term
   |RO of sep_term
   |Top

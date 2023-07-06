@@ -11,14 +11,15 @@ let rec print_term fmt term =
   match term.s_node with 
   |Star l -> list ~sep:star print_term fmt l   
   |App(id, l) -> 
-    pp fmt "@[%s@]" id;  
-    list ~first:lparens ~last:rparens ~sep:comma (fun fmt s -> pp fmt "%s" s) fmt l  
+    pp fmt "@[%a@]" Ident.pp id.vs_name;  
+    list ~first:lparens ~last:rparens ~sep:comma 
+    Ident.pp fmt (List.map (fun x-> x.Symbols.vs_name) l)  
   |RO t ->
     pp fmt "@[RO (%a)@]" print_term t 
   |Pure t ->
-    pp fmt "[@[%a]@]" Tterm_printer.print_term t
+    pp fmt "[@[%a]@]" (Tterm_printer.print_term ~print_type:false) t
   |Exists(l, t) ->
-    pp fmt "@[exists %a.@\n@[%a@]"
+    pp fmt "@[∃ %a.@\n@[%a@]"
     (list 
       (fun fmt x -> 
         pp fmt "(%a : %a)" 
@@ -29,7 +30,7 @@ let rec print_term fmt term =
   |_ -> assert false
 
 let print_triple fmt t = 
-  pp fmt "@[forall %a. @\n@[{ %a }@\n{ %a }@]" 
+  pp fmt "@[∀ %a. @\n@[{ %a }@\n{ %a }@]" 
   (list 
       (fun fmt x -> 
         pp fmt "(%a : %a)" 
@@ -43,8 +44,8 @@ let print_triple fmt t =
 let sep_node fmt s = match s.d_node with 
 |Type t -> pp fmt "@[Type %a@]" Ident.pp t
 |Pred(id, args) -> 
-    pp fmt "@[Predicate %s %a@]" 
-      id.id_str 
+    pp fmt "@[Predicate %a %a@]" 
+      Ident.pp id 
       (fun fmt args -> List.iter (field fmt) args) args
 |Triple t -> 
   pp fmt "@[Definition %a :@\n %a@]" 

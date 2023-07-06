@@ -17,4 +17,4 @@ val print_ls_nm : lsymbol Fmt.t
 val print_pattern : pattern Fmt.t
 val print_binop : binop Fmt.t
 val print_quantifier : quant Fmt.t
-val print_term : term Fmt.t
+val print_term : ?print_type:bool -> term Fmt.t

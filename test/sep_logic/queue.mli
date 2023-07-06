@@ -1,7 +1,17 @@
+(*@ open Sequence*)
+
 type t
-(*@ mutable model view: int list *)
+(*@ mutable model view: int Sequence.t *)
 
 val push : t -> int -> unit
 (*@ push q n
-    ensures q.view = old(n::q.view)
+    requires true
+    ensures q.view = cons n (old q.view)
     modifies q *)
+
+val pop : t -> int 
+(*@ n = pop q
+    requires q.view <> empty
+    ensures q.view = (old q.view) ++ (singleton n)
+    modifies q
+*)

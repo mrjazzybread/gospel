@@ -44,6 +44,8 @@ let print_type_kind fmt = function
         (list ~sep:newline print_ls_decl)
         (rd.rd_cs :: pjs)
 
+let print_term = print_term ~print_type:true
+
 let print_type_spec fmt { ty_ephemeral; ty_fields; ty_invariants; _ } =
   if (not ty_ephemeral) && ty_fields = [] && snd ty_invariants = [] then ()
   else

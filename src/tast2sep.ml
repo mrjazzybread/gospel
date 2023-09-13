@@ -74,6 +74,8 @@ let rec signature_item_desc s = match s with
 |Sig_type(_, l, _) -> List.concat_map (fun t -> type_declaration t) l
 |Sig_val (des, _) -> [val_description des]
 |Sig_open _ -> []
+|Sig_axiom axiom -> [Axiom axiom]
+|Sig_function f -> [Function f]
 |_ -> assert false
 
 
@@ -98,7 +100,8 @@ and val_description des =
     List.concat_map (fun v -> [v; mk_val_sym true v]) args_vsym in 
 
   let spec f = Option.fold ~none:[] ~some:f des.vd_spec in 
-
+  let ret = spec (fun spec -> List.map get_arg  spec.sp_ret ) in
+  
   let modifies_vs = spec (fun spec -> List.map id_of_term spec.sp_wr) in
   let modifies = List.map (fun x -> x.vs_name.id_str) modifies_vs in 
   let pre_rw = 
@@ -115,8 +118,12 @@ and val_description des =
   let post_terms = spec_terms (fun x -> x.sp_post) false in
   let post_star = mk_sep_term (Star (post_write@post_terms)) in 
   let pre = mk_sep_term (Star (pre_rw@pre_terms)) in 
-  let post = mk_sep_term (Exists (modified_val, post_star)) in 
+  let post = mk_sep_term (Exists (modified_val, post_star)) in
+  let () = print_endline "wow" in 
+  let post = mk_sep_term (Lambda (ret, post)) in 
+  
 
+  
   Triple {
     triple_name = name; 
     triple_args = all_args; 

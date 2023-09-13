@@ -1,4 +1,4 @@
-(*@ open Sequence*)
+(*@ open Sequence *)
 
 type t
 (*@ mutable model view: int Sequence.t *)

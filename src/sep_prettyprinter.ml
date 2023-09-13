@@ -27,15 +27,21 @@ let rec print_term fmt term =
           Ttypes.print_ty x.Symbols.vs_ty) 
         ~sep:comma) l 
     print_term t
+  |Lambda(ret, s) ->
+    pp fmt "@[λ %a.@\n %a@]"
+      (list
+         (fun fmt x -> 
+        pp fmt "(%a : %a)" 
+          Ident.pp x.Symbols.vs_name 
+          Ttypes.print_ty x.Symbols.vs_ty) 
+         ~sep:comma) ret
+      print_term s
   |_ -> assert false
 
 let print_triple fmt t = 
   pp fmt "@[∀ %a. @\n@[{ %a }@\n{ %a }@]" 
   (list 
-      (fun fmt x -> 
-        pp fmt "(%a : %a)" 
-          Ident.pp x.Symbols.vs_name 
-          Ttypes.print_ty x.Symbols.vs_ty) 
+        field
         ~sep:comma)
       t.triple_args
     print_term t.triple_pre
@@ -51,5 +57,7 @@ let sep_node fmt s = match s.d_node with
   pp fmt "@[Definition %a :@\n %a@]" 
     Ident.pp t.triple_name
     print_triple t 
-
+|Axiom axiom -> 
+  Tast.pp_axiom fmt axiom
+|Function f -> Tast.pp_function_ fmt f
 let file fmt l = list ~sep:(newline ++ newline) sep_node fmt l

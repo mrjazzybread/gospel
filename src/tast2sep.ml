@@ -48,7 +48,7 @@ let mk_pred_vs pred_name self_type =
     @param old this flag is set to false if we are lifting the modified version of the variable in a postcondition. This flag should
                not be false while {!read_only} is set to true*)
 let mk_pred_app ~read_only ~old arg =
-  let pred_name = get_ty_name arg.vs_ty in 
+  let pred_name = get_rep_pred (get_ty_name arg.vs_ty) in 
   let arg_name = arg.vs_name.id_str in 
   let arg_val = if not old then mk_update arg_name else mk_val arg_name in 
   let pred_vs = 
@@ -132,8 +132,9 @@ and val_description des =
     List.filter_map 
       (fun arg -> 
         if List.mem arg.vs_name.id_str modifies 
-          then Some (mk_pred_app ~read_only:false ~old:false arg) 
-          else None) args_vsym in 
+        then Some (mk_pred_app ~read_only:false ~old:false arg)
+        else if List.mem arg ret then Some (mk_pred_app ~read_only:false ~old:true arg)
+          else None) (args_vsym@ret) in 
   let post_terms = spec_terms (fun x -> x.sp_post) false in
   let post_star = mk_sep_term (Star (post_write@post_terms)) in 
   let pre = mk_sep_term (Star (pre_rw@pre_terms)) in 

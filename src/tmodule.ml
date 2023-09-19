@@ -515,6 +515,7 @@ let add_sig_contents muc sig_ =
                 ~export:true muc ls.ls_name.id_str ls)
             muc fields
         in
+        let muc = match fields with |[ls] -> add_coer muc ls |_ -> muc in
         add_kid muc td.td_ts.ts_ident sig_
       in
       List.fold_left add_td muc tdl

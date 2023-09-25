@@ -11,7 +11,7 @@ val push : t -> int -> unit
 val pop : t -> int 
 (*@ n = pop q
     requires q <> empty
-    ensures q = (old q) ++ (singleton n)
+    ensures old q = q ++ (singleton n)
     modifies q
  *)
 

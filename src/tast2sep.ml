@@ -69,14 +69,18 @@ open Tterm
   let rec map_term t is_old = 
     let f t = map_term t is_old in 
     let map_node = match t.t_node with 
-      |Tfield({t_node=Tvar vs;_}, {ls_name={id_str="view";_};_}) -> 
-        if is_old
+      |Tfield(t, {ls_name={id_str="view";_};_}) ->
+        begin match t.t_node with
+        |Tvar vs  -> 
+        if is_old vs
           then Tvar (Hashtbl.find id_table (mk_val vs.vs_name.id_str))
           else begin
             try Tvar (Hashtbl.find id_table (mk_update vs.vs_name.id_str)) with 
             |Not_found -> Tvar (Hashtbl.find id_table (mk_val vs.vs_name.id_str)) end
+        |Told {t_node=Tvar vs;_} -> Tvar (Hashtbl.find id_table (mk_val vs.vs_name.id_str))
+        |_ -> assert false end
       |Tlet(v, t1, t2) -> Tlet(v, f t1, f t2)
-      |Told t -> (map_term t true).t_node
+      |Told t -> (map_term t (fun _ -> true)).t_node
       |Tcase(t, l) -> 
         Tcase(f t, 
           List.map (fun (p, c, t) -> p, Option.map f c, f t) l)
@@ -123,10 +127,12 @@ and val_description des =
   
   let modifies_vs = spec (fun spec -> List.map id_of_term spec.sp_wr) in
   let modifies = List.map (fun x -> x.vs_name.id_str) modifies_vs in 
+  let is_ro = (fun arg -> not (List.mem arg.vs_name.id_str modifies)) in 
   let pre_rw = 
-    List.map (fun arg -> mk_pred_app ~read_only:(not (List.mem arg.vs_name.id_str modifies)) ~old:true arg) args_vsym in 
+    List.map (fun arg -> mk_pred_app ~read_only:(is_ro arg) ~old:true arg) args_vsym in
+  
   let spec_terms f is_old = List.map (fun t -> mk_sep_term (Pure (map_term t is_old))) (spec f) in 
-  let pre_terms = spec_terms (fun x -> x.sp_pre) true in  
+  let pre_terms = spec_terms (fun x -> x.sp_pre) (fun _ -> true) in  
   let modified_val = List.map (mk_val_sym false) modifies_vs in
   let post_write = 
     List.filter_map 
@@ -135,7 +141,7 @@ and val_description des =
         then Some (mk_pred_app ~read_only:false ~old:false arg)
         else if List.mem arg ret then Some (mk_pred_app ~read_only:false ~old:true arg)
           else None) (args_vsym@ret) in 
-  let post_terms = spec_terms (fun x -> x.sp_post) false in
+  let post_terms = spec_terms (fun x -> x.sp_post) is_ro in
   let post_star = mk_sep_term (Star (post_write@post_terms)) in 
   let pre = mk_sep_term (Star (pre_rw@pre_terms)) in 
   let post = mk_sep_term (Exists (modified_val, post_star)) in

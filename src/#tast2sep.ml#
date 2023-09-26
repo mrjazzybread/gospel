@@ -200,8 +200,5 @@ and type_declaration t =
          Tyapp(ts_arrow, self_type::model_type@[ty_prop])} in 
   let () = Hashtbl.add pred_table new_id.id_str {vs_name=new_id;vs_ty=pred_type} in 
     [Type(id, ty_var_list); Pred(new_id, {vs_name=id; vs_ty=self_type}::pred_fields)]
-
-  
-
 let signature_item s = 
   List.map (fun sep -> {d_node = sep; d_loc = s.sig_loc}) (signature_item_desc s.sig_desc)

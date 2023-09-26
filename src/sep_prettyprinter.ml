@@ -48,7 +48,9 @@ let print_triple fmt t =
     print_term t.triple_post
 
 let sep_node fmt s = match s.d_node with 
-|Type t -> pp fmt "@[Type %a@]" Ident.pp t
+  |Type(t, vl) -> pp fmt "@[Type %a %a@]"
+                    (list (fun fmt v -> pp fmt "'%a" Ident.pp v.Ttypes.tv_name)) vl
+                    Ident.pp t
 |Pred(id, args) -> 
     pp fmt "@[Predicate %a %a@]" 
       Ident.pp id 

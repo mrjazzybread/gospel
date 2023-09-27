@@ -16,7 +16,6 @@ module Ident = Identifier.Ident
 (** type variables *)
 
 type tvsymbol = { tv_name : Ident.t } [@@deriving show]
-
 let tv_equal x y = Ident.equal x.tv_name y.tv_name
 
 module Tvar = struct

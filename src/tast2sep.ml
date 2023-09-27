@@ -16,8 +16,16 @@ let pred_table : (string, vsymbol) Hashtbl.t = Hashtbl.create 100
 (** maps the names of types with their respective logical models*)
 let env : env ref = ref (Env.empty)
 
-let add f l = env := Env.add f l !env 
-let get f = Env.find f !env
+let add ty l = env := Env.add ty l !env 
+let rec get ty =
+  match ty.ty_node with
+  |Tyvar v -> Env.find v.tv_name.id_str !env
+  |Tyapp(v, l) ->
+    let v_map = try Env.find v.ts_ident.id_str !env with
+                |Not_found -> ty in
+    match v_map.ty_node with
+    |Tyapp(v, _) -> {ty_node = Tyapp(v, List.map get l)}
+    |_ -> assert false
 
 let rep_pred_pref = "_R_"
 
@@ -41,8 +49,7 @@ let rec get_ty_vars {ty_node = ty} =
     @param pred_name the name for the predicate
     @param self_type the type that is being lifted*)
 let mk_pred_vs pred_name self_type =
-  let type_name = get_ty_name self_type in
-  let model_type = try get type_name with |Not_found -> self_type in
+  let model_type = try get self_type with |Not_found -> self_type in
   let pred_type = 
     {ty_node = 
        Tyapp(ts_arrow, [self_type; model_type; ty_prop])} in
@@ -100,6 +107,16 @@ open Tterm
       |Tfield(t, n) -> Tfield(f t, n)
       |_ -> t.t_node in {t with t_node=map_node}
 
+let tyvar_suf = "_model" 
+let mk_ho_model var suf =  Ident.create ~loc:Location.none (var.tv_name.id_str ^ suf)
+
+    
+let tyvar_to_pred var =
+  let mk_ty n = {ty_node=n} in
+  let ty_model = get {ty_node = Tyvar var} in 
+  let ty = Tyapp(ts_arrow, [mk_ty (Tyvar var); ty_model; ty_prop]) in
+    {vs_name = mk_ho_model var "_RP";vs_ty = mk_ty ty}
+
 
 let rec signature_item_desc s = match s with 
 |Sig_type(_, l, _) -> List.concat_map (fun t -> type_declaration t) l
@@ -118,10 +135,7 @@ and val_description des =
   (* Creates a variable that represents the model of argument {!v}. This variable will 
      be called V_{!v} and have the type of the model of {!v} *)
   let mk_val_sym is_old v = 
-    let type_name = 
-      match v.vs_ty.ty_node with 
-      |Tyapp(v, _) -> v.ts_ident.id_str |_ -> assert false in 
-    let ty = try get type_name with |Not_found -> v.vs_ty in
+    let ty = try get v.vs_ty with |Not_found -> v.vs_ty in
     let name = 
       if is_old 
         then mk_val v.vs_name.id_str 
@@ -166,24 +180,21 @@ and val_description des =
   }
 
 and type_declaration t = 
-  let id = t.td_ts.ts_ident in 
+  let id = t.td_ts.ts_ident in
+  let () =
+    List.iter (fun (x, _) ->
+        let var = {tv_name = mk_ho_model x tyvar_suf} in
+        add x.tv_name.id_str {ty_node=Tyvar var}) t.td_params in 
   let pred_fields = 
     match t.td_spec with
-    |Some s ->  
+    |Some s ->
       let model_to_arg (sym, _) = 
         let arg = sym.ls_name in
         let ty = match sym.ls_value with |Some t -> t |None -> assert false in 
-        let field = {vs_name = arg; vs_ty = ty} in
+        let field = {vs_name = arg; vs_ty = get ty} in
         let () = add id.id_str ty in 
         field in 
       let pred_fields = List.map model_to_arg s.ty_fields in
-      let tyvar_to_pred var =
-         let mk_ho_model suf =  Ident.create ~loc:Location.none (var.tv_name.id_str ^ suf) in 
-         let mk_ty n = {ty_node=n} in
-         let ty_model = Tyvar {tv_name = mk_ho_model "_model"} in 
-         let ty = Tyapp(ts_arrow, [mk_ty (Tyvar var); mk_ty ty_model; ty_prop]) in
-         {vs_name = mk_ho_model "_RP";vs_ty = mk_ty ty}
-      in
       let tyvars = List.map (fun (x, _) -> tyvar_to_pred x) t.td_params in
       (tyvars@pred_fields)
     |None -> [] in 
@@ -198,10 +209,7 @@ and type_declaration t =
   let pred_type = 
       {ty_node = 
          Tyapp(ts_arrow, self_type::model_type@[ty_prop])} in 
-  let () = Hashtbl.add pred_table new_id.id_str {vs_name=new_id;vs_ty=pred_type} in 
+  let () = Hashtbl.add pred_table new_id.id_str {vs_name=new_id;vs_ty=pred_type} in
     [Type(id, ty_var_list); Pred(new_id, {vs_name=id; vs_ty=self_type}::pred_fields)]
-
-  
-
 let signature_item s = 
   List.map (fun sep -> {d_node = sep; d_loc = s.sig_loc}) (signature_item_desc s.sig_desc)

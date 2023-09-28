@@ -3,12 +3,14 @@
 type 'a t
 (*@ mutable model view : 'a Sequence.t *)
 
-        (*
+ 
 val push : 'a t -> 'a -> unit
 (*@ push q n
     ensures q = cons n (old q)
     modifies q *)
 
+
+                          (*
 val pop : 'a t -> 'a
 (*@ n = pop q
     requires q <> empty
@@ -30,4 +32,7 @@ val peek : 'a t -> 'a
     produces q @ any t
     consumes v -> produces q @ 'a t
   *)
+
 *)
+
+

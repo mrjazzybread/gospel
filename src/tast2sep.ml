@@ -27,22 +27,21 @@ let rec get ty =
     |Tyapp(v, _) -> {ty_node = Tyapp(v, List.map get l)}
     |_ -> assert false
 
-let rep_pred_pref = "_R_"
+let rep_pred_pref = "@R_"
 
 let get_rep_pred s = rep_pred_pref ^ s
-let mk_val s = "_V_" ^ s
+let mk_val s = "@V_" ^ s
 
 let mk_update s =  mk_val (s ^ "'")
 let id_of_term t = match t.Tterm.t_node with  |Tterm.Tvar v -> v |_ -> assert false
-let get_ty_name ty = match ty.ty_node with |Tyapp (t, _) -> t.ts_ident.id_str |_ -> assert false
+let get_ty_name ty = match ty.ty_node with
+  |Tyapp (t, _) -> t.ts_ident.id_str
+  |Tyvar v -> v.tv_name.id_str
+
 let ty_prop = ty_app {ts_ident=Ident.create ~loc:Location.none "Prop";
                       ts_args=[];
                       ts_alias=None} []
 
-let rec get_ty_vars {ty_node = ty} =
-  match ty with
-  |Tyvar x -> [x]
-  |Tyapp (_, l) -> List.concat_map get_ty_vars l
 
 (** creates a {!vs_symbol} for a representation predicate application.
     For now, this function only works for monomorphic types. 
@@ -107,15 +106,15 @@ open Tterm
       |Tfield(t, n) -> Tfield(f t, n)
       |_ -> t.t_node in {t with t_node=map_node}
 
-let tyvar_suf = "_model" 
-let mk_ho_model var suf =  Ident.create ~loc:Location.none (var.tv_name.id_str ^ suf)
-
+let tyvar_suf = "@model" 
+let mk_ho_model var =  Ident.create ~loc:Location.none (var.tv_name.id_str ^ tyvar_suf)
+let mk_ho_rp var = Ident.create ~loc:Location.none (get_rep_pred var.tv_name.id_str)
     
 let tyvar_to_pred var =
   let mk_ty n = {ty_node=n} in
   let ty_model = get {ty_node = Tyvar var} in 
   let ty = Tyapp(ts_arrow, [mk_ty (Tyvar var); ty_model; ty_prop]) in
-    {vs_name = mk_ho_model var "_RP";vs_ty = mk_ty ty}
+    {vs_name = mk_ho_rp var;vs_ty = mk_ty ty}
 
 
 let rec signature_item_desc s = match s with 
@@ -132,9 +131,22 @@ and val_description des =
   let get_arg x = match x with |Lnone x |Loptional x |Lnamed x | Lghost x -> x |_-> assert false in
   let args_vsym = List.map get_arg des.vd_args in
 
+  let rec get_ty_vars {ty_node = ty} =
+    match ty with
+    |Tyvar x -> begin
+        let pred = tyvar_to_pred x in
+        let pred_name = pred.vs_name.id_str in 
+      match Hashtbl.find_opt pred_table pred_name  with
+      |Some _ -> []
+      |None -> let vs = tyvar_to_pred x in
+               Hashtbl.add pred_table pred_name vs; [vs] end
+    |Tyapp (_, l) -> List.concat_map get_ty_vars l in 
+
+
   (* Creates a variable that represents the model of argument {!v}. This variable will 
      be called V_{!v} and have the type of the model of {!v} *)
-  let mk_val_sym is_old v = 
+  let mk_val_sym is_old v =
+    let ho_pred = get_ty_vars v.vs_ty in 
     let ty = try get v.vs_ty with |Not_found -> v.vs_ty in
     let name = 
       if is_old 
@@ -142,12 +154,13 @@ and val_description des =
         else mk_update v.vs_name.id_str in 
     let vs = {vs_name = Ident.create ~loc:Location.none name; vs_ty = ty} in 
     let () = Hashtbl.add id_table name vs in  
-    vs in 
+    vs, ho_pred in 
+
   let all_args = 
-    List.concat_map (fun v -> [v; mk_val_sym true v]) args_vsym in 
+    List.concat_map (fun v -> let vs, ho_pred = mk_val_sym true v in ho_pred@[v; vs]) args_vsym in 
 
   let spec f = Option.fold ~none:[] ~some:f des.vd_spec in 
-  let ret = spec (fun spec -> List.map get_arg  spec.sp_ret ) in
+  let ret = spec (fun spec -> List.map get_arg spec.sp_ret ) in
   
   let modifies_vs = spec (fun spec -> List.map id_of_term spec.sp_wr) in
   let modifies = List.map (fun x -> x.vs_name.id_str) modifies_vs in 
@@ -157,7 +170,7 @@ and val_description des =
   
   let spec_terms f is_old = List.map (fun t -> mk_sep_term (Pure (map_term t is_old))) (spec f) in 
   let pre_terms = spec_terms (fun x -> x.sp_pre) (fun _ -> true) in  
-  let modified_val = List.map (mk_val_sym false) modifies_vs in
+  let modified_val = List.map (fun x -> fst(mk_val_sym false x)) modifies_vs in
   let post_write = 
     List.filter_map 
       (fun arg -> 
@@ -183,7 +196,7 @@ and type_declaration t =
   let id = t.td_ts.ts_ident in
   let () =
     List.iter (fun (x, _) ->
-        let var = {tv_name = mk_ho_model x tyvar_suf} in
+        let var = {tv_name = mk_ho_model x} in
         add x.tv_name.id_str {ty_node=Tyvar var}) t.td_params in 
   let pred_fields = 
     match t.td_spec with

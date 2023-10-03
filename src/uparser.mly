@@ -42,6 +42,7 @@
     sp_xpost = [];
     sp_writes = [];
     sp_consumes= [];
+    sp_preserves = [];
     sp_diverge = false;
     sp_pure = false;
     sp_equiv = [];
@@ -224,15 +225,19 @@ val_spec_header:
   { { sp_hd_nm = nm; sp_hd_ret = []; sp_hd_args = args } }
 ;
 
+spatial_term:
+| t=term { {s_term = t; s_type = None} }
+;
+  
 val_spec_body:
 | (* Empty spec *) { empty_vspec }
 | PURE bd=val_spec_body
   { {bd with sp_pure = true} }
 | DIVERGES bd=val_spec_body
   { {bd with sp_diverge = true} }
-| MODIFIES wr=separated_list(COMMA, term) bd=val_spec_body
+| MODIFIES wr=separated_list(COMMA, spatial_term) bd=val_spec_body
   { { bd with sp_writes = wr @ bd.sp_writes } }
-| CONSUMES cs=separated_list(COMMA, term) bd=val_spec_body
+| CONSUMES cs=separated_list(COMMA, spatial_term) bd=val_spec_body
   { { bd with sp_consumes = cs @ bd.sp_consumes } }
 | REQUIRES t=term bd=val_spec_body
   { { bd with sp_pre = t :: bd.sp_pre } }

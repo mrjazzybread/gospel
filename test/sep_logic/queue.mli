@@ -6,11 +6,16 @@ type 'a t
  
 val push : 'a t -> 'a -> unit
 (*@ push q n
+    ensures q.view = cons n (old q.view)
+    modifies q  *)
+
+val push : 'a t -> 'a -> unit
+(*@ push q n
     ensures q = cons n (old q)
     modifies q *)
 
 
-                          (*
+
 val pop : 'a t -> 'a
 (*@ n = pop q
     requires q <> empty
@@ -20,19 +25,31 @@ val pop : 'a t -> 'a
 
 val length : 'a t -> int
 (*@ n = length q
-    ensures n = length q *)
+    ensures n = length q
+    
  *)
 
 
+
 (* 
-val peek : 'a t -> 'a
-  (*@ v = peek q
-    ensures old q = q ++ (singleton n)
-    consumes q @ 'a t
-    produces q @ any t
-    consumes v -> produces q @ 'a t
-  *)
+ghost val to_loc 'a t -> unit
+ (* @ to_loc q
+      consumes q @ 'a t
+      produces q @ loc t *)
 
-*)
+val peek : t -> int array 
+  (*@ n = peek q
+    ensures last q v
+    consumes q @ t
+    produces q @ t
 
+ *) *)
+
+
+(*
+  type 'a cell = Nil | Cons of {mutable c : 'a t}  and
+  type 'a t = {e : 'a; next : 'a cell}
+
+  type 'a t = {mutable first : 'a list; mutable last : 'a list}
+ *)
 

@@ -43,6 +43,18 @@ let ty_prop = ty_app {ts_ident=Ident.create ~loc:Location.none "Prop";
                       ts_alias=None} []
 
 
+let tyvar_suf = "@model" 
+let mk_ho_model var =  Ident.create ~loc:Location.none (var.tv_name.id_str ^ tyvar_suf)
+let mk_ho_rp var = Ident.create ~loc:Location.none (get_rep_pred var.tv_name.id_str)
+    
+let tyvar_to_pred var =
+  let mk_ty n = {ty_node=n} in
+  let ty_model = get {ty_node = Tyvar var} in 
+  let ty = Tyapp(ts_arrow, [mk_ty (Tyvar var); ty_model; ty_prop]) in
+    {vs_name = mk_ho_rp var;vs_ty = mk_ty ty}
+
+
+
 (** creates a {!vs_symbol} for a representation predicate application.
     For now, this function only works for monomorphic types. 
     @param pred_name the name for the predicate
@@ -57,18 +69,34 @@ let mk_pred_vs pred_name self_type =
   let () = Hashtbl.add pred_table pred_name vs in
   vs
 
+let rec get_ty_vars tbl {ty_node = ty} =
+    match ty with
+    |Tyvar x -> begin
+        let pred = tyvar_to_pred x in
+        let pred_name = pred.vs_name.id_str in 
+      match Hashtbl.find_opt tbl pred_name  with
+      |Some _ -> []
+      |None -> let vs =
+                 try Hashtbl.find pred_table pred_name with
+                 |Not_found -> tyvar_to_pred x in
+               Hashtbl.add tbl pred_name vs; [vs] end
+    |Tyapp (_, l) -> List.concat_map (get_ty_vars tbl) l 
+
+
 (** lifts a variable into its logical model using a generated representation predicate.
     @param read_only if the variable we are lifting is read_only. If this is set to true, the resulting term will also be read-only
     @param old this flag is set to false if we are lifting the modified version of the variable in a postcondition. This flag should
                not be false while {!read_only} is set to true*)
 let mk_pred_app ~read_only ~old arg =
-  let pred_name = get_rep_pred (get_ty_name arg.vs_ty) in 
+  let pred_name = get_rep_pred (get_ty_name arg.vs_ty) in
+  let tbl : (string, vsymbol) Hashtbl.t = Hashtbl.create 10 in
+  let ho_preds = match arg.vs_ty.ty_node with |Tyvar _ -> [] |_ -> get_ty_vars tbl arg.vs_ty in
   let arg_name = arg.vs_name.id_str in 
   let arg_val = if not old then mk_update arg_name else mk_val arg_name in 
   let pred_vs = 
     try Hashtbl.find pred_table pred_name with 
     |Not_found -> mk_pred_vs pred_name arg.vs_ty in 
-  let term =  mk_sep_term (App(pred_vs, [arg; Hashtbl.find id_table arg_val])) in 
+  let term =  mk_sep_term (App(pred_vs, arg::ho_preds@[Hashtbl.find id_table arg_val])) in 
   let term = if read_only then mk_sep_term (RO (term)) else term in 
     term
 
@@ -106,16 +134,6 @@ open Tterm
       |Tfield(t, n) -> Tfield(f t, n)
       |_ -> t.t_node in {t with t_node=map_node}
 
-let tyvar_suf = "@model" 
-let mk_ho_model var =  Ident.create ~loc:Location.none (var.tv_name.id_str ^ tyvar_suf)
-let mk_ho_rp var = Ident.create ~loc:Location.none (get_rep_pred var.tv_name.id_str)
-    
-let tyvar_to_pred var =
-  let mk_ty n = {ty_node=n} in
-  let ty_model = get {ty_node = Tyvar var} in 
-  let ty = Tyapp(ts_arrow, [mk_ty (Tyvar var); ty_model; ty_prop]) in
-    {vs_name = mk_ho_rp var;vs_ty = mk_ty ty}
-
 
 let rec signature_item_desc s = match s with 
 |Sig_type(_, l, _) -> List.concat_map (fun t -> type_declaration t) l
@@ -127,26 +145,15 @@ let rec signature_item_desc s = match s with
 
 
 and val_description des =
+  let keys = List.map fst (List.of_seq (Hashtbl.to_seq pred_table)) in
   let name = des.vd_name in 
   let get_arg x = match x with |Lnone x |Loptional x |Lnamed x | Lghost x -> x |_-> assert false in
   let args_vsym = List.map get_arg des.vd_args in
 
-  let rec get_ty_vars {ty_node = ty} =
-    match ty with
-    |Tyvar x -> begin
-        let pred = tyvar_to_pred x in
-        let pred_name = pred.vs_name.id_str in 
-      match Hashtbl.find_opt pred_table pred_name  with
-      |Some _ -> []
-      |None -> let vs = tyvar_to_pred x in
-               Hashtbl.add pred_table pred_name vs; [vs] end
-    |Tyapp (_, l) -> List.concat_map get_ty_vars l in 
-
-
   (* Creates a variable that represents the model of argument {!v}. This variable will 
      be called V_{!v} and have the type of the model of {!v} *)
   let mk_val_sym is_old v =
-    let ho_pred = get_ty_vars v.vs_ty in 
+    let ho_pred = get_ty_vars pred_table v.vs_ty in 
     let ty = try get v.vs_ty with |Not_found -> v.vs_ty in
     let name = 
       if is_old 
@@ -162,7 +169,7 @@ and val_description des =
   let spec f = Option.fold ~none:[] ~some:f des.vd_spec in 
   let ret = spec (fun spec -> List.map get_arg spec.sp_ret ) in
   
-  let modifies_vs = spec (fun spec -> List.map id_of_term spec.sp_wr) in
+  let modifies_vs = spec (fun spec -> List.map id_of_term (List.map (fun x -> x.s_term) spec.sp_wr)) in
   let modifies = List.map (fun x -> x.vs_name.id_str) modifies_vs in 
   let is_ro = (fun arg -> not (List.mem arg.vs_name.id_str modifies)) in 
   let pre_rw = 
@@ -183,7 +190,9 @@ and val_description des =
   let pre = mk_sep_term (Star (pre_rw@pre_terms)) in 
   let post = mk_sep_term (Exists (modified_val, post_star)) in
   let post = mk_sep_term (Lambda (ret, post)) in 
-  
+  let new_keys = List.map fst (List.of_seq (Hashtbl.to_seq pred_table)) in
+  let () = List.iter (fun x -> Hashtbl.remove pred_table x) (List.filter (fun x -> not (List.mem x keys)) new_keys) in
+    
   Triple {
     triple_name = name; 
     triple_args = all_args; 

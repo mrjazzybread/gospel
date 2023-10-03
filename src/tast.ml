@@ -22,6 +22,11 @@ type lb_arg =
   | Lghost of vsymbol  (** \[x: t\] *)
 [@@deriving show]
 
+type spatial_term = {
+    s_term : term;
+    s_type : ty; (* symbolizes a representation predicate *)
+  }[@@deriving show]
+
 type val_spec = {
   sp_args : lb_arg list;  (** Arguments *)
   sp_ret : lb_arg list;
@@ -31,8 +36,9 @@ type val_spec = {
   sp_post : term list;  (** Postconditions *)
   sp_xpost : (xsymbol * (pattern * term) list) list;
       (** Exceptional postconditions. *)
-  sp_wr : term list;  (** Writes *)
-  sp_cs : term list;  (** Consumes *)
+  sp_wr : spatial_term list;  (** Writes *)
+  sp_cs : spatial_term list;  (** Consumes *)
+  sp_pres : spatial_term list;
   sp_diverge : bool;  (** Diverges *)
   sp_pure : bool;  (** Pure *)
   sp_equiv : string list;  (** Equivalent *)

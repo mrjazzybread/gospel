@@ -88,6 +88,11 @@ type spec_header = {
   sp_hd_ret : labelled_arg list;
   (* Can only be LNone or LGhost *)
   sp_hd_args : labelled_arg list; (* header arguments' names *)
+  }
+
+type spatial_term = {
+   s_term : term;
+   s_type : pty option;
 }
 
 type val_spec = {
@@ -96,8 +101,9 @@ type val_spec = {
   sp_checks : term list;
   sp_post : term list;
   sp_xpost : xpost list;
-  sp_writes : term list;
-  sp_consumes : term list;
+  sp_writes : spatial_term list;
+  sp_consumes : spatial_term list;
+  sp_preserves : spatial_term list;
   sp_diverge : bool;
   sp_pure : bool;
   sp_equiv : string list;

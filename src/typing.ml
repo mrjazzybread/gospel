@@ -768,12 +768,20 @@ let process_val_spec kid crcm ns id args ret vs =
 
   let pre = List.map (fmla kid crcm ns env) vs.sp_pre in
   let checks = List.map (fmla kid crcm ns env) vs.sp_checks in
+  let type_spatial t =
+    let dt = dterm kid crcm ns env t.Uast.s_term in
+    let typed = term env dt in
+    let ty = match typed.t_ty with |Some ty -> ty |_ -> assert false in
+    let spatial_type = match t.Uast.s_type with |None -> ty |Some t -> ty_of_pty ns t in
+    {s_term = typed; s_type = spatial_type} in
   let wr =
-    List.map (fun t -> dterm kid crcm ns env t |> term env) vs.sp_writes
-  in
+    List.map type_spatial vs.sp_writes in
+  
   let cs =
-    List.map (fun t -> dterm kid crcm ns env t |> term env) vs.sp_consumes
+    List.map type_spatial vs.sp_consumes 
   in
+
+  let pres = List.map type_spatial vs.sp_preserves in
 
   let process_xpost (loc, exn) =
     let merge_xpost t tl =
@@ -840,7 +848,7 @@ let process_val_spec kid crcm ns id args ret vs =
       W.type_checking_error ~loc "a pure function cannot have writes";
     if xpost <> [] || checks <> [] then
       W.type_checking_error ~loc "a pure function cannot raise exceptions");
-  mk_val_spec args ret pre checks post xpost wr cs vs.sp_diverge vs.sp_pure
+  mk_val_spec args ret pre checks post xpost wr cs pres vs.sp_diverge vs.sp_pure
     vs.sp_equiv vs.sp_text vs.sp_loc
 
 let empty_spec preid ret args =
@@ -852,6 +860,7 @@ let empty_spec preid ret args =
     sp_xpost = [];
     sp_writes = [];
     sp_consumes = [];
+    sp_preserves = [];
     sp_diverge = false;
     sp_pure = false;
     sp_equiv = [];

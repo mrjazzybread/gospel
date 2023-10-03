@@ -25,8 +25,9 @@ val mk_val_spec :
   term list ->
   term list ->
   (xsymbol * (pattern * term) list) list ->
-  term list ->
-  term list ->
+  spatial_term list ->
+  spatial_term list ->
+  spatial_term list ->
   bool ->
   bool ->
   string list ->

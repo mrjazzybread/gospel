@@ -113,13 +113,16 @@ let print_xposts f xposts =
     in
     List.iter print_xpost xposts
 
+let print_spatial fmt s_term =
+  pp fmt "%a %@ %a" print_term s_term.s_term print_ty s_term.s_type
+
 let print_vd_spec val_id fmt spec =
   let print_term f t = pp f "@[%a@]" print_term t in
   let print_diverges f d = if not d then () else pp f "@\n@[diverges@]" in
   match spec with
   | None -> ()
   | Some vs ->
-      pp fmt "(*@@ @[%a%s@ %a@ %a@]%a%a%a%a%a%a%a%a*)"
+      pp fmt "(*@@ @[%a%s@ %a@ %a@]%a%a%a%a%a%a%a%a%a*)"
         (list ~sep:comma print_lb_arg)
         vs.sp_ret
         (if vs.sp_ret = [] then "" else " =")
@@ -144,13 +147,18 @@ let print_vd_spec val_id fmt spec =
         (list
            ~first:(newline ++ const string "writes ")
            ~sep:(newline ++ const string "writes ")
-           print_term)
+           print_spatial)
         vs.sp_wr
         (list
            ~first:(newline ++ const string "consumes ")
            ~sep:(newline ++ const string "consumes ")
-           print_term)
+           print_spatial)
         vs.sp_cs
+        (list
+           ~first:(newline ++ const string "preserves ")
+           ~sep:(newline ++ const string "preserves")
+           print_spatial)
+        vs.sp_pres
         (list
            ~first:(newline ++ const string "equivalent ")
            ~sep:(newline ++ const string "equivalent ")

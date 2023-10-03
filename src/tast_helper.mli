@@ -28,6 +28,7 @@ val mk_val_spec :
   spatial_term list ->
   spatial_term list ->
   spatial_term list ->
+  spatial_term list ->
   bool ->
   bool ->
   string list ->

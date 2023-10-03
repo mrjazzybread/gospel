@@ -43,6 +43,7 @@
     sp_writes = [];
     sp_consumes= [];
     sp_preserves = [];
+    sp_produces  = [];
     sp_diverge = false;
     sp_pure = false;
     sp_equiv = [];
@@ -79,7 +80,7 @@
 
 (* Spec Tokens *)
 
-%token REQUIRES ENSURES CONSUMES VARIANT
+%token REQUIRES ENSURES CONSUMES VARIANT MODIFIES PRESERVES PRODUCES
 
 (* keywords *)
 
@@ -90,7 +91,7 @@
 %token COERCION
 %token IF IN
 %token OLD NOT RAISES
-%token THEN TRUE MODIFIES EQUIVALENT CHECKS DIVERGES PURE
+%token THEN TRUE EQUIVALENT CHECKS DIVERGES PURE
 
 %token AS
 %token LET MATCH PREDICATE

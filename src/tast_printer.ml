@@ -122,7 +122,7 @@ let print_vd_spec val_id fmt spec =
   match spec with
   | None -> ()
   | Some vs ->
-      pp fmt "(*@@ @[%a%s@ %a@ %a@]%a%a%a%a%a%a%a%a%a*)"
+      pp fmt "(*@@ @[%a%s@ %a@ %a@]%a%a%a%a%a%a%a%a%a%a*)"
         (list ~sep:comma print_lb_arg)
         vs.sp_ret
         (if vs.sp_ret = [] then "" else " =")
@@ -159,6 +159,11 @@ let print_vd_spec val_id fmt spec =
            ~sep:(newline ++ const string "preserves")
            print_spatial)
         vs.sp_pres
+        (list
+           ~first:(newline ++ const string "produces")
+           ~sep:(newline ++ const string "produces")
+           print_spatial)
+        vs.sp_prod
         (list
            ~first:(newline ++ const string "equivalent ")
            ~sep:(newline ++ const string "equivalent ")

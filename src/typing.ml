@@ -31,6 +31,8 @@ let string_list_of_qualid q =
   in
   fold_q [] q
 
+let desugar = true
+
 exception Ns_not_found of location * string
 
 let rec q_loc = function Qpreid pid -> pid.pid_loc | Qdot (q, _) -> q_loc q
@@ -774,15 +776,30 @@ let process_val_spec kid crcm ns id args ret vs =
     let ty = match typed.t_ty with |Some ty -> ty |_ -> assert false in
     let spatial_type = match t.Uast.s_type with |None -> ty |Some t -> ty_of_pty ns t in
     {s_term = typed; s_type = spatial_type} in
-  let wr =
-    List.map type_spatial vs.sp_writes in
-  
-  let cs =
-    List.map type_spatial vs.sp_consumes 
-  in
-
+  let wr =  List.map type_spatial vs.sp_writes in
+  let cs =  List.map type_spatial vs.sp_consumes in
   let pres = List.map type_spatial vs.sp_preserves in
+  let prod = List.map type_spatial vs.sp_produces in 
 
+  let wr, cs, pres, prod =
+    if desugar
+    then
+      let vsymbol arg = match arg with |Lghost x |Lnone x|Loptional x|Lnamed x -> Some x |Lunit -> None in 
+      let args = List.filter_map vsymbol args in
+      let equal_arg arg t = match t.s_term.t_node with
+        |Tvar v -> v.vs_name.id_str = arg.vs_name.id_str
+        |Tapp (v, []) -> v.ls_name.id_str = arg.vs_name.id_str
+        |_ -> false in
+      let pres_args =
+        List.filter
+          (fun x -> not (List.exists (equal_arg x) (wr@cs@pres@prod))) args in
+      let pres = List.map (fun x ->
+                     let s_term = {t_node =Tvar x; t_ty = Some x.vs_ty; t_attrs=[]; t_loc= Location.none} in
+                     {s_term; s_type=x.vs_ty}) pres_args in 
+      let cs, prod = cs@pres@wr, prod@pres@wr in
+      [], cs, [], prod
+    else wr, cs, pres, prod in 
+  
   let process_xpost (loc, exn) =
     let merge_xpost t tl =
       match (t, tl) with
@@ -848,7 +865,7 @@ let process_val_spec kid crcm ns id args ret vs =
       W.type_checking_error ~loc "a pure function cannot have writes";
     if xpost <> [] || checks <> [] then
       W.type_checking_error ~loc "a pure function cannot raise exceptions");
-  mk_val_spec args ret pre checks post xpost wr cs pres vs.sp_diverge vs.sp_pure
+  mk_val_spec args ret pre checks post xpost wr cs pres prod vs.sp_diverge vs.sp_pure
     vs.sp_equiv vs.sp_text vs.sp_loc
 
 let empty_spec preid ret args =
@@ -861,6 +878,7 @@ let empty_spec preid ret args =
     sp_writes = [];
     sp_consumes = [];
     sp_preserves = [];
+    sp_produces = [];
     sp_diverge = false;
     sp_pure = false;
     sp_equiv = [];
@@ -914,7 +932,7 @@ let process_val ~loc ?(ghost = Nonghost) kid crcm ns vd =
       match so with
       | None -> ()
       | Some sp ->
-          if sp.sp_wr = [] then
+          if sp.sp_wr = [] && sp.sp_cs = [] then
             W.error ~loc (W.Return_unit_without_modifies id.id_str)
   in
   let vd =

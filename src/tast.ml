@@ -38,7 +38,8 @@ type val_spec = {
       (** Exceptional postconditions. *)
   sp_wr : spatial_term list;  (** Writes *)
   sp_cs : spatial_term list;  (** Consumes *)
-  sp_pres : spatial_term list;
+  sp_pres : spatial_term list; (** Preserves *)
+  sp_prod : spatial_term list;
   sp_diverge : bool;  (** Diverges *)
   sp_pure : bool;  (** Pure *)
   sp_equiv : string list;  (** Equivalent *)

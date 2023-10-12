@@ -27,7 +27,7 @@ module Fmt = struct
 
   let list ?(first = nop) ?(last = nop) ?sep pp_v ppf l =
     if List.length l = 0 then ()
-    else pf ppf "%a@[%a@]%a" first () (list ?sep pp_v) l last ()
+    else pf ppf "%a%a%a" first () (list ?sep pp_v) l last ()
 
   let pp = pf
   let full ppf _ = pf ppf ".@ "

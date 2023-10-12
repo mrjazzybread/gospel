@@ -156,12 +156,12 @@ let print_vd_spec val_id fmt spec =
         vs.sp_cs
         (list
            ~first:(newline ++ const string "preserves ")
-           ~sep:(newline ++ const string "preserves")
+           ~sep:(newline ++ const string "preserves ")
            print_spatial)
         vs.sp_pres
         (list
-           ~first:(newline ++ const string "produces")
-           ~sep:(newline ++ const string "produces")
+           ~first:(newline ++ const string "produces ")
+           ~sep:(newline ++ const string "produces ")
            print_spatial)
         vs.sp_prod
         (list

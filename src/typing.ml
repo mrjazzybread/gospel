@@ -780,25 +780,30 @@ let process_val_spec kid crcm ns id args ret vs =
   let cs =  List.map type_spatial vs.sp_consumes in
   let pres = List.map type_spatial vs.sp_preserves in
   let prod = List.map type_spatial vs.sp_produces in 
-
-  let wr, cs, pres, prod =
+  
+  let wr, cs, pres, prod, eq_clauses =
     if desugar
     then
       let vsymbol arg = match arg with |Lghost x |Lnone x|Loptional x|Lnamed x -> Some x |Lunit -> None in 
       let args = List.filter_map vsymbol args in
       let equal_arg arg t = match t.s_term.t_node with
         |Tvar v -> v.vs_name.id_str = arg.vs_name.id_str
-        |Tapp (v, []) -> v.ls_name.id_str = arg.vs_name.id_str
+        |Tapp (v, _) -> v.ls_name.id_str = arg.vs_name.id_str
         |_ -> false in
       let pres_args =
         List.filter
-          (fun x -> not (List.exists (equal_arg x) (wr@cs@pres@prod))) args in
+          (fun x -> not (List.exists (equal_arg x) (wr@cs@prod)) || List.exists (equal_arg x) pres) args in
       let pres = List.map (fun x ->
                      let s_term = {t_node =Tvar x; t_ty = Some x.vs_ty; t_attrs=[]; t_loc= Location.none} in
                      {s_term; s_type=x.vs_ty}) pres_args in 
       let cs, prod = cs@pres@wr, prod@pres@wr in
-      [], cs, [], prod
-    else wr, cs, pres, prod in 
+      let pres_eq =
+        List.map (fun spatial ->
+          let t = spatial.s_term in
+          let old = Tterm_helper.mk_term (Told t) t.t_ty Location.none in 
+          Tterm_helper.t_equ t old Location.none) pres in 
+      [], cs, [], prod, pres_eq
+    else wr, cs, pres, prod, [] in 
   
   let process_xpost (loc, exn) =
     let merge_xpost t tl =
@@ -856,7 +861,7 @@ let process_val_spec kid crcm ns id args ret vs =
         process_args header.sp_hd_ret tyl env []
     | _, _ -> process_args header.sp_hd_ret [ (ret, Asttypes.Nolabel) ] env []
   in
-  let post = List.map (fmla kid crcm ns env) vs.sp_post in
+  let post = (List.map (fmla kid crcm ns env) vs.sp_post) @ eq_clauses in
 
   if vs.sp_pure then (
     if vs.sp_diverge then

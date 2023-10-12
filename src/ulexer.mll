@@ -40,6 +40,8 @@
         "mutable", MUTABLE;
         "ensures", ENSURES;
         "consumes", CONSUMES;
+        "preserves", PRESERVES;
+        "produces", PRODUCES;
         "fun", FUN;
         "old", OLD;
         "raises", RAISES;

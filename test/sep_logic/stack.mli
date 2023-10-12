@@ -32,7 +32,7 @@ val epop : 'a estack -> 'a
 
 (* Basic operations on persistent stacks. *)
 type 'a pstack
-(*@         model pview: 'a memory -> 'a Sequence.t
+(*@ model pview: 'a memory -> 'a Sequence.t
     mutable model internal: unit *)
 
 (*@ axiom estack_mon: forall m m': 'a memory, p: 'a pstack.

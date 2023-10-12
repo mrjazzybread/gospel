@@ -107,7 +107,7 @@
 %token LEFTSQRIGHTSQ
 %token STAR TILDE UNDERSCORE
 %token WHEN
-
+%token AT
 
 (* priorities *)
 
@@ -205,7 +205,6 @@ ts_invariants:
 | l=list(ts_invariant) { None, l }
 | WITH id=lident l=nonempty_list(ts_invariant) { Some id, l }
 ;
-
 ts_invariant:
 | INVARIANT inv=term { inv }
 ;
@@ -228,6 +227,7 @@ val_spec_header:
 
 spatial_term:
 | t=term { {s_term = t; s_type = None} }
+| t=term AS ty=typ { {s_term = t; s_type = Some ty } }
 ;
   
 val_spec_body:
@@ -240,6 +240,10 @@ val_spec_body:
   { { bd with sp_writes = wr @ bd.sp_writes } }
 | CONSUMES cs=separated_list(COMMA, spatial_term) bd=val_spec_body
   { { bd with sp_consumes = cs @ bd.sp_consumes } }
+| PRODUCES pr=separated_list(COMMA, spatial_term) bd=val_spec_body
+ { { bd with sp_produces = pr@bd.sp_produces } }
+| PRESERVES pr=separated_list(COMMA, spatial_term) bd=val_spec_body
+  { { bd with sp_preserves = pr@bd.sp_preserves } }
 | REQUIRES t=term bd=val_spec_body
   { { bd with sp_pre = t :: bd.sp_pre } }
 | CHECKS t=term bd=val_spec_body

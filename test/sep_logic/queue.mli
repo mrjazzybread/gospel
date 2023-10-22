@@ -1,14 +1,21 @@
 (*@ open Sequence *)
 
 type 'a t
-(*@ mutable model view : 'a Sequence.t *)
+(*@ mutable model : 'a Sequence.t *)
 
+(* 
+   Type 'a t
+   
+   Type 'a @model_t = {view : 'a Sequence.t}
+
+   Predicate @R_t : ('a -> '@model_a -> Prop) -> 'a t -> 'a @model_t -> Prop 
+ *)
 
 val push : 'a t -> 'a -> unit
 (*@ push q x
     ensures q = cons x (old q)
-    consumes q as 'a t
-    produces q as 'a t
+    modifies q
+    consumes x
 *)
 
 val pop : 'a t -> 'a
@@ -24,3 +31,34 @@ val length : 'a t -> int
  *)
 
 
+(* predicate is_eq (A : Type) *)
+(* this predicate does not hold for unwoned mutable structures and functions*)
+
+val st_eq : 'a -> 'a -> bool
+(* b = st_eq x y
+    requires is_eq 'a
+    ensures b <-> x = y
+ *)
+
+(* predicate unowned (A : Type) *)
+
+
+val ph_eq : 'a -> 'a -> bool
+(* b = st_eq x y
+    requires unowned 'a
+    ensures b <-> x = y
+ *)
+
+{ R x Mx * R y My * [unowned R] } ph_eq x y {[x = y]}
+
+val ph_eq : 'a -> 'a -> bool
+(* b = st_eq x y
+    requires addressable 'a
+    ensures b <-> &x = &y
+ *)
+
+{ [is_loc x && is_loc y] } ph_eq x y {[x = y]}
+
+(* predicates over types, type classes *)
+(* increase clarity in spatial specs
+   adressable vs unowned *)

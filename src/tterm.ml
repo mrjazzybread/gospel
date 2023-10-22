@@ -16,7 +16,7 @@ module Ident = Identifier.Ident
 type pattern = {
   p_node : pattern_node;
   p_ty : ty;
-  p_loc : Location.t option; [@printer fun fmt _ -> fprintf fmt "<Location.t>"]
+  p_loc : Location.t; [@printer Utils.Fmt.pp_loc]
 }
 [@@deriving show]
 
@@ -44,13 +44,13 @@ and pattern_node =
 type binop = Tand | Tand_asym | Tor | Tor_asym | Timplies | Tiff
 [@@deriving show]
 
-type quant = Tforall | Texists | Tlambda [@@deriving show]
+type quant = Tforall | Texists [@@deriving show]
 
 type term = {
   t_node : term_node;
   t_ty : ty option;
   t_attrs : string list;
-  t_loc : Location.t; [@printer fun fmt _ -> fprintf fmt "<Location.t>"]
+  t_loc : Location.t; [@printer Utils.Fmt.pp_loc]
 }
 [@@deriving show]
 
@@ -63,6 +63,7 @@ and term_node =
   | Tlet of vsymbol * term * term
   | Tcase of term * (pattern * term option * term) list
   | Tquant of quant * vsymbol list * term
+  | Tlambda of pattern list * term
   | Tbinop of binop * term * term
   | Tnot of term
   | Told of term

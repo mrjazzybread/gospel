@@ -44,19 +44,18 @@ Gospel!
 
 ### Installation
 
-Gospel is not yet available on Opam repositories. You can install it via pinning:
+Gospel is available on Opam repositories. Installing it is straightforward:
 
 ```shell
-$ opam pin add gospel.dev git@github.com:ocaml-gospel/gospel
 $ opam install gospel
 ```
 
 This will install the `gospel` tool binary, as well as the developer library if you
-wish to build your software on top of Gospel. You may check the installation with.
+wish to build your software on top of Gospel. You may check the installation with:
 
 ```shell
 $ gospel --version
-gospel version xxxxxx
+gospel version 0.2.0
 ```
 
 ### Usage
@@ -80,6 +79,20 @@ $ gospel check max_array.mli
 OK
 ```
 
+Gospel also provides a ppx rewriter to allow odoc to display the contents of
+gospel specifications and declarations as documentation. This ppx rewriter
+works under the assumption that the source preprocessor has been run first. The
+dune stanza reads as follows:
+
+```dune
+(library
+ (name lib_name)
+ (preprocess
+  (pps gospel.ppx -- -pp "gospel pps")))
+```
+
+Be aware that it is the user's responsability to run the gospel type-checker when needed.
+
 ### Tools using Gospel
 
 > You are using Gospel as a frontend? [Let us
@@ -91,9 +104,10 @@ guarantees to your programs:
 - **[Cameleer](https://github.com/ocaml-gospel/cameleer).** A tool that extends
   Gospel to implementation files to provide semi-automated deductive
   verification of OCaml programs.
-- **[Ortac](https://github.com/ocaml-gospel/ortac).** A runtime assertion
-  checking tool based that generates verifying code for your test suites or
-  programs monitors.
+- **[Ortac](https://github.com/ocaml-gospel/ortac).** A testing tool for OCaml
+  programs that converts the Gospel specifications into code to test that they
+  hold at runtime. You may use it to generate testing suites and fuzzers or
+  monitor your program execution.
 - **[Why3gospel](https://github.com/ocaml-gospel/why3gospel).** A Why3 plugin that
   lets you verify that a program proof refines the Gospel specifications before
   extracting it to OCaml.
@@ -108,8 +122,8 @@ See the [LICENSE](LICENSE) file for more information.
 
 Gospel was initially developed by Cláudio Lourenço (LRI postdoctorate).
 
-It is now maintained by Clément Pascutto, Mário Pereira, and Jean-Christophe
-Filliâtre.
+It is currently maintained by Jean-Christophe Filliâtre, Samuel Hym, Nicolas
+Osborne, Clément Pascutto, and Mário Pereira.
 
 The full list of contributors is available
 [here](https://github.com/ocaml-gospel/gospel/graphs/contributors).

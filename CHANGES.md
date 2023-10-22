@@ -1,7 +1,12 @@
-# Unreleased
+# 0.2
 
 ## Added
 
+- Introduce a generic `pp_gen` pretty-printer for error messages, so that
+  external tools can pretty-print errors in the same style
+  [\#326](https://github.com/ocaml-gospel/gospel/pull/326)
+- Add ppx rewriter to display gospel contents as documentation with odoc
+  [\#288](https://github.com/ocaml-gospel/gospel/pull/288)
 - Add specific error message for patterns with guard on every clause.
   [\#220](https://github.com/ocaml-gospel/gospel/pull/220)
 - Added `when` guards in pattern-matching
@@ -22,6 +27,19 @@
 
 ## Improved
 
+- Forbid `old` operator in precondition clauses (`requires` and `checks`)
+  [\#335](https://github.com/ocaml-gospel/gospel/pull/335)
+- Display a warning when encountering an `include`
+  [\#334](https://github.com/ocaml-gospel/gospel/pull/334)
+- Allow patterns in arguments and return type annotation in anonymous functions
+  [\#309](https://github.com/ocaml-gospel/gospel/pull/309)
+- Propagate pattern locations to report errors to the precise patterns
+  [\#308](https://github.com/ocaml-gospel/gospel/pull/308)
+- Support partial application of functions and enforce OCaml syntax
+  for constructor application
+  [\#290](https://github.com/ocaml-gospel/gospel/pull/290)
+- Add a pretty-printer for locations
+  [\#294](https://github.com/ocaml-gospel/gospel/pull/294)
 - Gospel preprocessor does not fail when the file is an implementation file
   [\#265](https://github.com/ocaml-gospel/gospel/pull/265)
 - Rename standard library `Seq` and `'a seq` to `Sequence` and `'a sequence`.
@@ -52,6 +70,38 @@
 
 ## Fixed
 
+- Fix the performance issues in the preprocessor
+  [\353](https://github/ocaml-gospel/gospel/pull/353)
+- Gospel preprocessor support documentation for ghost declaration
+  [\#331](https://github/ocaml-gospel/gospel/pull/331)
+- Consider comments as spaces while preprocessing (to ensure specification can
+  be attached to a ghost function or type, for instance)
+  [\#321](https://github/ocaml-gospel/gospel/pull/321)
+- Fix source-location tracking (directives and overridden filename)
+  [\#319](https://github/ocaml-gospel/gospel/pull/319)
+- Set up location in parsing ghost specifications
+  [\#310](https://github/ocaml-gospel/gospel/pull/310)
+- Check that all patterns in a disjunction bind the same variables
+  [\#300](https://github/ocaml-gospel/gospel/pull/300)
+- Handle the special case of `MODULE_ALIASES` in `stdlib.mli` in the parser
+  [\#306](https://github/ocaml-gospel/gospel/pull/306)
+- Take recursivity into account when typing type declarations
+  [\#304](https://github/ocaml-gospel/gospel/pull/304)
+- Support pattern with cast
+  [\#301](https://github/ocaml-gospel/gospel/pull/301)
+- Use payload location for specification text
+  [\#299](https://github/ocaml-gospel/gospel/pull/299)
+- Support patterns of one-parameter constructors with a tuple argument
+  [\#297](https://github/ocaml-gospel/gospel/pull/297)
+- Use correct location for arity mismatches in type applications
+  [\#258](https://github/ocaml-gospel/gospel/pull/258)
+- Avoid uncaught exception when displaying a warning for builtins (using
+  `Location.none`)
+  [\#283](https://github.com/ocaml-gospel/gospel/pull/283)
+- Gospel preprocessor no longer detach documentation below a declaration
+  [\#281](https://github.com/ocaml-gospel/gospel/pull/281)
+- Fixed pattern match analysis in exceptional postconditions
+  [\#277](https://github/ocaml-gospel/gospel/pull/277)
 - Avoid uncaught exception when displaying a warning on a dummy
   position
   [\#262](https://github.com/ocaml-gospel/gospel/pull/262)
@@ -78,6 +128,8 @@
 
 ## Internals
 
+- Display the backtrace of an error when `$GOSPELDEBUG` is set
+  [\#295](https://github.com/ocaml-gospel/gospel/pull/295)
 - Fixed the order of exceptional postconditions in the AST.
   [\#200](https://github.com/ocaml-gospel/gospel/pull/200)
 - Refactored the error handling: Gospel now only raises a single `Gospel.Error`

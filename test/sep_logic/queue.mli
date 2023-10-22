@@ -1,7 +1,7 @@
 (*@ open Sequence *)
 
 type 'a t
-(*@ mutable model : 'a Sequence.t *)
+(*@ mutable model view : 'a Sequence.t *)
 
 (* 
    Type 'a t
@@ -49,6 +49,7 @@ val ph_eq : 'a -> 'a -> bool
     ensures b <-> x = y
  *)
 
+(*
 { R x Mx * R y My * [unowned R] } ph_eq x y {[x = y]}
 
 val ph_eq : 'a -> 'a -> bool
@@ -59,6 +60,6 @@ val ph_eq : 'a -> 'a -> bool
 
 { [is_loc x && is_loc y] } ph_eq x y {[x = y]}
 
-(* predicates over types, type classes *)
+ predicates over types, type classes *)
 (* increase clarity in spatial specs
    adressable vs unowned *)

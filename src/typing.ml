@@ -20,6 +20,20 @@ open Symbols
 
 (** Utils *)
 
+type whereami =
+  | Axiom
+  | Checks
+  | Consumes
+  | Ensures
+  | Function_or_predicate
+  | Invariant
+  | Modifies
+  | Raises
+  | Requires
+  | Variant
+  | Preserves
+  | Produces
+
 let pid_of_label = function
   | Lunit -> invalid_arg "pid_of_label Lunit"
   | Lnone p | Loptional p | Lnamed p | Lghost (p, _) -> p
@@ -86,15 +100,15 @@ let rec ty_of_core ns cty =
   | Ptyp_var s -> { ty_node = Tyvar (tv_of_string ~loc s) }
   | Ptyp_tuple ctl ->
       let tyl = List.map (ty_of_core ns) ctl in
-      ty_app (ts_tuple (List.length tyl)) tyl
+      ty_app ~loc (ts_tuple (List.length tyl)) tyl
   | Ptyp_constr (lid, ctl) ->
       let ts = find_ts ~loc:lid.loc ns (Longident.flatten_exn lid.txt) in
       let tyl = List.map (ty_of_core ns) ctl in
-      ty_app ts tyl
+      ty_app ~loc ts tyl
   | Ptyp_arrow (_, ct1, ct2) ->
       (* TODO check what to do with the arg_label *)
       let ty1, ty2 = ((ty_of_core ns) ct1, (ty_of_core ns) ct2) in
-      ty_app ts_arrow [ ty1; ty2 ]
+      ty_app ~loc ts_arrow [ ty1; ty2 ]
   | _ -> assert false
 
 (** Typing terms *)
@@ -148,8 +162,9 @@ let rec dpattern kid ns { pat_desc; pat_loc = loc } =
   let rec mk_papp ~loc cs dpl =
     let dtyl, dty = specialize_cs ~loc cs in
     match (dpl, cs.ls_args) with
-    (* allow pattern C (x,y) with type t = C of (int * int) *)
-    | _ :: _ :: _, [ { ty_node = Tyapp (ts, _) } ] when is_ts_tuple ts ->
+    (* allow pattern C (x,y) when the constructor C expects only one
+       argument, which can be a tuple (such as ('a * 'b) option) *)
+    | _ :: _ :: _, [ _ ] ->
         let n = List.length dpl in
         let p = mk_papp ~loc (fs_tuple n) dpl in
         mk_papp ~loc cs [ p ]
@@ -197,11 +212,16 @@ let rec dpattern kid ns { pat_desc; pat_loc = loc } =
       let dp1 = dpattern kid ns p1 in
       let dp2 = dpattern kid ns p2 in
       dpattern_unify dp1 dp2.dp_dty;
-      let join _ dty1 dty2 =
-        dty_unify ~loc:dp1.dp_loc dty1 dty2;
-        Some dty1
+      let join v dty1 dty2 =
+        match (dty1, dty2) with
+        | Some dty1, Some dty2 ->
+            dty_unify ~loc:dp1.dp_loc dty1 dty2;
+            Some dty1
+        | None, Some _ -> W.error ~loc:dp1.dp_loc (W.Unbound_variable v)
+        | Some _, None -> W.error ~loc:dp2.dp_loc (W.Unbound_variable v)
+        | None, None -> None
       in
-      let vars = Mstr.union join dp1.dp_vars dp2.dp_vars in
+      let vars = Mstr.merge join dp1.dp_vars dp2.dp_vars in
       mk_dpattern ~loc (DPor (dp1, dp2)) dp1.dp_dty vars
   | Pcast (p, pty) ->
       let dp = dpattern kid ns p in
@@ -241,10 +261,10 @@ let binop = function
   | Uast.Timplies -> Timplies
   | Uast.Tiff -> Tiff
 
-let rec dterm kid crcm ns denv { term_desc; term_loc = loc } : dterm =
+let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
   let mk_dterm ~loc dt_node dty = { dt_node; dt_dty = dty; dt_loc = loc } in
   let apply dt1 t2 =
-    let dt2 = dterm kid crcm ns denv t2 in
+    let dt2 = dterm whereami kid crcm ns denv t2 in
     let dty = dty_fresh () in
     unify dt1 (Some (Tapp (ts_arrow, [ dty_of_dterm dt2; dty ])));
     let dt_app = DTapp (fs_apply, [ dt1; dt2 ]) in
@@ -257,19 +277,43 @@ let rec dterm kid crcm ns denv { term_desc; term_loc = loc } : dterm =
     let dtl = app_unify_map ~loc ls (dterm_expected crcm) dtl dtyl in
     mk_dterm ~loc (DTapp (ls, dtl)) dty
   in
-  let rec gen_app ~loc ls tl =
-    let n = List.length ls.ls_args in
-    match tl with
-    | [ { term_desc = Ttuple tl; _ } ] when List.length tl = n && ls.ls_constr
-      ->
-        gen_app ~loc ls tl
-    | _ when List.length tl < n ->
-        W.error ~loc (W.Partial_application ls.ls_name.id_str)
-    | _ ->
-        let args, extra = split_at_i (List.length ls.ls_args) tl in
-        let dtl = List.map (dterm kid crcm ns denv) args in
-        let dt = mk_app ~loc ls dtl in
-        if extra = [] then dt else map_apply dt extra
+  let gen_app ~loc ls tl =
+    let nls = List.length ls.ls_args and ntl = List.length tl in
+    let args, extra = split_at_i nls tl in
+    let dtl = List.map (dterm whereami kid crcm ns denv) args in
+    let dtyl, dty = specialize_ls ls in
+    if ntl < nls then
+      let dtyl1, dtyl2 = split_at_i ntl dtyl in
+      let dtl = List.map2 (dterm_expected crcm) dtl dtyl1 in
+      let dty = Option.value ~default:dty_bool dty in
+      let dty =
+        List.fold_right
+          (fun t1 t2 -> Dterm.Tapp (ts_arrow, [ t1; t2 ]))
+          dtyl2 dty
+      in
+      mk_dterm ~loc (DTapp (ls, dtl)) (Some dty)
+    else
+      let dtl = List.map2 (dterm_expected crcm) dtl dtyl in
+      let dt = mk_dterm ~loc (DTapp (ls, dtl)) dty in
+      if extra = [] then dt else map_apply dt extra
+  in
+  let gen_app ~loc ls tl =
+    (* gen_app in two layers, to check that constructors are fully
+       applied (and with the usual syntax) without enforcing this on
+       functions *)
+    if ls.ls_constr then
+      let n = List.length ls.ls_args in
+      match tl with
+      | [ { term_desc = Ttuple tl; _ } ] when List.length tl = n ->
+          gen_app ~loc ls tl
+      | [ { term_desc = Ttuple tl; _ } ] when n > 1 ->
+          W.error ~loc (W.Bad_arity (ls.ls_name.id_str, n, List.length tl))
+      | _ when List.length tl < n ->
+          W.error ~loc (W.Partial_application ls.ls_name.id_str)
+      | _ :: _ :: _ when not (is_fs_tuple ls || ls_equal ls fs_list_cons) ->
+          W.error ~loc W.Syntax_error
+      | _ -> gen_app ~loc ls tl
+    else gen_app ~loc ls tl
   in
   let fun_app ~loc ls tl =
     if ls.ls_field then W.error ~loc (W.Field_application ls.ls_name.id_str);
@@ -290,7 +334,7 @@ let rec dterm kid crcm ns denv { term_desc; term_loc = loc } : dterm =
     | Uast.Tpreid q -> qualid_app q (t2 :: tl)
     | Uast.Tapply (t11, t12) -> unfold_app t11 t12 (t2 :: tl)
     | _ ->
-        let dt1 = dterm kid crcm ns denv t1 in
+        let dt1 = dterm whereami kid crcm ns denv t1 in
         map_apply dt1 (t2 :: tl)
   in
   match term_desc with
@@ -319,11 +363,7 @@ let rec dterm kid crcm ns denv { term_desc; term_loc = loc } : dterm =
       let ls = find_q_ls ns q in
       if ls.ls_field then
         W.error ~loc (W.Symbol_not_found (string_list_of_qualid q));
-      if ls.ls_args <> [] then
-        W.error ~loc (W.Partial_application ls.ls_name.id_str);
-      let _, dty = specialize_ls ls in
-      let node, dty = (DTapp (ls, []), dty) in
-      mk_dterm ~loc node dty
+      gen_app ~loc ls []
   | Uast.Tfield (t, q) ->
       let ls = find_q_fd ns q in
       if not ls.ls_field then
@@ -332,13 +372,13 @@ let rec dterm kid crcm ns denv { term_desc; term_loc = loc } : dterm =
   | Uast.Tidapp (q, tl) -> qualid_app q tl
   | Uast.Tapply (t1, t2) -> unfold_app t1 t2 []
   | Uast.Tnot t ->
-      let dt = dterm kid crcm ns denv t in
+      let dt = dterm whereami kid crcm ns denv t in
       dfmla_unify dt;
       mk_dterm ~loc (DTnot dt) dt.dt_dty
   | Uast.Tif (t1, t2, t3) ->
-      let dt1 = dterm kid crcm ns denv t1 in
-      let dt2 = dterm kid crcm ns denv t2 in
-      let dt3 = dterm kid crcm ns denv t3 in
+      let dt1 = dterm whereami kid crcm ns denv t1 in
+      let dt2 = dterm whereami kid crcm ns denv t2 in
+      let dt3 = dterm whereami kid crcm ns denv t3 in
       let dt1 = dfmla_expected crcm dt1 in
       let dty = max_dty crcm [ dt2; dt3 ] in
       let dt2 = dterm_expected_op crcm dt2 dty in
@@ -347,9 +387,9 @@ let rec dterm kid crcm ns denv { term_desc; term_loc = loc } : dterm =
   | Uast.Ttuple [] -> fun_app ~loc fs_unit []
   | Uast.Ttuple tl -> fun_app ~loc (fs_tuple (List.length tl)) tl
   | Uast.Tlet (pid, t1, t2) ->
-      let dt1 = dterm kid crcm ns denv t1 in
+      let dt1 = dterm whereami kid crcm ns denv t1 in
       let denv = denv_add_var denv pid.pid_str (dty_of_dterm dt1) in
-      let dt2 = dterm kid crcm ns denv t2 in
+      let dt2 = dterm whereami kid crcm ns denv t2 in
       mk_dterm ~loc (DTlet (pid, dt1, dt2)) dt2.dt_dty
   | Uast.Tinfix (t1, op1, t23) ->
       let apply de1 op de2 =
@@ -359,9 +399,10 @@ let rec dterm kid crcm ns denv { term_desc; term_loc = loc } : dterm =
         let ls = find_ls ~loc:op1.pid_loc ns [ symbol ] in
         let dtyl, dty = specialize_ls ls in
         (if ls_equal ls ps_equ then
-         let max = max_dty crcm [ de1; de2 ] in
-         try dty_unify ~loc (Option.value max ~default:dty_bool) (List.hd dtyl)
-         with Exit -> ());
+           let max = max_dty crcm [ de1; de2 ] in
+           try
+             dty_unify ~loc (Option.value max ~default:dty_bool) (List.hd dtyl)
+           with Exit -> ());
         let dtl =
           app_unify_map ~loc ls (dterm_expected crcm) [ de1; de2 ] dtyl
         in
@@ -372,7 +413,7 @@ let rec dterm kid crcm ns denv { term_desc; term_loc = loc } : dterm =
       let rec chain _ de1 op1 t23 =
         match t23 with
         | { term_desc = Uast.Tinfix (t2, op2, t3); term_loc = loc23 } ->
-            let de2 = dterm kid crcm ns denv t2 in
+            let de2 = dterm whereami kid crcm ns denv t2 in
             (* TODO: improve locations of subterms. See loc_cutoff function in why3 typing.ml *)
             (* let loc12 = loc_cutoff loc loc23 t2.term_loc in *)
             let de12 = apply de1 op1 de2 in
@@ -380,12 +421,12 @@ let rec dterm kid crcm ns denv { term_desc; term_loc = loc } : dterm =
             dfmla_unify de12;
             dfmla_unify de23;
             mk_dterm ~loc (DTbinop (Tand, de12, de23)) None
-        | _ -> apply de1 op1 (dterm kid crcm ns denv t23)
+        | _ -> apply de1 op1 (dterm whereami kid crcm ns denv t23)
       in
-      chain loc (dterm kid crcm ns denv t1) op1 t23
+      chain loc (dterm whereami kid crcm ns denv t1) op1 t23
   | Uast.Tbinop (t1, op, t2) ->
-      let dt1 = dterm kid crcm ns denv t1 in
-      let dt2 = dterm kid crcm ns denv t2 in
+      let dt1 = dterm whereami kid crcm ns denv t1 in
+      let dt2 = dterm whereami kid crcm ns denv t2 in
       dfmla_unify dt1;
       dfmla_unify dt2;
       mk_dterm ~loc (DTbinop (binop op, dt1, dt2)) None
@@ -395,7 +436,7 @@ let rec dterm kid crcm ns denv { term_desc; term_loc = loc } : dterm =
       in
       let vl = List.map (fun (pid, pty) -> (pid, get_dty pty)) vl in
       let denv = denv_add_var_quant denv vl in
-      let dt = dterm kid crcm ns denv t in
+      let dt = dterm whereami kid crcm ns denv t in
       let dty, q =
         match q with
         | Uast.Tforall ->
@@ -404,25 +445,46 @@ let rec dterm kid crcm ns denv { term_desc; term_loc = loc } : dterm =
         | Uast.Texists ->
             dfmla_unify dt;
             (None, Texists)
-        | Uast.Tlambda ->
-            let dty = Option.value dt.dt_dty ~default:dty_bool in
-            let apply (_, dty1) dty2 = Dterm.Tapp (ts_arrow, [ dty1; dty2 ]) in
-            (Some (List.fold_right apply vl dty), Tlambda)
       in
       mk_dterm ~loc (DTquant (q, vl, dt)) dty
+  | Uast.Tlambda (pl, t, pty) ->
+      let arg p =
+        let dty = dty_fresh () and dp = dpattern kid ns p in
+        dpattern_unify dp dty;
+        (dp, dty)
+      in
+      let args = List.map arg pl in
+      let choose_snd _ _ vs = Some vs in
+      let denv =
+        List.fold_left
+          (fun denv (dp, _) -> Mstr.union choose_snd denv dp.dp_vars)
+          denv args
+      in
+      let dt = dterm whereami kid crcm ns denv t in
+      let dt =
+        match pty with
+        | Some pty -> dterm_expected crcm dt (dty_of_pty ns pty)
+        | _ -> dt
+      in
+      let dt_dty = dty_of_dterm dt in
+      let dty =
+        let apply (_, dty1) dty2 = Dterm.Tapp (ts_arrow, [ dty1; dty2 ]) in
+        Some (List.fold_right apply args dt_dty)
+      in
+      mk_dterm ~loc (DTlambda (List.map fst args, dt)) dty
   | Uast.Tcase (t, ptl) ->
-      let dt = dterm kid crcm ns denv t in
+      let dt = dterm whereami kid crcm ns denv t in
       let dt_dty = dty_of_dterm dt in
       let branch (p, g, t) =
         let dp = dpattern kid ns p in
         dpattern_unify dp dt_dty;
         let choose_snd _ _ x = Some x in
         let denv = Mstr.union choose_snd denv dp.dp_vars in
-        let dt = dterm kid crcm ns denv t in
+        let dt = dterm whereami kid crcm ns denv t in
         let dg =
           match g with
           | None -> None
-          | Some g -> Some (dterm kid crcm ns denv g)
+          | Some g -> Some (dterm whereami kid crcm ns denv g)
         in
         (dp, dg, dt)
       in
@@ -440,22 +502,26 @@ let rec dterm kid crcm ns denv { term_desc; term_loc = loc } : dterm =
       in
       mk_dterm ~loc (DTcase (dt, pdtl)) dty
   | Uast.Tcast (t, pty) ->
-      let dt = dterm kid crcm ns denv t in
+      let dt = dterm whereami kid crcm ns denv t in
       let dty = dty_of_pty ns pty in
       dterm_expected crcm dt dty
   | Uast.Tscope (q, t) ->
       let ns = find_q_ns ns q in
-      dterm kid crcm ns denv t
+      dterm whereami kid crcm ns denv t
   | Uast.Tattr (at, t) ->
-      let dt = dterm kid crcm ns denv t in
+      let dt = dterm whereami kid crcm ns denv t in
       mk_dterm ~loc (DTattr (dt, [ at ])) dt.dt_dty
-  | Uast.Told t ->
-      let dt = dterm kid crcm ns denv t in
-      mk_dterm ~loc (DTold dt) dt.dt_dty
+  | Uast.Told t -> (
+      match whereami with
+      | Requires -> W.(error ~loc (Old_in_precond "requires"))
+      | Checks -> W.(error ~loc (Old_in_precond "checks"))
+      | _ ->
+          let dt = dterm whereami kid crcm ns denv t in
+          mk_dterm ~loc (DTold dt) dt.dt_dty)
   | Uast.Trecord qtl ->
       let cs, pjl, fll = parse_record ~loc kid ns qtl in
       let get_term pj =
-        try dterm kid crcm ns denv (Mls.find pj fll)
+        try dterm whereami kid crcm ns denv (Mls.find pj fll)
         with Not_found ->
           W.error ~loc (W.Unknown_record_field pj.ls_name.id_str)
       in
@@ -463,22 +529,22 @@ let rec dterm kid crcm ns denv { term_desc; term_loc = loc } : dterm =
   | Uast.Tupdate (t, qtl) ->
       let cs, pjl, fll = parse_record ~loc kid ns qtl in
       let get_term pj =
-        try dterm kid crcm ns denv (Mls.find pj fll)
+        try dterm whereami kid crcm ns denv (Mls.find pj fll)
         with Not_found -> fun_app ~loc:t.term_loc pj [ t ]
       in
       mk_app ~loc:t.term_loc cs (List.map get_term pjl)
 
-let dterm kid crcm ns env t =
+let dterm whereami kid crcm ns env t =
   let denv = Mstr.map (fun vs -> dty_of_ty vs.vs_ty) env in
-  dterm kid crcm ns denv t
+  dterm whereami kid crcm ns denv t
 
-let term_with_unify kid crcm ty ns env t =
-  let dt = dterm kid crcm ns env t in
+let term_with_unify whereami kid crcm ty ns env t =
+  let dt = dterm whereami kid crcm ns env t in
   dterm_unify dt (dty_of_ty ty);
   term env dt
 
-let fmla kid crcm ns env t =
-  let dt = dterm kid crcm ns env t in
+let fmla whereami kid crcm ns env t =
+  let dt = dterm whereami kid crcm ns env t in
   let tt = fmla env dt in
   { tt with t_loc = t.term_loc }
 
@@ -511,12 +577,14 @@ let process_type_spec kid crcm ns ty spec =
     | Some vs -> Mstr.singleton vs.vs_name.id_str vs
     | None -> Mstr.empty
   in
-  let invariants = List.map (fmla kid crcm ns env) (snd spec.ty_invariant) in
+  let invariants =
+    List.map (fmla Invariant kid crcm ns env) (snd spec.ty_invariant)
+  in
   type_spec spec.ty_ephemeral fields (self_vs, invariants) spec.ty_text
     spec.ty_loc
 
 (* TODO compare manifest with td_kind *)
-let type_type_declaration kid crcm ns tdl =
+let type_type_declaration kid crcm ns r tdl =
   let add_new tdm td =
     if Mstr.mem td.tname.txt tdm then
       W.error ~loc:td.tname.loc (W.Name_clash td.tname.txt)
@@ -543,11 +611,11 @@ let type_type_declaration kid crcm ns tdl =
         let tyl = List.map (parse_core alias tvl) ctl in
         let ts =
           match idl with
-          | [ s ] when Sstr.mem s alias ->
+          | [ s ] when r = Recursive && Sstr.mem s alias ->
               W.error ~loc (W.Cyclic_type_declaration s)
           | [ s ] when Hashtbl.mem hts s -> Hashtbl.find hts s
-          | [ s ] when Mstr.mem s tdm ->
-              visit ~alias s (Mstr.find s tdm);
+          | [ s ] when r = Recursive && Mstr.mem s tdm ->
+              visit ~alias:(Sstr.add s alias) s (Mstr.find s tdm);
               Hashtbl.find hts s
           | s -> find_ts ~loc:lid.loc ns s
         in
@@ -574,7 +642,10 @@ let type_type_declaration kid crcm ns tdl =
     in
 
     let manifest =
-      Option.map (parse_core (Sstr.add s alias) tvl) td.tmanifest
+      let alias =
+        match r with Nonrecursive -> alias | _ -> Sstr.add s alias
+      in
+      Option.map (parse_core alias tvl) td.tmanifest
     in
     let td_ts = mk_ts (Ident.create ~loc:td.tname.loc s) params manifest in
     Hashtbl.add hts s td_ts;
@@ -685,8 +756,9 @@ let type_type_declaration kid crcm ns tdl =
   tdl
 
 let process_sig_type ~loc ?(ghost = Nonghost) kid crcm ns r tdl =
-  let tdl = type_type_declaration kid crcm ns tdl in
-  let sig_desc = Sig_type (rec_flag r, tdl, ghost) in
+  let r = rec_flag r in
+  let tdl = type_type_declaration kid crcm ns r tdl in
+  let sig_desc = Sig_type (r, tdl, ghost) in
   mk_sig_item sig_desc loc
 
 (** Type val declarations *)
@@ -731,55 +803,74 @@ let process_val_spec kid crcm ns id args ret vs =
         (Mstr.update vs_str add env, la :: lal)
   in
 
-  let rec process_args args tyl env lal =
-    match (args, tyl) with
-    | [], [] -> (env, List.rev lal)
-    | [], _ ->
-        W.type_checking_error ~loc:header.sp_hd_nm.pid_loc "too few parameters"
-    | Uast.Lghost (pid, pty) :: args, _ ->
-        let ty = ty_of_pty ns pty in
-        let vs = create_vsymbol pid ty in
-        let env, lal = add_arg (Lghost vs) env lal in
-        process_args args tyl env lal
-    | Loptional pid :: args, (ty, Asttypes.Optional s) :: tyl ->
-        if not (String.equal pid.pid_str s) then
-          W.type_checking_error ~loc:pid.pid_loc
-            "parameter do not match with val type";
-        let ty = ty_app ts_option [ ty ] in
-        let vs = create_vsymbol pid ty in
-        let env, lal = add_arg (Loptional vs) env lal in
-        process_args args tyl env lal
-    | Lnamed pid :: args, (ty, Asttypes.Labelled s) :: tyl ->
-        if not (String.equal pid.pid_str s) then
-          W.type_checking_error ~loc:pid.pid_loc
-            "parameter do not match with val type";
-        let vs = create_vsymbol pid ty in
-        let env, lal = add_arg (Lnamed vs) env lal in
-        process_args args tyl env lal
-    | Lnone pid :: args, (ty, Asttypes.Nolabel) :: tyl ->
-        let vs = create_vsymbol pid ty in
-        let env, lal = add_arg (Lnone vs) env lal in
-        process_args args tyl env lal
-    | Lunit :: args, _ :: tyl -> process_args args tyl env (Lunit :: lal)
-    | la :: _, _ ->
-        W.type_checking_error ~loc:(pid_of_label la).pid_loc
-          "parameter do not match with val type"
+  let process_args where args tyl env lal =
+    let wh_msg =
+      match where with `Parameter -> "parameter" | `Return -> "returned value"
+    in
+    let mismatch_msg = wh_msg ^ " does not match with val type" in
+    let global_tyl = tyl in
+    let rec aux args tyl env lal =
+      match (args, tyl) with
+      | [], [] -> (env, List.rev lal)
+      | [], _ ->
+          let msg =
+            match (where, global_tyl) with
+            | `Return, _ :: _ :: _ ->
+                "too few returned values: when a function returns a tuple, the \
+                 gospel header should name each member of the tuple; so the \
+                 header of a function returning a pair might be \"x,y = ...\""
+            | `Return, _ -> "too few returned values"
+            | `Parameter, _ -> "too few parameters"
+          in
+          W.type_checking_error ~loc:header.sp_hd_nm.pid_loc msg
+      | Uast.Lghost (pid, pty) :: args, _ ->
+          let ty = ty_of_pty ns pty in
+          let vs = create_vsymbol pid ty in
+          let env, lal = add_arg (Lghost vs) env lal in
+          aux args tyl env lal
+      | Loptional pid :: args, (ty, Asttypes.Optional s) :: tyl ->
+          if not (String.equal pid.pid_str s) then
+            W.type_checking_error ~loc:pid.pid_loc mismatch_msg;
+          let ty = ty_app ts_option [ ty ] in
+          let vs = create_vsymbol pid ty in
+          let env, lal = add_arg (Loptional vs) env lal in
+          aux args tyl env lal
+      | Lnamed pid :: args, (ty, Asttypes.Labelled s) :: tyl ->
+          if not (String.equal pid.pid_str s) then
+            W.type_checking_error ~loc:pid.pid_loc mismatch_msg;
+          let vs = create_vsymbol pid ty in
+          let env, lal = add_arg (Lnamed vs) env lal in
+          aux args tyl env lal
+      | Lnone pid :: args, (ty, Asttypes.Nolabel) :: tyl ->
+          let vs = create_vsymbol pid ty in
+          let env, lal = add_arg (Lnone vs) env lal in
+          aux args tyl env lal
+      | Lunit :: args, _ :: tyl -> aux args tyl env (Lunit :: lal)
+      | _, [] ->
+          let msg = "too many " ^ wh_msg ^ "s" in
+          W.type_checking_error ~loc:header.sp_hd_nm.pid_loc msg
+      | la :: _, _ ->
+          W.type_checking_error ~loc:(pid_of_label la).pid_loc mismatch_msg
+    in
+    aux args tyl env lal
   in
 
-  let env, args = process_args header.sp_hd_args args Mstr.empty [] in
-
-  let pre = List.map (fmla kid crcm ns env) vs.sp_pre in
-  let checks = List.map (fmla kid crcm ns env) vs.sp_checks in
-  let type_spatial t =
-    let dt = dterm kid crcm ns env t.Uast.s_term in
+  let env, args =
+    process_args `Parameter header.sp_hd_args args Mstr.empty []
+  in
+  
+  let pre = List.map (fmla Requires kid crcm ns env) vs.sp_pre in
+  let checks = List.map (fmla Checks kid crcm ns env) vs.sp_checks in
+  let type_spatial whereami t =
+    let dt = dterm whereami kid crcm ns env t.Uast.s_term in
     let typed = term env dt in
     let ty = match typed.t_ty with |Some ty -> ty |_ -> assert false in
     let spatial_type = match t.Uast.s_type with |None -> ty |Some t -> ty_of_pty ns t in
     {s_term = typed; s_type = spatial_type} in
-  let wr =  List.map type_spatial vs.sp_writes in
-  let cs =  List.map type_spatial vs.sp_consumes in
-  let pres = List.map type_spatial vs.sp_preserves in
-  let prod = List.map type_spatial vs.sp_produces in 
+  let wr =  List.map (type_spatial Modifies) vs.sp_writes in
+  let cs =  List.map (type_spatial Consumes) vs.sp_consumes in
+  let pres = List.map (type_spatial Preserves) vs.sp_preserves in
+  let prod = List.map (type_spatial Produces) vs.sp_produces in 
   
   let wr, cs, pres, prod, eq_clauses =
     if desugar
@@ -804,7 +895,7 @@ let process_val_spec kid crcm ns id args ret vs =
           Tterm_helper.t_equ t old Location.none) pres in 
       [], cs, [], prod, pres_eq
     else wr, cs, pres, prod, [] in 
-  
+
   let process_xpost (loc, exn) =
     let merge_xpost t tl =
       match (t, tl) with
@@ -825,26 +916,44 @@ let process_val_spec kid crcm ns id args ret vs =
       | Some (p, t) ->
           let dp = dpattern kid ns p in
           let ty =
-            match (p.pat_desc, xs.xs_type) with
-            | (Pvar _ | Pwild), Exn_tuple [] ->
-                W.type_checking_error ~loc "exception pattern not expected"
-            | (Pvar _ | Pwild | Ptuple _), Exn_tuple [ ty ] -> ty
-            | (Pvar _ | Pwild), Exn_tuple (_ :: _ :: _) ->
-                W.type_checking_error ~loc
-                  "Exception pattern doesn't match its type"
-            | Ptuple _, Exn_tuple tyl -> ty_app (ts_tuple (List.length tyl)) tyl
-            | Prec _, Exn_record _ ->
-                (* TODO unify types and field names *)
-                W.error ~loc (W.Unsupported "Record type in exceptions")
-            | _, _ ->
-                W.type_checking_error ~loc
-                  "Exception pattern does not match its type"
+            let rec aux p xs =
+              match (p.pat_desc, xs.xs_type) with
+              | (Pvar _ | Pwild), Exn_tuple [] ->
+                  W.type_checking_error ~loc "Exception pattern not expected"
+              | ( ( Pvar _ | Pwild | Ptuple _ | Pconst _
+                  | Pinterval (_, _)
+                  | Ptrue | Pfalse ),
+                  Exn_tuple [ ty ] ) ->
+                  ty
+              | (Pvar _ | Pwild), Exn_tuple (_ :: _ :: _) ->
+                  W.type_checking_error ~loc
+                    "Exception pattern doesn't match its type"
+              | Ptuple _, Exn_tuple tyl ->
+                  ty_app (ts_tuple (List.length tyl)) tyl
+              | Pas (p, _), _ -> aux p xs
+              | Por (p0, p1), _ ->
+                  let ty0 = aux p0 xs and ty1 = aux p1 xs in
+                  if Ttypes.ty_equal ty0 ty1 then ty0
+                  else W.type_checking_error ~loc "Type mismatch"
+              | Prec _, Exn_record _ ->
+                  (* TODO unify types and field names *)
+                  W.error ~loc (W.Unsupported "Record type in exceptions")
+              | Pcast (_, _), _ ->
+                  (* This is not handled in Dterm.pattern *)
+                  W.error ~loc (W.Unsupported "Cast in exceptions")
+              | Papp (_, _), _ ->
+                  W.error ~loc (W.Unsupported "Qualified pattern in exceptions")
+              | _, _ ->
+                  W.type_checking_error ~loc
+                    "Exception pattern does not match its type"
+            in
+            aux p xs
           in
           dpattern_unify dp (dty_of_ty ty);
           let p, vars = pattern dp in
           let choose_snd _ _ vs = Some vs in
           let env = Mstr.union choose_snd env vars in
-          let t = fmla kid crcm ns env t in
+          let t = fmla Raises kid crcm ns env t in
           Mxs.update xs (merge_xpost (Some (p, t))) mxs
     in
     List.fold_left process Mxs.empty exn |> Mxs.bindings
@@ -858,10 +967,11 @@ let process_val_spec kid crcm ns id args ret vs =
     | [], _ -> (env, [])
     | _, Tyapp (ts, tyl) when (not (ts_equal ts ts_unit)) && is_ts_tuple ts ->
         let tyl = List.map (fun ty -> (ty, Asttypes.Nolabel)) tyl in
-        process_args header.sp_hd_ret tyl env []
-    | _, _ -> process_args header.sp_hd_ret [ (ret, Asttypes.Nolabel) ] env []
+        process_args `Return header.sp_hd_ret tyl env []
+    | _, _ ->
+        process_args `Return header.sp_hd_ret [ (ret, Asttypes.Nolabel) ] env []
   in
-  let post = (List.map (fmla kid crcm ns env) vs.sp_post) @ eq_clauses in
+  let post = List.map (fmla Ensures kid crcm ns env) vs.sp_post @ eq_clauses in
 
   if vs.sp_pure then (
     if vs.sp_diverge then
@@ -989,17 +1099,22 @@ let process_function kid crcm ns f =
 
   let def =
     match f_ty with
-    | None -> Option.map (fmla kid crcm ns env) f.fun_def
-    | Some ty -> Option.map (term_with_unify kid crcm ty ns env) f.fun_def
+    | None -> Option.map (fmla Function_or_predicate kid crcm ns env) f.fun_def
+    | Some ty ->
+        Option.map
+          (term_with_unify Function_or_predicate kid crcm ty ns env)
+          f.fun_def
   in
 
   let spec =
     Option.map
       (fun (spec : Uast.fun_spec) ->
-        let req = List.map (fmla kid crcm ns env) spec.fun_req in
-        let ens = List.map (fmla kid crcm ns env) spec.fun_ens in
+        let req = List.map (fmla Requires kid crcm ns env) spec.fun_req in
+        let ens = List.map (fmla Ensures kid crcm ns env) spec.fun_ens in
         let variant =
-          List.map (term_with_unify kid crcm ty_integer ns env) spec.fun_variant
+          List.map
+            (term_with_unify Variant kid crcm ty_integer ns env)
+            spec.fun_variant
         in
         mk_fun_spec req ens variant spec.fun_coer spec.fun_text spec.fun_loc)
       f.fun_spec
@@ -1011,7 +1126,7 @@ let process_function kid crcm ns f =
 
 let process_axiom loc kid crcm ns a =
   let id = Ident.of_preid a.Uast.ax_name in
-  let t = fmla kid crcm ns Mstr.empty a.Uast.ax_term in
+  let t = fmla Axiom kid crcm ns Mstr.empty a.Uast.ax_term in
   let ax = mk_axiom id t a.ax_loc a.ax_text in
   mk_sig_item (Sig_axiom ax) loc
 
@@ -1133,7 +1248,8 @@ and process_modtype penv muc umty =
         match c with
         | Wtype (li, tyd) ->
             let tdl =
-              type_type_declaration muc.muc_kid muc.muc_crcm ns_init [ tyd ]
+              type_type_declaration muc.muc_kid muc.muc_crcm ns_init
+                Nonrecursive [ tyd ]
             in
             let td = match tdl with [ td ] -> td | _ -> assert false in
 
@@ -1158,7 +1274,8 @@ and process_modtype penv muc umty =
             (muc, Wty (ts.ts_ident, td) :: cl)
         | Wtypesubst (li, tyd) ->
             let tdl =
-              type_type_declaration muc.muc_kid muc.muc_crcm ns_init [ tyd ]
+              type_type_declaration muc.muc_kid muc.muc_crcm ns_init
+                Nonrecursive [ tyd ]
             in
             let td = match tdl with [ td ] -> td | _ -> assert false in
             let ty =

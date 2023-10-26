@@ -107,7 +107,6 @@
 %token LEFTSQRIGHTSQ
 %token STAR TILDE UNDERSCORE
 %token WHEN
-%token AT
 
 (* priorities *)
 
@@ -210,8 +209,8 @@ ts_invariant:
 ;
 
 type_spec_model:
-| f_mutable=boption(MUTABLE) MODEL f_preid=lident_rich COLON f_pty=typ
-  { { f_preid; f_mutable; f_pty;
+| f_mutable=boption(MUTABLE) MODEL COLON f_pty=typ
+  { { f_mutable; f_pty;
       f_loc = mk_loc $loc } }
 ;
 

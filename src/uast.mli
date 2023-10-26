@@ -115,7 +115,6 @@ type val_spec = {
 
 type field = {
   f_loc : Location.t;
-  f_preid : Preid.t;
   f_pty : pty;
   f_mutable : bool;
 }

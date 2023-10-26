@@ -40,12 +40,13 @@ let list_keyword s fmt x =
 let type_spec f ts =
   let ephemeral f e = if e then pp f "ephemeral@\n" else () in
   let print_tspec _fmt ts =
-    pp f "@[<v>%a%a%a@]" ephemeral ts.ty_ephemeral (list_keyword "model ...")
-      ts.ty_field
+    pp f "@[<v>%a%s%a@]"
+      ephemeral ts.ty_ephemeral
+      (if ts.ty_field = None then "" else "model ...@\n")
       (list_keyword "invariant ...")
       (snd ts.ty_invariant)
   in
-  if ts.ty_ephemeral || ts.ty_field != [] || snd ts.ty_invariant != [] then
+  if ts.ty_ephemeral || ts.ty_field != None || snd ts.ty_invariant != [] then
     pp f "@[%a@]" (spec print_tspec) ts
   else ()
 

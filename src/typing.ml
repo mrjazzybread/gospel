@@ -561,14 +561,11 @@ let mutable_flag = function
   | Asttypes.Immutable -> Immutable
 
 let process_type_spec kid crcm ns ty spec =
-  let field (ns, fields) f =
+  let field f =
     let f_ty = ty_of_pty ns f.f_pty in
-    let ls = fsymbol ~field:true (Ident.of_preid f.f_preid) [ ty ] f_ty in
-    ( ns_add_fd ~allow_duplicate:true ns f.f_preid.pid_str ls,
-      (ls, f.f_mutable) :: fields )
+    f_ty, f.f_mutable
   in
-  let ns, fields = List.fold_left field (ns, []) spec.ty_field in
-  let fields = List.rev fields in
+  let fields = Option.map field spec.ty_field in  
   let self_vs =
     Option.map (fun x -> create_vsymbol x ty) (fst spec.ty_invariant)
   in

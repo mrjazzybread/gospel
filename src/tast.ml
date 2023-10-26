@@ -63,7 +63,7 @@ type val_description = {
 
 type type_spec = {
   ty_ephemeral : bool;  (** Ephemeral *)
-  ty_fields : (lsymbol * bool) list;  (** Models (field symbol * mutable) *)
+  ty_fields : (ty * bool) option;  (** Models (field symbol * mutable) *)
   ty_invariants : vsymbol option * term list;  (** Invariants *)
   ty_text : string;
   ty_loc : Location.t; [@printer Utils.Fmt.pp_loc]  (** Specification location *)

@@ -187,8 +187,8 @@ nonempty_func_spec:
 ;
 
 type_spec:
-| e=ts_ephemeral m=list(type_spec_model) i=ts_invariants EOF
-  { { ty_ephemeral = e || List.exists (fun f -> f.f_mutable) m;
+| e=ts_ephemeral m=option(type_spec_model) i=ts_invariants EOF
+  { { ty_ephemeral = e || Option.fold ~none:false ~some:(fun f -> f.f_mutable) m;
       ty_field = m;
       ty_invariant = i;
       ty_text = "";

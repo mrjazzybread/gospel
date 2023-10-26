@@ -241,25 +241,26 @@ and type_declaration t =
     List.iter (fun (x, _) ->
         let var = {tv_name = mk_ho_model x} in
         add x.tv_name.id_str {ty_node=Tyvar var}) t.td_params in 
+  let self_type = 
+    {ty_node = Tyapp({ts_ident=id;ts_alias=None;ts_args=[]},
+                     List.map (fun (x, _) -> {ty_node=Tyvar x}) t.td_params)} in 
   let pred_fields = 
     match t.td_spec with
     |Some s ->
-      let model_to_arg (sym, _) = 
-        let arg = sym.ls_name in
-        let ty = match sym.ls_value with |Some t -> t |None -> assert false in 
+      let model_to_arg model = 
+        let arg = Ident.create ~loc:Location.none "model" in
+        let ty = Option.map fst model in
+        let ty = Option.value ty ~default:self_type in
         let field = {vs_name = arg; vs_ty = get ty} in
         let () = add id.id_str ty in 
-        field in 
-      let pred_fields = List.map model_to_arg s.ty_fields in
+          field in
+      let pred_fields = model_to_arg s.ty_fields  in
       let tyvars = List.map (fun (x, _) -> tyvar_to_pred x) t.td_params in
-      (tyvars@pred_fields)
+      (tyvars@[pred_fields])
     |None -> [] in 
   let new_id = 
       Ident.create ~attrs:id.id_attrs  ~loc:id.id_loc (get_rep_pred id.id_str) in
   let ty_var_list = List.map fst t.td_params in 
-  let self_type = 
-    {ty_node = Tyapp({ts_ident=id;ts_alias=None;ts_args=[]},
-                     List.map (fun (x, _) -> {ty_node=Tyvar x}) t.td_params)} in 
   let model_type = 
     List.map (fun x -> x.vs_ty) pred_fields in 
   let pred_type = 

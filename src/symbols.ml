@@ -44,7 +44,8 @@ let ls_equal : lsymbol -> lsymbol -> bool = ( == )
 module LS = struct
   type t = lsymbol
 
-  let compare = Stdlib.compare
+  let compare = Stdlib.compare 
+  let e = Stdlib.compare
   let equal = ls_equal
   let hash = (Hashtbl.hash : lsymbol -> int)
 end

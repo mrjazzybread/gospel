@@ -47,20 +47,19 @@ let print_type_kind fmt = function
 let print_term = print_term ~print_type:true
 
 let print_type_spec fmt { ty_ephemeral; ty_fields; ty_invariants; _ } =
-  if (not ty_ephemeral) && ty_fields = [] && snd ty_invariants = [] then ()
+  if (not ty_ephemeral) && ty_fields = None && snd ty_invariants = [] then ()
   else
     let print_ephemeral f e = if e then pp f "@[ephemeral@]" in
     let print_term f t = pp f "@[%a@]" print_term t in
-    let print_field f (ls, mut) =
-      pp f "@[%s%a : %a@]"
+    let print_field f (ty, mut) = 
+      pp f "@[%s %a@]"
         (if mut then "mutable model " else "model ")
-        print_ls_nm ls print_ty
-        (Stdlib.Option.get ls.ls_value)
+        print_ty ty
     in
     let print_invariant_vs ppf = pf ppf "with %a" print_vs in
-    pp fmt "(*@@ @[%a%a%a%a@] *)" print_ephemeral ty_ephemeral
-      (list ~first:newline ~sep:newline print_field)
-      ty_fields
+    pp fmt "(*@@ @ [%a%a%a%a@] *)"
+      print_ephemeral ty_ephemeral
+      (option print_field) ty_fields
       (option print_invariant_vs)
       (fst ty_invariants)
       (list

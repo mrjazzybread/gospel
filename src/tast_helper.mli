@@ -9,7 +9,7 @@ val vs_of_lb_arg : lb_arg -> vsymbol
 
 val type_spec :
   bool ->
-  (lsymbol * bool) list ->
+  (ty * bool) option ->
   vsymbol option * term list ->
   string ->
   Location.t ->

@@ -63,7 +63,7 @@ type val_description = {
 
 type type_spec = {
   ty_ephemeral : bool;  (** Ephemeral *)
-  ty_fields : (lsymbol * bool) list;  (** Models (field symbol * mutable) *)
+  ty_fields : (ty * bool) option;  (** Models (field symbol * mutable) *)
   ty_invariants : vsymbol option * term list;  (** Invariants *)
   ty_text : string;
       (** String containing the original specificaion as written by the user *)

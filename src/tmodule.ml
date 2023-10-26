@@ -503,19 +503,7 @@ let add_sig_contents muc sig_ =
                 ~export:true muc cs.ls_name.id_str cs)
             muc csl
         in
-        let fields =
-          Option.fold ~none:[]
-            ~some:(fun spec -> List.map fst spec.ty_fields)
-            td.td_spec
-        in
-        let muc =
-          List.fold_left
-            (fun muc ls ->
-              (if ls.ls_field then add_fd else add_ls)
-                ~export:true muc ls.ls_name.id_str ls)
-            muc fields
-        in
-        let muc = match fields with |[ls] -> add_coer muc ls |_ -> muc in
+        
         add_kid muc td.td_ts.ts_ident sig_
       in
       List.fold_left add_td muc tdl

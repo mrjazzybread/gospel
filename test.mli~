@@ -1,7 +1,0 @@
-type t
-
-type x = t
-
-val f : x
-          (*@ x = f
-            ensures x = x *)

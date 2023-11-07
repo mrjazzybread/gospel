@@ -560,12 +560,12 @@ let mutable_flag = function
   | Asttypes.Mutable -> Mutable
   | Asttypes.Immutable -> Immutable
 
+let field ns f =
+  let f_ty = ty_of_pty ns f.f_pty in
+  f_ty, f.f_mutable
+
 let process_type_spec kid crcm ns ty spec =
-  let field f =
-    let f_ty = ty_of_pty ns f.f_pty in
-    f_ty, f.f_mutable
-  in
-  let fields = Option.map field spec.ty_field in  
+  let fields = Option.map (field ns) spec.ty_field in  
   let self_vs =
     Option.map (fun x -> create_vsymbol x ty) (fst spec.ty_invariant)
   in
@@ -642,7 +642,15 @@ let type_type_declaration kid crcm ns r tdl =
       let alias =
         match r with Nonrecursive -> alias | _ -> Sstr.add s alias
       in
-      Option.map (parse_core alias tvl) td.tmanifest
+      match td.tmanifest with
+      |Some m ->
+        let ty = parse_core alias tvl m in
+        begin match ty.ty_node with
+        |Tyapp(ts, _) -> if ts.ts_alias <> None then ts.ts_alias else Some ty
+        |_ -> assert false end
+      |None ->
+          let f = Option.bind td.tspec (fun ts -> ts.ty_field)  in
+          Option.map (fun field -> ty_of_pty ns field.f_pty) f 
     in
     let td_ts = mk_ts (Ident.create ~loc:td.tname.loc s) params manifest in
     Hashtbl.add hts s td_ts;

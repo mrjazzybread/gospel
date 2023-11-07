@@ -1,7 +1,7 @@
 (*@ open Sequence *)
 
-type 'a t
-(*@ mutable model : 'a Sequence.t *)
+type t
+(*@ mutable model : int Sequence.t *)
 
 (* 
    Type 'a t
@@ -11,21 +11,21 @@ type 'a t
    Predicate @R_t : ('a -> '@model_a -> Prop) -> 'a t -> 'a @model_t -> Prop 
  *)
 
-val push : 'a t -> 'a -> unit
+val push : t -> int -> unit
 (*@ push q x
     ensures q = cons x (old q)
     modifies q
     consumes x
 *)
 
-val pop : 'a t -> 'a
+val pop : t -> int
 (*@ x = pop q
     requires q <> empty
     ensures old q = q ++ (singleton x)
     modifies q
  *)
 
-val length : 'a t -> int
+val length : t -> int
 (*@ n = length q
     ensures n = length q
  *)

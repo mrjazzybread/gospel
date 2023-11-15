@@ -31,7 +31,7 @@ val length : t -> int
  *)
 
 
-(* predicate is_eq (A : Type) *)
+(* predicate is_eq (A : Type) 
 (* this predicate does not hold for unwoned mutable structures and functions*)
 
 val st_eq : 'a -> 'a -> bool
@@ -43,11 +43,6 @@ val st_eq : 'a -> 'a -> bool
 (* predicate unowned (A : Type) *)
 
 
-val ph_eq : 'a -> 'a -> bool
-(* b = st_eq x y
-    requires unowned 'a
-    ensures b <-> x = y
- *)
 
 (*
 { R x Mx * R y My * [unowned R] } ph_eq x y {[x = y]}
@@ -63,3 +58,4 @@ val ph_eq : 'a -> 'a -> bool
  predicates over types, type classes *)
 (* increase clarity in spatial specs
    adressable vs unowned *)
+ *)

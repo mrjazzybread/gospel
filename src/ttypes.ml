@@ -43,6 +43,9 @@ let tv_of_string =
 
 (** types *)
 
+(* Represents the representation predicate (spatial type) used to lift a type symbol to a logical type
+   If the type symbol represents an OCaml type, then this will be a function that receives a spatial type and returns a
+   logical type.*)
 type ty = { ty_node : ty_node } [@@deriving show]
 
 and ty_node = Tyvar of tvsymbol | Tyapp of tysymbol * ty list
@@ -54,7 +57,14 @@ and tysymbol = {
   (* we need to keep variables to do things like
      type ('a,'b) t1  type ('a,'b) t2 = ('b,'a) t1 *)
   ts_alias : ty option;
+  ts_rep : spatial;
 }
+[@@deriving show]
+
+and spatial =
+  |Self (* to be used when the OCaml type is a reflection of the logical type *)
+  |Spatial of {spatial : ty; ocaml_ty : ty} (* the spatial type used to obtain the model from the given OCaml type *)
+  |Model of ty (* the logical model of the type. Can be instantiated with a spatial type *)
 [@@deriving show]
 
 let ts_equal x y = Ident.equal x.ts_ident y.ts_ident
@@ -77,8 +87,13 @@ end
 module Mts = Map.Make (Ts)
 module Hts = Hashtbl.Make (Ts)
 
-let ts id args = { ts_ident = id; ts_args = args; ts_alias = None }
-let mk_ts id args alias = { ts_ident = id; ts_args = args; ts_alias = alias }
+let mk_ts ?(alias=None) ?(spatial=Self) id args =
+  { ts_ident = id;
+    ts_args = args;
+    ts_alias = alias;
+    ts_rep = spatial;
+  }
+
 let ts_ident ts = ts.ts_ident
 let ts_args ts = ts.ts_args
 let ts_alias ts = ts.ts_alias
@@ -98,6 +113,16 @@ let ty_app ?loc ts tyl =
     W.error ~loc
       (W.Bad_type_arity (ts.ts_ident.id_str, ts_arity ts, List.length tyl))
 
+let ty_apply_spatial ty spatial =
+  match ty.ty_node, spatial.ty_node with
+  |Tyvar v1, Tyvar v2 when tv_equal v1 v2 -> ty
+  |Tyapp(ts1, _), Tyapp(ts2, _) when ts_equal ts1 ts2 ->
+    begin match ts1.ts_rep with
+    |Self -> ty
+    |Model model -> model
+    |_ -> assert false end
+  |_ -> assert false (*TODO: replace with W.error *)
+
 let rec ty_full_inst ?loc m ty =
   match ty.ty_node with
   | Tyvar tv -> Mtv.find tv m
@@ -115,18 +140,18 @@ let ty_app ?loc ts tyl =
   | None -> ty_app ?loc ts tyl
   | Some ty -> ty_full_inst ?loc (ts_match_args ?loc ts tyl) ty
 
-let rec ts_subst_ts old_ts new_ts ({ ts_ident; ts_args; ts_alias } as ts) =
-  if ts_equal old_ts ts then new_ts
-  else
-    let ts_alias = Option.map (ty_subst_ts old_ts new_ts) ts_alias in
-    mk_ts ts_ident ts_args ts_alias
-
-and ty_subst_ts old_ts new_ts ty =
+let rec ty_subst_ts old_ts new_ts ty =
   match ty.ty_node with
   | Tyvar _ -> ty
   | Tyapp (ts, tyl) ->
       let ts = if ts_equal old_ts ts then new_ts else ts in
       ty_app ts (List.map (ty_subst_ts old_ts new_ts) tyl)
+
+let ts_subst_ts old_ts new_ts ({ ts_ident; ts_args; ts_alias; ts_rep } as ts) =
+  if ts_equal old_ts ts then new_ts
+  else
+    let ts_alias = Option.map (ty_subst_ts old_ts new_ts) ts_alias in
+    mk_ts ts_ident ts_args ~alias:ts_alias ~spatial:ts_rep
 
 let rec ty_subst_ty old_ts new_ts new_ty ty =
   match ty.ty_node with
@@ -138,10 +163,10 @@ let rec ty_subst_ty old_ts new_ts new_ty ty =
         let tyl = List.map subst tyl in
         ty_app ts tyl
 
-and ts_subst_ty old_ts new_ts new_ty ts =
+let ts_subst_ty old_ts new_ts new_ty ts =
   let subst ty = ty_subst_ty old_ts new_ts new_ty ty in
   let ts_alias = Option.map subst ts.ts_alias in
-  mk_ts ts.ts_ident ts.ts_args ts_alias
+  mk_ts ts.ts_ident ts.ts_args ~alias:ts_alias ~spatial:ts.ts_rep
 
 (** type matching *)
 
@@ -174,37 +199,37 @@ let ty_equal_check ty1 ty2 =
 
 (** Built-in symbols *)
 
-let ts_unit = ts (Ident.create ~loc:Location.none "unit") []
-let ts_integer = ts (Ident.create ~loc:Location.none "integer") []
-let ts_int = ts (Ident.create ~loc:Location.none "int") []
-let ts_char = ts (Ident.create ~loc:Location.none "char") []
-let ts_bytes = ts (Ident.create ~loc:Location.none "bytes") []
-let ts_string = ts (Ident.create ~loc:Location.none "string") []
-let ts_float = ts (Ident.create ~loc:Location.none "float") []
-let ts_bool = ts (Ident.create ~loc:Location.none "bool") []
-let ts_exn = ts (Ident.create ~loc:Location.none "exn") []
+let ts_unit = mk_ts (Ident.create ~loc:Location.none "unit") []
+let ts_integer = mk_ts (Ident.create ~loc:Location.none "integer") []
+let ts_int = mk_ts (Ident.create ~loc:Location.none "int") []
+let ts_char = mk_ts (Ident.create ~loc:Location.none "char") []
+let ts_bytes = mk_ts (Ident.create ~loc:Location.none "bytes") []
+let ts_string = mk_ts (Ident.create ~loc:Location.none "string") []
+let ts_float = mk_ts (Ident.create ~loc:Location.none "float") []
+let ts_bool = mk_ts (Ident.create ~loc:Location.none "bool") []
+let ts_exn = mk_ts (Ident.create ~loc:Location.none "exn") []
 
 let ts_array =
-  ts
+  mk_ts
     (Ident.create ~loc:Location.none "array")
     [ fresh_tv ~loc:Location.none "a" ]
 
 let ts_list =
-  ts
+  mk_ts
     (Ident.create ~loc:Location.none "list")
     [ fresh_tv ~loc:Location.none "a" ]
 
 let ts_option =
-  ts
+  mk_ts
     (Ident.create ~loc:Location.none "option")
     [ fresh_tv ~loc:Location.none "a" ]
 
-let ts_int32 = ts (Ident.create ~loc:Location.none "int32") []
-let ts_int64 = ts (Ident.create ~loc:Location.none "int64") []
-let ts_nativeint = ts (Ident.create ~loc:Location.none "nativeint") []
+let ts_int32 = mk_ts (Ident.create ~loc:Location.none "int32") []
+let ts_int64 = mk_ts (Ident.create ~loc:Location.none "int64") []
+let ts_nativeint = mk_ts (Ident.create ~loc:Location.none "nativeint") []
 
 let ts_format6 =
-  ts
+  mk_ts
     (Ident.create ~loc:Location.none "format6")
     [
       fresh_tv ~loc:Location.none "a";
@@ -216,7 +241,7 @@ let ts_format6 =
     ]
 
 let ts_lazy =
-  ts
+  mk_ts
     (Ident.create ~loc:Location.none "lazy")
     [ fresh_tv ~loc:Location.none "a" ]
 
@@ -231,7 +256,7 @@ let ts_tuple =
         List.init n (fun x ->
             fresh_tv ~loc:Location.none ("a" ^ string_of_int x))
       in
-      let ts = ts ts_id ts_args in
+      let ts = mk_ts ts_id ts_args in
       Hashtbl.add ts_tuples n ts;
       ts
 
@@ -239,7 +264,7 @@ let ts_arrow =
   let ta = fresh_tv ~loc:Location.none "a" in
   let tb = fresh_tv ~loc:Location.none "b" in
   let id = Ident.create ~loc:Location.none "->" in
-  ts id [ ta; tb ]
+  mk_ts id [ ta; tb ]
 
 let is_ts_tuple ts =
   let ts_tuple = ts_tuple (ts_arity ts) in

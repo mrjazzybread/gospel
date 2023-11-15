@@ -100,7 +100,9 @@ let rec ns_find get_map ns = function
   | [ x ] -> Mstr.find x (get_map ns)
   | x :: xs -> ns_find get_map (Mstr.find x ns.ns_ns) xs
 
-let ns_find_ts ns s = ns_find (fun ns -> ns.ns_ts) ns s
+let ns_find_ts ns s =
+  let t = ns_find (fun ns -> ns.ns_ts) ns s in 
+  let () = print_endline t.ts_ident.id_str in t
 let ns_find_ls ns s = ns_find (fun ns -> ns.ns_ls) ns s
 let ns_find_fd ns s = ns_find (fun ns -> ns.ns_fd) ns s
 let ns_find_xs ns s = ns_find (fun ns -> ns.ns_xs) ns s
@@ -162,7 +164,7 @@ let mk_td ts kind =
 
 let mk_abstract_td ts =
   mk_td
-    { Ttypes.ts_ident = ts.ts_ident; ts_args = []; ts_alias = None }
+    { Ttypes.ts_ident = ts.ts_ident; ts_args = []; ts_alias = None; ts_rep = Self }
     Tast.Pty_abstract
 
 let ns_with_primitives =
@@ -503,7 +505,6 @@ let add_sig_contents muc sig_ =
                 ~export:true muc cs.ls_name.id_str cs)
             muc csl
         in
-        
         add_kid muc td.td_ts.ts_ident sig_
       in
       List.fold_left add_td muc tdl

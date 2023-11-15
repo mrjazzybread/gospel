@@ -54,8 +54,8 @@ let rec q_loc = function Qpreid pid -> pid.pid_loc | Qdot (q, _) -> q_loc q
 let ns_find ~loc f ns sl =
   match sl with
   | s :: _ :: _ when not (ns_exists_ns ns s) ->
-      raise (Ns_not_found (loc, s))
-      (* this will be caught to try to find file s *)
+     raise (Ns_not_found (loc, s))
+  (* this will be caught to try to find file s *)
   | _ -> ( try f ns sl with Not_found -> W.error ~loc (W.Symbol_not_found sl))
 
 let find_ts ~loc = ns_find ~loc ns_find_ts
@@ -80,17 +80,17 @@ let find_q_ns = find_q find_ns
 (* specification types *)
 let rec ty_of_pty ns = function
   | PTtyvar { pid_str; pid_loc; _ } ->
-      { ty_node = Tyvar (tv_of_string ~loc:pid_loc pid_str) }
+     { ty_node = Tyvar (tv_of_string ~loc:pid_loc pid_str) }
   | PTtyapp (q, ptyl) ->
-      let ts = find_q_ts ns q in
-      ty_app ts (List.map (ty_of_pty ns) ptyl)
+     let ts = find_q_ts ns q in
+     ty_app ts (List.map (ty_of_pty ns) ptyl)
   | PTtuple ptyl ->
-      let tyl = List.map (ty_of_pty ns) ptyl in
-      let ts = ts_tuple (List.length tyl) in
-      ty_app ts tyl
+     let tyl = List.map (ty_of_pty ns) ptyl in
+     let ts = ts_tuple (List.length tyl) in
+     ty_app ts tyl
   | PTarrow (_, pty1, pty2) ->
-      let ty1, ty2 = (ty_of_pty ns pty1, ty_of_pty ns pty2) in
-      ty_app ts_arrow [ ty1; ty2 ]
+     let ty1, ty2 = (ty_of_pty ns pty1, ty_of_pty ns pty2) in
+     ty_app ts_arrow [ ty1; ty2 ]
 
 (* OCaml types *)
 let rec ty_of_core ns cty =
@@ -99,16 +99,16 @@ let rec ty_of_core ns cty =
   | Ptyp_any -> { ty_node = Tyvar (create_tv (Ident.create ~loc "_")) }
   | Ptyp_var s -> { ty_node = Tyvar (tv_of_string ~loc s) }
   | Ptyp_tuple ctl ->
-      let tyl = List.map (ty_of_core ns) ctl in
-      ty_app ~loc (ts_tuple (List.length tyl)) tyl
+     let tyl = List.map (ty_of_core ns) ctl in
+     ty_app ~loc (ts_tuple (List.length tyl)) tyl
   | Ptyp_constr (lid, ctl) ->
-      let ts = find_ts ~loc:lid.loc ns (Longident.flatten_exn lid.txt) in
-      let tyl = List.map (ty_of_core ns) ctl in
-      ty_app ~loc ts tyl
+     let ts = find_ts ~loc:lid.loc ns (Longident.flatten_exn lid.txt) in
+     let tyl = List.map (ty_of_core ns) ctl in
+     ty_app ~loc ts tyl
   | Ptyp_arrow (_, ct1, ct2) ->
-      (* TODO check what to do with the arg_label *)
-      let ty1, ty2 = ((ty_of_core ns) ct1, (ty_of_core ns) ct2) in
-      ty_app ~loc ts_arrow [ ty1; ty2 ]
+     (* TODO check what to do with the arg_label *)
+     let ty1, ty2 = ((ty_of_core ns) ct1, (ty_of_core ns) ct2) in
+     ty_app ~loc ts_arrow [ ty1; ty2 ]
   | _ -> assert false
 
 (** Typing terms *)
@@ -122,10 +122,10 @@ let dty_of_pty ns dty = dty_of_ty (ty_of_pty ns dty)
 let find_constructors kid ts =
   match (Mid.find ts.ts_ident kid).sig_desc with
   | Sig_type (_, tdl, _) -> (
-      match (List.find (fun td -> td.td_ts = ts) tdl).td_kind with
-      | Pty_record { rd_cs; rd_ldl } ->
-          (rd_cs, List.map (fun ld -> ld.ld_field) rd_ldl)
-      | _ -> assert false)
+    match (List.find (fun td -> td.td_ts = ts) tdl).td_kind with
+    | Pty_record { rd_cs; rd_ldl } ->
+       (rd_cs, List.map (fun ld -> ld.ld_field) rd_ldl)
+    | _ -> assert false)
   | _ -> assert false
 
 let parse_record ~loc kid ns fll =
@@ -165,93 +165,93 @@ let rec dpattern kid ns { pat_desc; pat_loc = loc } =
     (* allow pattern C (x,y) when the constructor C expects only one
        argument, which can be a tuple (such as ('a * 'b) option) *)
     | _ :: _ :: _, [ _ ] ->
-        let n = List.length dpl in
-        let p = mk_papp ~loc (fs_tuple n) dpl in
-        mk_papp ~loc cs [ p ]
+       let n = List.length dpl in
+       let p = mk_papp ~loc (fs_tuple n) dpl in
+       mk_papp ~loc cs [ p ]
     (* allow C _ with type t = C of int * int *)
     | [ { dp_node = DPwild; _ } ], _ :: _ :: _ ->
-        let dpl = List.map (mk_pwild loc) dtyl in
-        mk_papp ~loc cs dpl
+       let dpl = List.map (mk_pwild loc) dtyl in
+       mk_papp ~loc cs dpl
     | _ ->
-        app_unify ~loc cs dpattern_unify dpl dtyl;
-        let check_duplicate s _ _ = W.error ~loc (W.Duplicated_variable s) in
-        let vars =
-          List.fold_left
-            (fun acc dp -> Mstr.union check_duplicate acc dp.dp_vars)
-            Mstr.empty dpl
-        in
-        mk_dpattern ~loc (DPapp (cs, dpl)) dty vars
+       app_unify ~loc cs dpattern_unify dpl dtyl;
+       let check_duplicate s _ _ = W.error ~loc (W.Duplicated_variable s) in
+       let vars =
+         List.fold_left
+           (fun acc dp -> Mstr.union check_duplicate acc dp.dp_vars)
+           Mstr.empty dpl
+       in
+       mk_dpattern ~loc (DPapp (cs, dpl)) dty vars
   in
   match pat_desc with
   | Pwild ->
-      let dty = dty_fresh () in
-      mk_pwild loc dty
+     let dty = dty_fresh () in
+     mk_pwild loc dty
   | Pinterval (c1, c2) ->
-      mk_dpattern ~loc (DPinterval (c1, c2)) dty_char Mstr.empty
+     mk_dpattern ~loc (DPinterval (c1, c2)) dty_char Mstr.empty
   | Pvar pid ->
-      let dty = dty_fresh () in
-      let vars = Mstr.singleton pid.pid_str dty in
-      mk_dpattern ~loc (DPvar pid) dty vars
+     let dty = dty_fresh () in
+     let vars = Mstr.singleton pid.pid_str dty in
+     mk_dpattern ~loc (DPvar pid) dty vars
   | Ptrue -> mk_papp ~loc fs_bool_true []
   | Pfalse -> mk_papp ~loc fs_bool_false []
   | Papp (q, pl) ->
-      let cs = find_q_ls ns q in
-      let dpl = List.map (dpattern kid ns) pl in
-      mk_papp ~loc cs dpl
+     let cs = find_q_ls ns q in
+     let dpl = List.map (dpattern kid ns) pl in
+     mk_papp ~loc cs dpl
   | Ptuple pl ->
-      let cs = fs_tuple (List.length pl) in
-      let dpl = List.map (dpattern kid ns) pl in
-      mk_papp ~loc cs dpl
+     let cs = fs_tuple (List.length pl) in
+     let dpl = List.map (dpattern kid ns) pl in
+     mk_papp ~loc cs dpl
   | Pas (p, pid) ->
-      let dp = dpattern kid ns p in
-      if Mstr.mem pid.pid_str dp.dp_vars then
-        W.error ~loc:pid.pid_loc (W.Duplicated_variable pid.pid_str);
-      let vars = Mstr.add pid.pid_str dp.dp_dty dp.dp_vars in
-      mk_dpattern ~loc (DPas (dp, pid)) dp.dp_dty vars
+     let dp = dpattern kid ns p in
+     if Mstr.mem pid.pid_str dp.dp_vars then
+       W.error ~loc:pid.pid_loc (W.Duplicated_variable pid.pid_str);
+     let vars = Mstr.add pid.pid_str dp.dp_dty dp.dp_vars in
+     mk_dpattern ~loc (DPas (dp, pid)) dp.dp_dty vars
   | Por (p1, p2) ->
-      let dp1 = dpattern kid ns p1 in
-      let dp2 = dpattern kid ns p2 in
-      dpattern_unify dp1 dp2.dp_dty;
-      let join v dty1 dty2 =
-        match (dty1, dty2) with
-        | Some dty1, Some dty2 ->
-            dty_unify ~loc:dp1.dp_loc dty1 dty2;
-            Some dty1
-        | None, Some _ -> W.error ~loc:dp1.dp_loc (W.Unbound_variable v)
-        | Some _, None -> W.error ~loc:dp2.dp_loc (W.Unbound_variable v)
-        | None, None -> None
-      in
-      let vars = Mstr.merge join dp1.dp_vars dp2.dp_vars in
-      mk_dpattern ~loc (DPor (dp1, dp2)) dp1.dp_dty vars
+     let dp1 = dpattern kid ns p1 in
+     let dp2 = dpattern kid ns p2 in
+     dpattern_unify dp1 dp2.dp_dty;
+     let join v dty1 dty2 =
+       match (dty1, dty2) with
+       | Some dty1, Some dty2 ->
+          dty_unify ~loc:dp1.dp_loc dty1 dty2;
+          Some dty1
+       | None, Some _ -> W.error ~loc:dp1.dp_loc (W.Unbound_variable v)
+       | Some _, None -> W.error ~loc:dp2.dp_loc (W.Unbound_variable v)
+       | None, None -> None
+     in
+     let vars = Mstr.merge join dp1.dp_vars dp2.dp_vars in
+     mk_dpattern ~loc (DPor (dp1, dp2)) dp1.dp_dty vars
   | Pcast (p, pty) ->
-      let dp = dpattern kid ns p in
-      let dty = dty_of_pty ns pty in
-      dpattern_unify dp dty;
-      mk_dpattern ~loc (DPcast (dp, dty)) dty dp.dp_vars
+     let dp = dpattern kid ns p in
+     let dty = dty_of_pty ns pty in
+     dpattern_unify dp dty;
+     mk_dpattern ~loc (DPcast (dp, dty)) dty dp.dp_vars
   | Prec qpl ->
-      let cs, pjl, fll = parse_record ~loc kid ns qpl in
-      let get_pattern pj =
-        try dpattern kid ns (Mls.find pj fll)
-        with Not_found -> mk_pwild loc (dty_of_ty (Option.get pj.ls_value))
-      in
-      let dpl = List.map get_pattern pjl in
-      mk_papp ~loc cs dpl
+     let cs, pjl, fll = parse_record ~loc kid ns qpl in
+     let get_pattern pj =
+       try dpattern kid ns (Mls.find pj fll)
+       with Not_found -> mk_pwild loc (dty_of_ty (Option.get pj.ls_value))
+     in
+     let dpl = List.map get_pattern pjl in
+     mk_papp ~loc cs dpl
   | Pconst c ->
-      let dty =
-        match c with
-        | Pconst_integer (_, None) -> dty_integer
-        | Pconst_integer (s, (Some 'i' as c)) -> (
-            try
-              let (_ : int) = int_of_string s in
-              dty_int
-            with Failure _ -> W.error ~loc (W.Invalid_int_literal (s, c)))
-        | Pconst_integer (_, _) ->
-            (* This is forbidden at parsing*) assert false
-        | Pconst_char _ -> dty_char
-        | Pconst_string _ -> dty_string
-        | Pconst_float _ -> dty_float
-      in
-      mk_dpattern ~loc (DPconst c) dty Mstr.empty
+     let dty =
+       match c with
+       | Pconst_integer (_, None) -> dty_integer
+       | Pconst_integer (s, (Some 'i' as c)) -> (
+         try
+           let (_ : int) = int_of_string s in
+           dty_int
+         with Failure _ -> W.error ~loc (W.Invalid_int_literal (s, c)))
+       | Pconst_integer (_, _) ->
+          (* This is forbidden at parsing*) assert false
+       | Pconst_char _ -> dty_char
+       | Pconst_string _ -> dty_string
+       | Pconst_float _ -> dty_float
+     in
+     mk_dpattern ~loc (DPconst c) dty Mstr.empty
 
 let binop = function
   | Uast.Tand -> Tand
@@ -261,10 +261,10 @@ let binop = function
   | Uast.Timplies -> Timplies
   | Uast.Tiff -> Tiff
 
-let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
+let rec dterm whereami kid crcm ns denv old_denv { term_desc; term_loc = loc } : dterm =
   let mk_dterm ~loc dt_node dty = { dt_node; dt_dty = dty; dt_loc = loc } in
   let apply dt1 t2 =
-    let dt2 = dterm whereami kid crcm ns denv t2 in
+    let dt2 = dterm whereami kid crcm ns denv old_denv t2 in
     let dty = dty_fresh () in
     unify dt1 (Some (Tapp (ts_arrow, [ dty_of_dterm dt2; dty ])));
     let dt_app = DTapp (fs_apply, [ dt1; dt2 ]) in
@@ -280,7 +280,7 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
   let gen_app ~loc ls tl =
     let nls = List.length ls.ls_args and ntl = List.length tl in
     let args, extra = split_at_i nls tl in
-    let dtl = List.map (dterm whereami kid crcm ns denv) args in
+    let dtl = List.map (dterm whereami kid crcm ns denv old_denv) args in
     let dtyl, dty = specialize_ls ls in
     if ntl < nls then
       let dtyl1, dtyl2 = split_at_i ntl dtyl in
@@ -305,13 +305,13 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
       let n = List.length ls.ls_args in
       match tl with
       | [ { term_desc = Ttuple tl; _ } ] when List.length tl = n ->
-          gen_app ~loc ls tl
+         gen_app ~loc ls tl
       | [ { term_desc = Ttuple tl; _ } ] when n > 1 ->
-          W.error ~loc (W.Bad_arity (ls.ls_name.id_str, n, List.length tl))
+         W.error ~loc (W.Bad_arity (ls.ls_name.id_str, n, List.length tl))
       | _ when List.length tl < n ->
-          W.error ~loc (W.Partial_application ls.ls_name.id_str)
+         W.error ~loc (W.Partial_application ls.ls_name.id_str)
       | _ :: _ :: _ when not (is_fs_tuple ls || ls_equal ls fs_list_cons) ->
-          W.error ~loc W.Syntax_error
+         W.error ~loc W.Syntax_error
       | _ -> gen_app ~loc ls tl
     else gen_app ~loc ls tl
   in
@@ -322,11 +322,11 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
   let qualid_app q tl =
     match q with
     | Qpreid ({ pid_loc = loc; pid_str = s; _ } as pid) -> (
-        match denv_get_opt denv s with
-        | Some dty ->
-            let dtv = mk_dterm ~loc (DTvar pid) (Some dty) in
-            map_apply dtv tl
-        | None -> fun_app ~loc (find_q_ls ns q) tl)
+      match denv_get_opt denv s with
+      | Some dty ->
+         let dtv = mk_dterm ~loc (DTvar pid) (Some dty) in
+         map_apply dtv tl
+      | None -> fun_app ~loc (find_q_ls ns q) tl)
     | _ -> fun_app ~loc (find_q_ls ns q) tl
   in
   let rec unfold_app t1 t2 tl =
@@ -334,217 +334,218 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
     | Uast.Tpreid q -> qualid_app q (t2 :: tl)
     | Uast.Tapply (t11, t12) -> unfold_app t11 t12 (t2 :: tl)
     | _ ->
-        let dt1 = dterm whereami kid crcm ns denv t1 in
-        map_apply dt1 (t2 :: tl)
+       let dt1 = dterm whereami kid crcm ns denv old_denv t1 in
+       map_apply dt1 (t2 :: tl)
   in
   match term_desc with
   | Uast.Ttrue -> mk_dterm ~loc DTtrue (Some dty_bool)
   | Uast.Tfalse -> mk_dterm ~loc DTfalse (Some dty_bool)
   | Uast.Tconst c ->
-      let dty =
-        match c with
-        | Pconst_integer (_, None) -> dty_integer
-        | Pconst_integer (s, (Some 'i' as c)) -> (
-            try
-              let (_ : int) = int_of_string s in
-              dty_int
-            with Failure _ -> W.error ~loc (W.Invalid_int_literal (s, c)))
-        | Pconst_integer (_, _) -> assert false
-        | Pconst_char _ -> dty_char
-        | Pconst_string _ -> dty_string
-        | Pconst_float _ -> dty_float
-      in
-      mk_dterm ~loc (DTconst c) (Some dty)
+     let dty =
+       match c with
+       | Pconst_integer (_, None) -> dty_integer
+       | Pconst_integer (s, (Some 'i' as c)) -> (
+         try
+           let (_ : int) = int_of_string s in
+           dty_int
+         with Failure _ -> W.error ~loc (W.Invalid_int_literal (s, c)))
+       | Pconst_integer (_, _) -> assert false
+       | Pconst_char _ -> dty_char
+       | Pconst_string _ -> dty_string
+       | Pconst_float _ -> dty_float
+     in
+     mk_dterm ~loc (DTconst c) (Some dty)
   | Uast.Tpreid (Qpreid pid) when is_in_denv denv pid.pid_str ->
-      let dty = denv_find ~loc:pid.pid_loc pid.pid_str denv in
-      mk_dterm ~loc (DTvar pid) (Some dty)
+     let dty = denv_find ~loc:pid.pid_loc pid.pid_str denv in
+     mk_dterm ~loc (DTvar pid) (Some dty)
   | Uast.Tpreid q ->
-      (* in this case it must be a constant *)
-      let ls = find_q_ls ns q in
-      if ls.ls_field then
-        W.error ~loc (W.Symbol_not_found (string_list_of_qualid q));
-      gen_app ~loc ls []
+     (* in this case it must be a constant *)
+     let ls = find_q_ls ns q in
+     if ls.ls_field then
+       W.error ~loc (W.Symbol_not_found (string_list_of_qualid q));
+     gen_app ~loc ls []
   | Uast.Tfield (t, q) ->
-      let ls = find_q_fd ns q in
-      if not ls.ls_field then
-        W.error ~loc (W.Bad_record_field ls.ls_name.id_str);
-      gen_app ~loc ls [ t ]
+     let ls = find_q_fd ns q in
+     if not ls.ls_field then
+       W.error ~loc (W.Bad_record_field ls.ls_name.id_str);
+     gen_app ~loc ls [ t ]
   | Uast.Tidapp (q, tl) -> qualid_app q tl
   | Uast.Tapply (t1, t2) -> unfold_app t1 t2 []
   | Uast.Tnot t ->
-      let dt = dterm whereami kid crcm ns denv t in
-      dfmla_unify dt;
-      mk_dterm ~loc (DTnot dt) dt.dt_dty
+     let dt = dterm whereami kid crcm ns denv old_denv t in
+     dfmla_unify dt;
+     mk_dterm ~loc (DTnot dt) dt.dt_dty
   | Uast.Tif (t1, t2, t3) ->
-      let dt1 = dterm whereami kid crcm ns denv t1 in
-      let dt2 = dterm whereami kid crcm ns denv t2 in
-      let dt3 = dterm whereami kid crcm ns denv t3 in
-      let dt1 = dfmla_expected crcm dt1 in
-      let dty = max_dty crcm [ dt2; dt3 ] in
-      let dt2 = dterm_expected_op crcm dt2 dty in
-      let dt3 = dterm_expected_op crcm dt3 dty in
-      mk_dterm ~loc (DTif (dt1, dt2, dt3)) dt2.dt_dty
+     let dt1 = dterm whereami kid crcm ns denv old_denv t1 in
+     let dt2 = dterm whereami kid crcm ns denv old_denv t2 in
+     let dt3 = dterm whereami kid crcm ns denv old_denv t3 in
+     let dt1 = dfmla_expected crcm dt1 in
+     let dty = max_dty crcm [ dt2; dt3 ] in
+     let dt2 = dterm_expected_op crcm dt2 dty in
+     let dt3 = dterm_expected_op crcm dt3 dty in
+     mk_dterm ~loc (DTif (dt1, dt2, dt3)) dt2.dt_dty
   | Uast.Ttuple [] -> fun_app ~loc fs_unit []
   | Uast.Ttuple tl -> fun_app ~loc (fs_tuple (List.length tl)) tl
   | Uast.Tlet (pid, t1, t2) ->
-      let dt1 = dterm whereami kid crcm ns denv t1 in
-      let denv = denv_add_var denv pid.pid_str (dty_of_dterm dt1) in
-      let dt2 = dterm whereami kid crcm ns denv t2 in
-      mk_dterm ~loc (DTlet (pid, dt1, dt2)) dt2.dt_dty
+     let dt1 = dterm whereami kid crcm ns denv old_denv t1 in
+     let denv = denv_add_var denv pid.pid_str (dty_of_dterm dt1) in
+     let dt2 = dterm whereami kid crcm ns denv old_denv t2 in
+     mk_dterm ~loc (DTlet (pid, dt1, dt2)) dt2.dt_dty
   | Uast.Tinfix (t1, op1, t23) ->
-      let apply de1 op de2 =
-        let symbol =
-          if op.Preid.pid_str = neq.id_str then eq.id_str else op.pid_str
-        in
-        let ls = find_ls ~loc:op1.pid_loc ns [ symbol ] in
-        let dtyl, dty = specialize_ls ls in
-        (if ls_equal ls ps_equ then
-           let max = max_dty crcm [ de1; de2 ] in
-           try
-             dty_unify ~loc (Option.value max ~default:dty_bool) (List.hd dtyl)
-           with Exit -> ());
-        let dtl =
-          app_unify_map ~loc ls (dterm_expected crcm) [ de1; de2 ] dtyl
-        in
-        if op.pid_str = neq.id_str then
-          mk_dterm ~loc (DTnot (mk_dterm ~loc (DTapp (ls, dtl)) dty)) None
-        else mk_dterm ~loc (DTapp (ls, dtl)) dty
-      in
-      let rec chain _ de1 op1 t23 =
-        match t23 with
-        | { term_desc = Uast.Tinfix (t2, op2, t3); term_loc = loc23 } ->
-            let de2 = dterm whereami kid crcm ns denv t2 in
-            (* TODO: improve locations of subterms. See loc_cutoff function in why3 typing.ml *)
-            (* let loc12 = loc_cutoff loc loc23 t2.term_loc in *)
-            let de12 = apply de1 op1 de2 in
-            let de23 = chain loc23 de2 op2 t3 in
-            dfmla_unify de12;
-            dfmla_unify de23;
-            mk_dterm ~loc (DTbinop (Tand, de12, de23)) None
-        | _ -> apply de1 op1 (dterm whereami kid crcm ns denv t23)
-      in
-      chain loc (dterm whereami kid crcm ns denv t1) op1 t23
+     let apply de1 op de2 =
+       let symbol =
+         if op.Preid.pid_str = neq.id_str then eq.id_str else op.pid_str
+       in
+       let ls = find_ls ~loc:op1.pid_loc ns [ symbol ] in
+       let dtyl, dty = specialize_ls ls in
+       (if ls_equal ls ps_equ then
+          let max = max_dty crcm [ de1; de2 ] in
+          try
+            dty_unify ~loc (Option.value max ~default:dty_bool) (List.hd dtyl)
+          with Exit -> ());
+       let dtl =
+         app_unify_map ~loc ls (dterm_expected crcm) [ de1; de2 ] dtyl
+       in
+       if op.pid_str = neq.id_str then
+         mk_dterm ~loc (DTnot (mk_dterm ~loc (DTapp (ls, dtl)) dty)) None
+       else mk_dterm ~loc (DTapp (ls, dtl)) dty
+     in
+     let rec chain _ de1 op1 t23 =
+       match t23 with
+       | { term_desc = Uast.Tinfix (t2, op2, t3); term_loc = loc23 } ->
+          let de2 = dterm whereami kid crcm ns denv old_denv t2 in
+          (* TODO: improve locations of subterms. See loc_cutoff function in why3 typing.ml *)
+          (* let loc12 = loc_cutoff loc loc23 t2.term_loc in *)
+          let de12 = apply de1 op1 de2 in
+          let de23 = chain loc23 de2 op2 t3 in
+          dfmla_unify de12;
+          dfmla_unify de23;
+          mk_dterm ~loc (DTbinop (Tand, de12, de23)) None
+       | _ -> apply de1 op1 (dterm whereami kid crcm ns denv old_denv t23)
+     in
+     chain loc (dterm whereami kid crcm ns denv old_denv t1) op1 t23
   | Uast.Tbinop (t1, op, t2) ->
-      let dt1 = dterm whereami kid crcm ns denv t1 in
-      let dt2 = dterm whereami kid crcm ns denv t2 in
-      dfmla_unify dt1;
-      dfmla_unify dt2;
-      mk_dterm ~loc (DTbinop (binop op, dt1, dt2)) None
+     let dt1 = dterm whereami kid crcm ns denv old_denv t1 in
+     let dt2 = dterm whereami kid crcm ns denv old_denv t2 in
+     dfmla_unify dt1;
+     dfmla_unify dt2;
+     mk_dterm ~loc (DTbinop (binop op, dt1, dt2)) None
   | Uast.Tquant (q, vl, t) ->
-      let get_dty pty =
-        match pty with None -> dty_fresh () | Some pty -> dty_of_pty ns pty
-      in
-      let vl = List.map (fun (pid, pty) -> (pid, get_dty pty)) vl in
-      let denv = denv_add_var_quant denv vl in
-      let dt = dterm whereami kid crcm ns denv t in
-      let dty, q =
-        match q with
-        | Uast.Tforall ->
-            dfmla_unify dt;
-            (None, Tforall)
-        | Uast.Texists ->
-            dfmla_unify dt;
-            (None, Texists)
-      in
-      mk_dterm ~loc (DTquant (q, vl, dt)) dty
+     let get_dty pty =
+       match pty with None -> dty_fresh () | Some pty -> dty_of_pty ns pty
+     in
+     let vl = List.map (fun (pid, pty) -> (pid, get_dty pty)) vl in
+     let denv = denv_add_var_quant denv vl in
+     let dt = dterm whereami kid crcm ns denv old_denv t in
+     let dty, q =
+       match q with
+       | Uast.Tforall ->
+          dfmla_unify dt;
+          (None, Tforall)
+       | Uast.Texists ->
+          dfmla_unify dt;
+          (None, Texists)
+     in
+     mk_dterm ~loc (DTquant (q, vl, dt)) dty
   | Uast.Tlambda (pl, t, pty) ->
-      let arg p =
-        let dty = dty_fresh () and dp = dpattern kid ns p in
-        dpattern_unify dp dty;
-        (dp, dty)
-      in
-      let args = List.map arg pl in
-      let choose_snd _ _ vs = Some vs in
-      let denv =
-        List.fold_left
-          (fun denv (dp, _) -> Mstr.union choose_snd denv dp.dp_vars)
-          denv args
-      in
-      let dt = dterm whereami kid crcm ns denv t in
-      let dt =
-        match pty with
-        | Some pty -> dterm_expected crcm dt (dty_of_pty ns pty)
-        | _ -> dt
-      in
-      let dt_dty = dty_of_dterm dt in
-      let dty =
-        let apply (_, dty1) dty2 = Dterm.Tapp (ts_arrow, [ dty1; dty2 ]) in
-        Some (List.fold_right apply args dt_dty)
-      in
-      mk_dterm ~loc (DTlambda (List.map fst args, dt)) dty
+     let arg p =
+       let dty = dty_fresh () and dp = dpattern kid ns p in
+       dpattern_unify dp dty;
+       (dp, dty)
+     in
+     let args = List.map arg pl in
+     let choose_snd _ _ vs = Some vs in
+     let denv =
+       List.fold_left
+         (fun denv (dp, _) -> Mstr.union choose_snd denv dp.dp_vars)
+         denv args
+     in
+     let dt = dterm whereami kid crcm ns denv old_denv t in
+     let dt =
+       match pty with
+       | Some pty -> dterm_expected crcm dt (dty_of_pty ns pty)
+       | _ -> dt
+     in
+     let dt_dty = dty_of_dterm dt in
+     let dty =
+       let apply (_, dty1) dty2 = Dterm.Tapp (ts_arrow, [ dty1; dty2 ]) in
+       Some (List.fold_right apply args dt_dty)
+     in
+     mk_dterm ~loc (DTlambda (List.map fst args, dt)) dty
   | Uast.Tcase (t, ptl) ->
-      let dt = dterm whereami kid crcm ns denv t in
-      let dt_dty = dty_of_dterm dt in
-      let branch (p, g, t) =
-        let dp = dpattern kid ns p in
-        dpattern_unify dp dt_dty;
-        let choose_snd _ _ x = Some x in
-        let denv = Mstr.union choose_snd denv dp.dp_vars in
-        let dt = dterm whereami kid crcm ns denv t in
-        let dg =
-          match g with
-          | None -> None
-          | Some g -> Some (dterm whereami kid crcm ns denv g)
-        in
-        (dp, dg, dt)
-      in
-      let pdtl = List.map branch ptl in
-      let dty = max_dty crcm (List.map (fun (_p, _g, t) -> t) pdtl) in
-      let pdtl =
-        List.map
-          (fun (pat, guard, dt) ->
-            ( pat,
-              (match guard with
+     let dt = dterm whereami kid crcm ns denv old_denv t in
+     let dt_dty = dty_of_dterm dt in
+     let branch (p, g, t) =
+       let dp = dpattern kid ns p in
+       dpattern_unify dp dt_dty;
+       let choose_snd _ _ x = Some x in
+       let denv = Mstr.union choose_snd denv dp.dp_vars in
+       let dt = dterm whereami kid crcm ns denv old_denv t in
+       let dg =
+         match g with
+         | None -> None
+         | Some g -> Some (dterm whereami kid crcm ns denv old_denv g)
+       in
+       (dp, dg, dt)
+     in
+     let pdtl = List.map branch ptl in
+     let dty = max_dty crcm (List.map (fun (_p, _g, t) -> t) pdtl) in
+     let pdtl =
+       List.map
+         (fun (pat, guard, dt) ->
+           ( pat,
+             (match guard with
               | None -> None
               | Some g -> Some (dfmla_expected crcm g)),
-              dterm_expected_op crcm dt dty ))
-          pdtl
-      in
-      mk_dterm ~loc (DTcase (dt, pdtl)) dty
+             dterm_expected_op crcm dt dty ))
+         pdtl
+     in
+     mk_dterm ~loc (DTcase (dt, pdtl)) dty
   | Uast.Tcast (t, pty) ->
-      let dt = dterm whereami kid crcm ns denv t in
-      let dty = dty_of_pty ns pty in
-      dterm_expected crcm dt dty
+     let dt = dterm whereami kid crcm ns denv old_denv t in
+     let dty = dty_of_pty ns pty in
+     dterm_expected crcm dt dty
   | Uast.Tscope (q, t) ->
-      let ns = find_q_ns ns q in
-      dterm whereami kid crcm ns denv t
+     let ns = find_q_ns ns q in
+     dterm whereami kid crcm ns denv old_denv t
   | Uast.Tattr (at, t) ->
-      let dt = dterm whereami kid crcm ns denv t in
-      mk_dterm ~loc (DTattr (dt, [ at ])) dt.dt_dty
+     let dt = dterm whereami kid crcm ns denv old_denv t in
+     mk_dterm ~loc (DTattr (dt, [ at ])) dt.dt_dty
   | Uast.Told t -> (
-      match whereami with
-      | Requires -> W.(error ~loc (Old_in_precond "requires"))
-      | Checks -> W.(error ~loc (Old_in_precond "checks"))
-      | _ ->
-          let dt = dterm whereami kid crcm ns denv t in
-          mk_dterm ~loc (DTold dt) dt.dt_dty)
+    match whereami with
+    | Requires -> W.(error ~loc (Old_in_precond "requires"))
+    | Checks -> W.(error ~loc (Old_in_precond "checks"))
+    | _ ->
+       let dt = dterm whereami kid crcm ns old_denv old_denv t in
+       mk_dterm ~loc (DTold dt) dt.dt_dty)
   | Uast.Trecord qtl ->
-      let cs, pjl, fll = parse_record ~loc kid ns qtl in
-      let get_term pj =
-        try dterm whereami kid crcm ns denv (Mls.find pj fll)
-        with Not_found ->
-          W.error ~loc (W.Unknown_record_field pj.ls_name.id_str)
-      in
-      mk_app ~loc cs (List.map get_term pjl)
+     let cs, pjl, fll = parse_record ~loc kid ns qtl in
+     let get_term pj =
+       try dterm whereami kid crcm ns denv old_denv (Mls.find pj fll)
+       with Not_found ->
+         W.error ~loc (W.Unknown_record_field pj.ls_name.id_str)
+     in
+     mk_app ~loc cs (List.map get_term pjl)
   | Uast.Tupdate (t, qtl) ->
-      let cs, pjl, fll = parse_record ~loc kid ns qtl in
-      let get_term pj =
-        try dterm whereami kid crcm ns denv (Mls.find pj fll)
-        with Not_found -> fun_app ~loc:t.term_loc pj [ t ]
-      in
-      mk_app ~loc:t.term_loc cs (List.map get_term pjl)
+     let cs, pjl, fll = parse_record ~loc kid ns qtl in
+     let get_term pj =
+       try dterm whereami kid crcm ns denv old_denv (Mls.find pj fll)
+       with Not_found -> fun_app ~loc:t.term_loc pj [ t ]
+     in
+     mk_app ~loc:t.term_loc cs (List.map get_term pjl)
 
-let dterm whereami kid crcm ns env t =
+let dterm whereami kid crcm ns env old_env t =
   let denv = Mstr.map (fun vs -> dty_of_ty vs.vs_ty) env in
-  dterm whereami kid crcm ns denv t
+  let old_denv =  Mstr.map (fun vs -> dty_of_ty vs.vs_ty) old_env in 
+  dterm whereami kid crcm ns denv old_denv t
 
-let term_with_unify whereami kid crcm ty ns env t =
-  let dt = dterm whereami kid crcm ns env t in
+let term_with_unify whereami kid crcm ty ns env old_env t =
+  let dt = dterm whereami kid crcm ns env old_env t in
   dterm_unify dt (dty_of_ty ty);
   term env dt
 
-let fmla whereami kid crcm ns env t =
-  let dt = dterm whereami kid crcm ns env t in
+let fmla whereami kid crcm ns env old_denv t =
+  let dt = dterm whereami kid crcm ns env old_denv t in
   let tt = fmla env dt in
   { tt with t_loc = t.term_loc }
 
@@ -575,7 +576,7 @@ let process_type_spec kid crcm ns ty spec =
     | None -> Mstr.empty
   in
   let invariants =
-    List.map (fmla Invariant kid crcm ns env) (snd spec.ty_invariant)
+    List.map (fmla Invariant kid crcm ns env env) (snd spec.ty_invariant)
   in
   type_spec spec.ty_ephemeral fields (self_vs, invariants) spec.ty_text
     spec.ty_loc
@@ -595,31 +596,31 @@ let type_type_declaration kid crcm ns r tdl =
     match core.ptyp_desc with
     | Ptyp_any -> W.error ~loc (W.Unsupported "_ type parameters")
     | Ptyp_var s -> (
-        try { ty_node = Tyvar (Mstr.find s tvl) }
-        with Not_found -> W.error ~loc:core.ptyp_loc (W.Unbound_variable s))
+      try { ty_node = Tyvar (Mstr.find s tvl) }
+      with Not_found -> W.error ~loc:core.ptyp_loc (W.Unbound_variable s))
     | Ptyp_arrow (_lbl, ct1, ct2) ->
-        let ty1, ty2 = (parse_core alias tvl ct1, parse_core alias tvl ct2) in
-        ty_app ts_arrow [ ty1; ty2 ]
+       let ty1, ty2 = (parse_core alias tvl ct1, parse_core alias tvl ct2) in
+       ty_app ts_arrow [ ty1; ty2 ]
     | Ptyp_tuple ctl ->
-        let tyl = List.map (parse_core alias tvl) ctl in
-        ty_app (ts_tuple (List.length tyl)) tyl
+       let tyl = List.map (parse_core alias tvl) ctl in
+       ty_app (ts_tuple (List.length tyl)) tyl
     | Ptyp_constr (lid, ctl) ->
-        let idl = Longident.flatten_exn lid.txt in
-        let tyl = List.map (parse_core alias tvl) ctl in
-        let ts =
-          match idl with
-          | [ s ] when r = Recursive && Sstr.mem s alias ->
-              W.error ~loc (W.Cyclic_type_declaration s)
-          | [ s ] when Hashtbl.mem hts s -> Hashtbl.find hts s
-          | [ s ] when r = Recursive && Mstr.mem s tdm ->
-              visit ~alias:(Sstr.add s alias) s (Mstr.find s tdm);
-              Hashtbl.find hts s
-          | s -> find_ts ~loc:lid.loc ns s
-        in
-        if List.length tyl <> ts_arity ts then
-          W.error ~loc
-            (W.Bad_type_arity (ts.ts_ident.id_str, ts_arity ts, List.length tyl));
-        ty_app ts tyl
+       let idl = Longident.flatten_exn lid.txt in
+       let tyl = List.map (parse_core alias tvl) ctl in
+       let ts =
+         match idl with
+         | [ s ] when r = Recursive && Sstr.mem s alias ->
+            W.error ~loc (W.Cyclic_type_declaration s)
+         | [ s ] when Hashtbl.mem hts s -> Hashtbl.find hts s
+         | [ s ] when r = Recursive && Mstr.mem s tdm ->
+            visit ~alias:(Sstr.add s alias) s (Mstr.find s tdm);
+            Hashtbl.find hts s
+         | s -> find_ts ~loc:lid.loc ns s
+       in
+       if List.length tyl <> ts_arity ts then
+         W.error ~loc
+           (W.Bad_type_arity (ts.ts_ident.id_str, ts_arity ts, List.length tyl));
+       ty_app ts tyl
     | _ -> assert false
   (* TODO what to do with other cases? *)
   and visit ~alias s td =
@@ -627,11 +628,11 @@ let type_type_declaration kid crcm ns r tdl =
       let loc = ct.ptyp_loc in
       match ct.ptyp_desc with
       | Ptyp_var s ->
-          let tv = tv_of_string ~loc s in
-          (Mstr.add s tv tvl, tv :: params, vi :: vs)
+         let tv = tv_of_string ~loc s in
+         (Mstr.add s tv tvl, tv :: params, vi :: vs)
       | Ptyp_any -> W.error ~loc (W.Unsupported "_ type parameters")
       | _ -> assert false
-      (* should not happen -- see parser optional_type_variable *)
+                    (* should not happen -- see parser optional_type_variable *)
     in
 
     let tvl, params, variance_list =
@@ -642,17 +643,14 @@ let type_type_declaration kid crcm ns r tdl =
       let alias =
         match r with Nonrecursive -> alias | _ -> Sstr.add s alias
       in
-      match td.tmanifest with
-      |Some m ->
-        let ty = parse_core alias tvl m in
-        begin match ty.ty_node with
-        |Tyapp(ts, _) -> if ts.ts_alias <> None then ts.ts_alias else Some ty
-        |_ -> assert false end
-      |None ->
-          let f = Option.bind td.tspec (fun ts -> ts.ty_field)  in
-          Option.map (fun field -> ty_of_pty ns field.f_pty) f 
+      Option.map (parse_core alias tvl) td.tmanifest
     in
-    let td_ts = mk_ts (Ident.create ~loc:td.tname.loc s) params manifest in
+    let td_model = Option.bind td.tspec
+                       (fun spec -> Option.map (fun f -> fst(field ns f)) spec.ty_field) in  
+
+    let spatial = Option.fold ~some:(fun t -> Model t) ~none:Self td_model in 
+    let td_ts = mk_ts (Ident.create ~loc:td.tname.loc s)
+                  params ~alias:manifest ~spatial in
     Hashtbl.add hts s td_ts;
 
     let process_record ty alias ldl =
@@ -681,26 +679,26 @@ let type_type_declaration kid crcm ns r tdl =
       let cd_cs, cd_ld, ns =
         match cd.pcd_args with
         | Pcstr_tuple ctl ->
-            let tyl = List.map (parse_core alias tvl) ctl in
-            let ls = fsymbol ~constr:true ~field:false cs_id tyl ty_res in
-            (ls, [], ns_add_ls ~allow_duplicate:true ns cs_id.id_str ls)
+           let tyl = List.map (parse_core alias tvl) ctl in
+           let ls = fsymbol ~constr:true ~field:false cs_id tyl ty_res in
+           (ls, [], ns_add_ls ~allow_duplicate:true ns cs_id.id_str ls)
         | Pcstr_record ldl ->
-            let add ld (ldl, tyl, ns) =
-              let id = Ident.create ~loc:ld.pld_loc ld.pld_name.txt in
-              let ty = parse_core alias tvl ld.pld_type in
-              let mut = mutable_flag ld.pld_mutable in
-              let field = fsymbol ~constr:false ~field:true id [ ty_res ] ty in
-              let ld =
-                label_declaration (id, ty) mut ld.pld_loc ld.pld_attributes
-              in
-              ( ld :: ldl,
-                ty :: tyl,
-                ns_add_fd ~allow_duplicate:true ns id.id_str field )
-            in
-            let ldl, tyl, ns = List.fold_right add ldl ([], [], ns) in
-            let cs = fsymbol ~constr:true ~field:false cs_id tyl ty_res in
-            let ns = ns_add_ls ~allow_duplicate:true ns cs_id.id_str cs in
-            (cs, ldl, ns)
+           let add ld (ldl, tyl, ns) =
+             let id = Ident.create ~loc:ld.pld_loc ld.pld_name.txt in
+             let ty = parse_core alias tvl ld.pld_type in
+             let mut = mutable_flag ld.pld_mutable in
+             let field = fsymbol ~constr:false ~field:true id [ ty_res ] ty in
+             let ld =
+               label_declaration (id, ty) mut ld.pld_loc ld.pld_attributes
+             in
+             ( ld :: ldl,
+               ty :: tyl,
+               ns_add_fd ~allow_duplicate:true ns id.id_str field )
+           in
+           let ldl, tyl, ns = List.fold_right add ldl ([], [], ns) in
+           let cs = fsymbol ~constr:true ~field:false cs_id tyl ty_res in
+           let ns = ns_add_ls ~allow_duplicate:true ns cs_id.id_str cs in
+           (cs, ldl, ns)
       in
       (constructor_decl cd_cs cd_ld cd.pcd_loc cd.pcd_attributes :: acc, ns)
     in
@@ -711,26 +709,26 @@ let type_type_declaration kid crcm ns r tdl =
       match td.tkind with
       | Ptype_abstract -> (Pty_abstract, ns)
       | Ptype_variant cdl
-        when List.exists (fun cd -> Option.is_some cd.pcd_res) cdl ->
-          (* GADT *)
-          (* TODO: Add a warning here *)
-          (Pty_abstract, ns)
+           when List.exists (fun cd -> Option.is_some cd.pcd_res) cdl ->
+         (* GADT *)
+         (* TODO: Add a warning here *)
+         (Pty_abstract, ns)
       | Ptype_variant cdl ->
-          let v, ns = List.fold_right (process_variant ty alias) cdl ([], ns) in
-          (Pty_variant v, ns)
+         let v, ns = List.fold_right (process_variant ty alias) cdl ([], ns) in
+         (Pty_variant v, ns)
       | Ptype_record ldl ->
-          let record, ns = process_record ty alias ldl in
-          (Pty_record record, ns)
+         let record, ns = process_record ty alias ldl in
+         (Pty_record record, ns)
       | Ptype_open -> assert false
     in
 
     (* invariants are only allowed on abstract/private types *)
     (match ((td.tkind, td.tmanifest), td.tspec) with
-    | ( ((Ptype_variant _ | Ptype_record _), _ | _, Some _),
-        Some { ty_invariant = _, _ :: _; _ } )
-      when td.tprivate = Public ->
+     | ( ((Ptype_variant _ | Ptype_record _), _ | _, Some _),
+         Some { ty_invariant = _, _ :: _; _ } )
+          when td.tprivate = Public ->
         W.error ~loc:td.tloc (W.Public_type_invariant td_ts.ts_ident.id_str)
-    | _, _ -> ());
+     | _, _ -> ());
 
     let params = List.combine params variance_list in
 
@@ -771,15 +769,15 @@ let process_sig_type ~loc ?(ghost = Nonghost) kid crcm ns r tdl =
 let rec val_parse_core_type ns cty =
   match cty.ptyp_desc with
   | Ptyp_arrow (lbl, ct1, ct2) ->
-      let args, res = val_parse_core_type ns ct2 in
-      ((ty_of_core ns ct1, lbl) :: args, res)
+     let args, res = val_parse_core_type ns ct2 in
+     ((ty_of_core ns ct1, lbl) :: args, res)
   | _ -> ([], ty_of_core ns cty)
 
 (* Checks the following
    1 - the val id string is equal to the name in val header
    2 - no duplicated names in arguments and arguments in header
    match core type
-*)
+ *)
 let process_val_spec kid crcm ns id args ret vs =
   let header = Option.get vs.sp_header in
   let loc = header.sp_hd_nm.pid_loc in
@@ -798,14 +796,14 @@ let process_val_spec kid crcm ns id args ret vs =
     match la with
     | Lunit -> (env, la :: lal)
     | _ ->
-        let vs = vs_of_lb_arg la in
-        let vs_str = vs.vs_name.id_str in
-        let add = function
-          | None -> Some vs
-          | Some _ ->
-              W.error ~loc:vs.vs_name.id_loc (W.Duplicated_variable vs_str)
-        in
-        (Mstr.update vs_str add env, la :: lal)
+       let vs = vs_of_lb_arg la in
+       let vs_str = vs.vs_name.id_str in
+       let add = function
+         | None -> Some vs
+         | Some _ ->
+            W.error ~loc:vs.vs_name.id_loc (W.Duplicated_variable vs_str)
+       in
+       (Mstr.update vs_str add env, la :: lal)
   in
 
   let process_args where args tyl env lal =
@@ -818,44 +816,44 @@ let process_val_spec kid crcm ns id args ret vs =
       match (args, tyl) with
       | [], [] -> (env, List.rev lal)
       | [], _ ->
-          let msg =
-            match (where, global_tyl) with
-            | `Return, _ :: _ :: _ ->
-                "too few returned values: when a function returns a tuple, the \
-                 gospel header should name each member of the tuple; so the \
-                 header of a function returning a pair might be \"x,y = ...\""
-            | `Return, _ -> "too few returned values"
-            | `Parameter, _ -> "too few parameters"
-          in
-          W.type_checking_error ~loc:header.sp_hd_nm.pid_loc msg
+         let msg =
+           match (where, global_tyl) with
+           | `Return, _ :: _ :: _ ->
+              "too few returned values: when a function returns a tuple, the \
+               gospel header should name each member of the tuple; so the \
+               header of a function returning a pair might be \"x,y = ...\""
+           | `Return, _ -> "too few returned values"
+           | `Parameter, _ -> "too few parameters"
+         in
+         W.type_checking_error ~loc:header.sp_hd_nm.pid_loc msg
       | Uast.Lghost (pid, pty) :: args, _ ->
-          let ty = ty_of_pty ns pty in
-          let vs = create_vsymbol pid ty in
-          let env, lal = add_arg (Lghost vs) env lal in
-          aux args tyl env lal
+         let ty = ty_of_pty ns pty in
+         let vs = create_vsymbol pid ty in
+         let env, lal = add_arg (Lghost vs) env lal in
+         aux args tyl env lal
       | Loptional pid :: args, (ty, Asttypes.Optional s) :: tyl ->
-          if not (String.equal pid.pid_str s) then
-            W.type_checking_error ~loc:pid.pid_loc mismatch_msg;
-          let ty = ty_app ts_option [ ty ] in
-          let vs = create_vsymbol pid ty in
-          let env, lal = add_arg (Loptional vs) env lal in
-          aux args tyl env lal
+         if not (String.equal pid.pid_str s) then
+           W.type_checking_error ~loc:pid.pid_loc mismatch_msg;
+         let ty = ty_app ts_option [ ty ] in
+         let vs = create_vsymbol pid ty in
+         let env, lal = add_arg (Loptional vs) env lal in
+         aux args tyl env lal
       | Lnamed pid :: args, (ty, Asttypes.Labelled s) :: tyl ->
-          if not (String.equal pid.pid_str s) then
-            W.type_checking_error ~loc:pid.pid_loc mismatch_msg;
-          let vs = create_vsymbol pid ty in
-          let env, lal = add_arg (Lnamed vs) env lal in
-          aux args tyl env lal
+         if not (String.equal pid.pid_str s) then
+           W.type_checking_error ~loc:pid.pid_loc mismatch_msg;
+         let vs = create_vsymbol pid ty in
+         let env, lal = add_arg (Lnamed vs) env lal in
+         aux args tyl env lal
       | Lnone pid :: args, (ty, Asttypes.Nolabel) :: tyl ->
-          let vs = create_vsymbol pid ty in
-          let env, lal = add_arg (Lnone vs) env lal in
-          aux args tyl env lal
+         let vs = create_vsymbol pid ty in
+         let env, lal = add_arg (Lnone vs) env lal in
+         aux args tyl env lal
       | Lunit :: args, _ :: tyl -> aux args tyl env (Lunit :: lal)
       | _, [] ->
-          let msg = "too many " ^ wh_msg ^ "s" in
-          W.type_checking_error ~loc:header.sp_hd_nm.pid_loc msg
+         let msg = "too many " ^ wh_msg ^ "s" in
+         W.type_checking_error ~loc:header.sp_hd_nm.pid_loc msg
       | la :: _, _ ->
-          W.type_checking_error ~loc:(pid_of_label la).pid_loc mismatch_msg
+         W.type_checking_error ~loc:(pid_of_label la).pid_loc mismatch_msg
     in
     aux args tyl env lal
   in
@@ -864,10 +862,11 @@ let process_val_spec kid crcm ns id args ret vs =
     process_args `Parameter header.sp_hd_args args Mstr.empty []
   in
 
-  let pre = List.map (fmla Requires kid crcm ns env) vs.sp_pre in
-  let checks = List.map (fmla Checks kid crcm ns env) vs.sp_checks in
+  let old_denv = assert false in 
+  
+  let checks = List.map (fmla Checks kid crcm ns env old_denv) vs.sp_checks in
   let type_spatial whereami t =
-    let dt = dterm whereami kid crcm ns env t.Uast.s_term in
+    let dt = dterm whereami kid crcm ns env old_denv t.Uast.s_term in
     let typed = term env dt in
     let ty = match typed.t_ty with |Some ty -> ty |_ -> assert false in
     let spatial_type = match t.Uast.s_type with |None -> ty |Some t -> ty_of_pty ns t in
@@ -880,7 +879,7 @@ let process_val_spec kid crcm ns id args ret vs =
   let wr, cs, pres, prod, eq_clauses =
     if desugar
     then
-      let vsymbol arg = match arg with |Lghost x |Lnone x|Loptional x|Lnamed x -> Some x |Lunit -> None in 
+      let vsymbol arg = match arg with |Lghost x |Lnone x|Loptional x|Lnamed x -> Some x |Lunit -> None in
       let args = List.filter_map vsymbol args in
       let equal_arg arg t = match t.s_term.t_node with
         |Tvar v -> v.vs_name.id_str = arg.vs_name.id_str
@@ -895,11 +894,13 @@ let process_val_spec kid crcm ns id args ret vs =
       let cs, prod = cs@pres@wr, prod@pres@wr in
       let pres_eq =
         List.map (fun spatial ->
-          let t = spatial.s_term in
-          let old = Tterm_helper.mk_term (Told t) t.t_ty Location.none in 
-          Tterm_helper.t_equ t old Location.none) pres in 
+            let t = spatial.s_term in
+            let old = Tterm_helper.mk_term (Told t) t.t_ty Location.none in 
+            Tterm_helper.t_equ t old Location.none) pres in 
       [], cs, [], prod, pres_eq
-    else wr, cs, pres, prod, [] in 
+    else wr, cs, pres, prod, [] in
+  
+  let pre = List.map (fmla Requires kid crcm ns env old_denv) vs.sp_pre in
   
   let process_xpost (loc, exn) =
     let merge_xpost t tl =
@@ -913,53 +914,53 @@ let process_val_spec kid crcm ns id args ret vs =
       let xs = find_q_xs ns q in
       match pt with
       | None -> (
-          match xs.xs_type with
-          | Exn_tuple [] -> Mxs.update xs (merge_xpost None) mxs
-          | _ ->
-              W.type_checking_error ~loc
-                "Exception pattern does not match its type")
+        match xs.xs_type with
+        | Exn_tuple [] -> Mxs.update xs (merge_xpost None) mxs
+        | _ ->
+           W.type_checking_error ~loc
+             "Exception pattern does not match its type")
       | Some (p, t) ->
-          let dp = dpattern kid ns p in
-          let ty =
-            let rec aux p xs =
-              match (p.pat_desc, xs.xs_type) with
-              | (Pvar _ | Pwild), Exn_tuple [] ->
-                  W.type_checking_error ~loc "Exception pattern not expected"
-              | ( ( Pvar _ | Pwild | Ptuple _ | Pconst _
-                  | Pinterval (_, _)
-                  | Ptrue | Pfalse ),
-                  Exn_tuple [ ty ] ) ->
-                  ty
-              | (Pvar _ | Pwild), Exn_tuple (_ :: _ :: _) ->
-                  W.type_checking_error ~loc
-                    "Exception pattern doesn't match its type"
-              | Ptuple _, Exn_tuple tyl ->
-                  ty_app (ts_tuple (List.length tyl)) tyl
-              | Pas (p, _), _ -> aux p xs
-              | Por (p0, p1), _ ->
-                  let ty0 = aux p0 xs and ty1 = aux p1 xs in
-                  if Ttypes.ty_equal ty0 ty1 then ty0
-                  else W.type_checking_error ~loc "Type mismatch"
-              | Prec _, Exn_record _ ->
-                  (* TODO unify types and field names *)
-                  W.error ~loc (W.Unsupported "Record type in exceptions")
-              | Pcast (_, _), _ ->
-                  (* This is not handled in Dterm.pattern *)
-                  W.error ~loc (W.Unsupported "Cast in exceptions")
-              | Papp (_, _), _ ->
-                  W.error ~loc (W.Unsupported "Qualified pattern in exceptions")
-              | _, _ ->
-                  W.type_checking_error ~loc
-                    "Exception pattern does not match its type"
-            in
-            aux p xs
-          in
-          dpattern_unify dp (dty_of_ty ty);
-          let p, vars = pattern dp in
-          let choose_snd _ _ vs = Some vs in
-          let env = Mstr.union choose_snd env vars in
-          let t = fmla Raises kid crcm ns env t in
-          Mxs.update xs (merge_xpost (Some (p, t))) mxs
+         let dp = dpattern kid ns p in
+         let ty =
+           let rec aux p xs =
+             match (p.pat_desc, xs.xs_type) with
+             | (Pvar _ | Pwild), Exn_tuple [] ->
+                W.type_checking_error ~loc "Exception pattern not expected"
+             | ( ( Pvar _ | Pwild | Ptuple _ | Pconst _
+                   | Pinterval (_, _)
+                   | Ptrue | Pfalse ),
+                 Exn_tuple [ ty ] ) ->
+                ty
+             | (Pvar _ | Pwild), Exn_tuple (_ :: _ :: _) ->
+                W.type_checking_error ~loc
+                  "Exception pattern doesn't match its type"
+             | Ptuple _, Exn_tuple tyl ->
+                ty_app (ts_tuple (List.length tyl)) tyl
+             | Pas (p, _), _ -> aux p xs
+             | Por (p0, p1), _ ->
+                let ty0 = aux p0 xs and ty1 = aux p1 xs in
+                if Ttypes.ty_equal ty0 ty1 then ty0
+                else W.type_checking_error ~loc "Type mismatch"
+             | Prec _, Exn_record _ ->
+                (* TODO unify types and field names *)
+                W.error ~loc (W.Unsupported "Record type in exceptions")
+             | Pcast (_, _), _ ->
+                (* This is not handled in Dterm.pattern *)
+                W.error ~loc (W.Unsupported "Cast in exceptions")
+             | Papp (_, _), _ ->
+                W.error ~loc (W.Unsupported "Qualified pattern in exceptions")
+             | _, _ ->
+                W.type_checking_error ~loc
+                  "Exception pattern does not match its type"
+           in
+           aux p xs
+         in
+         dpattern_unify dp (dty_of_ty ty);
+         let p, vars = pattern dp in
+         let choose_snd _ _ vs = Some vs in
+         let env = Mstr.union choose_snd env vars in
+         let t = fmla Raises kid crcm ns env old_denv t in
+         Mxs.update xs (merge_xpost (Some (p, t))) mxs
     in
     List.fold_left process Mxs.empty exn |> Mxs.bindings
   in
@@ -971,12 +972,12 @@ let process_val_spec kid crcm ns id args ret vs =
     match (header.sp_hd_ret, ret.ty_node) with
     | [], _ -> (env, [])
     | _, Tyapp (ts, tyl) when (not (ts_equal ts ts_unit)) && is_ts_tuple ts ->
-        let tyl = List.map (fun ty -> (ty, Asttypes.Nolabel)) tyl in
-        process_args `Return header.sp_hd_ret tyl env []
+       let tyl = List.map (fun ty -> (ty, Asttypes.Nolabel)) tyl in
+       process_args `Return header.sp_hd_ret tyl env []
     | _, _ ->
-        process_args `Return header.sp_hd_ret [ (ret, Asttypes.Nolabel) ] env []
+       process_args `Return header.sp_hd_ret [ (ret, Asttypes.Nolabel) ] env []
   in
-  let post = List.map (fmla Ensures kid crcm ns env) vs.sp_post @ eq_clauses in
+  let post = List.map (fmla Ensures kid crcm ns env old_denv) vs.sp_post @ eq_clauses in
 
   if vs.sp_pure then (
     if vs.sp_diverge then
@@ -1020,28 +1021,28 @@ let process_val ~loc ?(ghost = Nonghost) kid crcm ns vd =
   let spec =
     match vd.vspec with
     | None | Some { sp_header = None; _ } -> (
-        let id = Preid.create ~loc:vd.vloc vd.vname.txt in
-        let rets =
-          match ret with
-          | { ty_node = Tyapp (ts, _) } when is_ts_tuple ts ->
-              let arity = ts_arity ts in
-              List.init arity (fun i ->
-                  Uast.Lnone (Preid.create ~loc:vd.vloc (Fmt.str "result%d" i)))
-          | _ ->
-              [
-                Uast.Lnone
-                  (if args = [] then id else Preid.create ~loc:vd.vloc "result");
-              ]
-        in
-        let args = List.mapi mk_dummy_var args in
-        match vd.vspec with
-        | None -> empty_spec id rets args
-        | Some s ->
-            {
-              s with
-              sp_header =
-                Some { sp_hd_nm = id; sp_hd_ret = rets; sp_hd_args = args };
-            })
+      let id = Preid.create ~loc:vd.vloc vd.vname.txt in
+      let rets =
+        match ret with
+        | { ty_node = Tyapp (ts, _) } when is_ts_tuple ts ->
+           let arity = ts_arity ts in
+           List.init arity (fun i ->
+               Uast.Lnone (Preid.create ~loc:vd.vloc (Fmt.str "result%d" i)))
+        | _ ->
+           [
+             Uast.Lnone
+               (if args = [] then id else Preid.create ~loc:vd.vloc "result");
+           ]
+      in
+      let args = List.mapi mk_dummy_var args in
+      match vd.vspec with
+      | None -> empty_spec id rets args
+      | Some s ->
+         {
+           s with
+           sp_header =
+             Some { sp_hd_nm = id; sp_hd_ret = rets; sp_hd_args = args };
+    })
     | Some s -> s
   in
   let spec = process_val_spec kid crcm ns id args ret spec in
@@ -1052,8 +1053,8 @@ let process_val ~loc ?(ghost = Nonghost) kid crcm ns vd =
       match so with
       | None -> ()
       | Some sp ->
-          if sp.sp_wr = [] && sp.sp_cs = [] then
-            W.error ~loc (W.Return_unit_without_modifies id.id_str)
+         if sp.sp_wr = [] && sp.sp_cs = [] then
+           W.error ~loc (W.Return_unit_without_modifies id.id_str)
   in
   let vd =
     mk_val_description id vd.vtype vd.vprim vd.vattributes spec.sp_args
@@ -1098,27 +1099,27 @@ let process_function kid crcm ns f =
     match f_ty with
     | None -> (env, None)
     | Some ty ->
-        let result = create_vsymbol (Preid.create ~loc:f.fun_loc "result") ty in
-        (Mstr.add "result" result env, Some result)
+       let result = create_vsymbol (Preid.create ~loc:f.fun_loc "result") ty in
+       (Mstr.add "result" result env, Some result)
   in
 
   let def =
     match f_ty with
-    | None -> Option.map (fmla Function_or_predicate kid crcm ns env) f.fun_def
+    | None -> Option.map (fmla Function_or_predicate kid crcm ns env env) f.fun_def
     | Some ty ->
-        Option.map
-          (term_with_unify Function_or_predicate kid crcm ty ns env)
-          f.fun_def
+       Option.map
+         (term_with_unify Function_or_predicate kid crcm ty ns env env)
+         f.fun_def
   in
 
   let spec =
     Option.map
       (fun (spec : Uast.fun_spec) ->
-        let req = List.map (fmla Requires kid crcm ns env) spec.fun_req in
-        let ens = List.map (fmla Ensures kid crcm ns env) spec.fun_ens in
+        let req = List.map (fmla Requires kid crcm ns env env) spec.fun_req in
+        let ens = List.map (fmla Ensures kid crcm ns env env) spec.fun_ens in
         let variant =
           List.map
-            (term_with_unify Variant kid crcm ty_integer ns env)
+            (term_with_unify Variant kid crcm ty_integer ns env env)
             spec.fun_variant
         in
         mk_fun_spec req ens variant spec.fun_coer spec.fun_text spec.fun_loc)
@@ -1131,7 +1132,7 @@ let process_function kid crcm ns f =
 
 let process_axiom loc kid crcm ns a =
   let id = Ident.of_preid a.Uast.ax_name in
-  let t = fmla Axiom kid crcm ns Mstr.empty a.Uast.ax_term in
+  let t = fmla Axiom kid crcm ns Mstr.empty Mstr.empty a.Uast.ax_term in
   let ax = mk_axiom id t a.ax_loc a.ax_text in
   mk_sig_item (Sig_axiom ax) loc
 
@@ -1142,19 +1143,19 @@ let process_exception_sig loc ns te =
     match ec.pext_kind with
     | Pext_rebind lid -> find_xs ~loc:lid.loc ns (Longident.flatten_exn lid.txt)
     | Pext_decl ([], ca, None) ->
-        let args =
-          match ca with
-          | Pcstr_tuple ctyl -> Exn_tuple (List.map (ty_of_core ns) ctyl)
-          | Pcstr_record ldl ->
-              let get { pld_name; pld_type; _ } =
-                ( Ident.create ~loc:pld_name.loc pld_name.txt,
-                  ty_of_core ns pld_type )
-              in
-              Exn_record (List.map get ldl)
-        in
-        xsymbol id args
+       let args =
+         match ca with
+         | Pcstr_tuple ctyl -> Exn_tuple (List.map (ty_of_core ns) ctyl)
+         | Pcstr_record ldl ->
+            let get { pld_name; pld_type; _ } =
+              ( Ident.create ~loc:pld_name.loc pld_name.txt,
+                ty_of_core ns pld_type )
+            in
+            Exn_record (List.map get ldl)
+       in
+       xsymbol id args
     | Pext_decl (_, _, _) ->
-        W.error ~loc (W.Unsupported "type of exception declaration")
+       W.error ~loc (W.Unsupported "type of exception declaration")
   in
   let ec =
     extension_constructor id xs ec.pext_kind ec.pext_loc ec.pext_attributes
@@ -1165,11 +1166,11 @@ let process_exception_sig loc ns te =
 (** Typing use, and modules *)
 
 type parse_env = {
-  lpaths : string list;
-  (* loading paths *)
-  parsing : Utils.Sstr.t;
-      (* files being parsed; used to avoid circular dependencies *)
-}
+    lpaths : string list;
+    (* loading paths *)
+    parsing : Utils.Sstr.t;
+    (* files being parsed; used to avoid circular dependencies *)
+  }
 
 let penv lpaths parsing =
   { lpaths = lpaths @ [ Findlib.package_directory "stdlib" ]; parsing }
@@ -1215,132 +1216,132 @@ and process_open ~loc ?(ghost = Nonghost) penv muc od =
 and process_modtype penv muc umty =
   match umty.mdesc with
   | Mod_signature usig ->
-      let muc = List.fold_left (type_sig_item penv) muc usig in
-      let tsig = Mod_signature (get_top_sigs muc) in
-      let tmty =
-        { mt_desc = tsig; mt_loc = umty.mloc; mt_attrs = umty.mattributes }
-      in
-      (muc, tmty)
+     let muc = List.fold_left (type_sig_item penv) muc usig in
+     let tsig = Mod_signature (get_top_sigs muc) in
+     let tmty =
+       { mt_desc = tsig; mt_loc = umty.mloc; mt_attrs = umty.mattributes }
+     in
+     (muc, tmty)
   | Mod_ident li ->
-      (* module type MTB = *MTA*  module MA : *MTA* *)
-      let nm = Longident.flatten_exn li.txt in
-      let tmty =
-        {
-          mt_desc = Mod_ident nm;
-          mt_loc = umty.mloc;
-          mt_attrs = umty.mattributes;
-        }
-      in
-      let ns = find_tns ~loc:li.loc (get_top_import muc) nm in
-      (add_ns_top ~export:true muc ns, tmty)
+     (* module type MTB = *MTA*  module MA : *MTA* *)
+     let nm = Longident.flatten_exn li.txt in
+     let tmty =
+       {
+         mt_desc = Mod_ident nm;
+         mt_loc = umty.mloc;
+         mt_attrs = umty.mattributes;
+       }
+     in
+     let ns = find_tns ~loc:li.loc (get_top_import muc) nm in
+     (add_ns_top ~export:true muc ns, tmty)
   | Mod_alias li ->
-      (* module MB = *MA* *)
-      let nm = Longident.flatten_exn li.txt in
-      let tmty =
-        {
-          mt_desc = Mod_alias nm;
-          mt_loc = umty.mloc;
-          mt_attrs = umty.mattributes;
-        }
-      in
-      let ns = find_ns ~loc:li.loc (get_top_import muc) nm in
-      (add_ns_top ~export:true muc ns, tmty)
+     (* module MB = *MA* *)
+     let nm = Longident.flatten_exn li.txt in
+     let tmty =
+       {
+         mt_desc = Mod_alias nm;
+         mt_loc = umty.mloc;
+         mt_attrs = umty.mattributes;
+       }
+     in
+     let ns = find_ns ~loc:li.loc (get_top_import muc) nm in
+     (add_ns_top ~export:true muc ns, tmty)
   | Mod_with (umty2, cl) ->
-      let ns_init = get_top_import muc in
-      (* required to type type decls in constraints *)
-      let muc, tmty2 = process_modtype penv muc umty2 in
-      let process_constraint (muc, cl) c =
-        match c with
-        | Wtype (li, tyd) ->
-            let tdl =
-              type_type_declaration muc.muc_kid muc.muc_crcm ns_init
-                Nonrecursive [ tyd ]
-            in
-            let td = match tdl with [ td ] -> td | _ -> assert false in
+     let ns_init = get_top_import muc in
+     (* required to type type decls in constraints *)
+     let muc, tmty2 = process_modtype penv muc umty2 in
+     let process_constraint (muc, cl) c =
+       match c with
+       | Wtype (li, tyd) ->
+          let tdl =
+            type_type_declaration muc.muc_kid muc.muc_crcm ns_init
+              Nonrecursive [ tyd ]
+          in
+          let td = match tdl with [ td ] -> td | _ -> assert false in
 
-            let q = Longident.flatten_exn li.txt in
-            let ns = get_top_import muc in
-            let ts = find_ts ~loc:li.loc ns q in
+          let q = Longident.flatten_exn li.txt in
+          let ns = get_top_import muc in
+          let ts = find_ts ~loc:li.loc ns q in
 
-            (* check that type symbols are compatible
-               TODO there are other checks that need to be performed, for
-               now we assume that the file passes the ocaml compiler type checker *)
-            if ts_arity ts <> ts_arity td.td_ts then
-              W.error ~loc:li.loc
-                (W.Bad_type_arity
-                   (ts.ts_ident.id_str, ts_arity ts, ts_arity td.td_ts));
-            (match (ts.ts_alias, td.td_ts.ts_alias) with
-            | None, Some _ -> ()
-            | Some ty1, Some ty2 -> ignore (ty_match Mtv.empty ty1 ty2)
-            | _ -> assert false);
+          (* check that type symbols are compatible
+             TODO there are other checks that need to be performed, for
+             now we assume that the file passes the ocaml compiler type checker *)
+          if ts_arity ts <> ts_arity td.td_ts then
+            W.error ~loc:li.loc
+              (W.Bad_type_arity
+                 (ts.ts_ident.id_str, ts_arity ts, ts_arity td.td_ts));
+          (match (ts.ts_alias, td.td_ts.ts_alias) with
+           | None, Some _ -> ()
+           | Some ty1, Some ty2 -> ignore (ty_match Mtv.empty ty1 ty2)
+           | _ -> assert false);
 
-            let muc = muc_replace_ts muc td.td_ts q in
-            let muc = muc_subst_ts muc ts td.td_ts in
-            (muc, Wty (ts.ts_ident, td) :: cl)
-        | Wtypesubst (li, tyd) ->
-            let tdl =
-              type_type_declaration muc.muc_kid muc.muc_crcm ns_init
-                Nonrecursive [ tyd ]
-            in
-            let td = match tdl with [ td ] -> td | _ -> assert false in
-            let ty =
-              match td.td_ts.ts_alias with
-              | None -> assert false (* should not happen *)
-              | Some ty -> ty
-            in
+          let muc = muc_replace_ts muc td.td_ts q in
+          let muc = muc_subst_ts muc ts td.td_ts in
+          (muc, Wty (ts.ts_ident, td) :: cl)
+       | Wtypesubst (li, tyd) ->
+          let tdl =
+            type_type_declaration muc.muc_kid muc.muc_crcm ns_init
+              Nonrecursive [ tyd ]
+          in
+          let td = match tdl with [ td ] -> td | _ -> assert false in
+          let ty =
+            match td.td_ts.ts_alias with
+            | None -> assert false (* should not happen *)
+            | Some ty -> ty
+          in
 
-            let q = Longident.flatten_exn li.txt in
-            let ns = get_top_import muc in
-            let ts = find_ts ~loc:li.loc ns q in
-            let muc = muc_rm_ts muc q in
+          let q = Longident.flatten_exn li.txt in
+          let ns = get_top_import muc in
+          let ts = find_ts ~loc:li.loc ns q in
+          let muc = muc_rm_ts muc q in
 
-            (* check that type symbols are compatible
-               TODO there are other checks that need to be performed, for
-               now we assume that the file passes the ocaml compiler type checker *)
-            if ts_arity ts <> ts_arity td.td_ts then
-              W.error ~loc:li.loc
-                (W.Bad_type_arity
-                   (ts.ts_ident.id_str, ts_arity ts, ts_arity td.td_ts));
-            (match (ts.ts_alias, td.td_ts.ts_alias) with
-            | None, Some _ -> ()
-            | Some ty1, Some ty2 -> ignore (ty_match Mtv.empty ty1 ty2)
-            | _ -> assert false);
+          (* check that type symbols are compatible
+             TODO there are other checks that need to be performed, for
+             now we assume that the file passes the ocaml compiler type checker *)
+          if ts_arity ts <> ts_arity td.td_ts then
+            W.error ~loc:li.loc
+              (W.Bad_type_arity
+                 (ts.ts_ident.id_str, ts_arity ts, ts_arity td.td_ts));
+          (match (ts.ts_alias, td.td_ts.ts_alias) with
+           | None, Some _ -> ()
+           | Some ty1, Some ty2 -> ignore (ty_match Mtv.empty ty1 ty2)
+           | _ -> assert false);
 
-            let muc = muc_subst_ty muc ts td.td_ts ty in
-            (muc, Wty (ts.ts_ident, td) :: cl)
-        | Wmodule (_, _)
-        | Wmodsubst (_, _)
-        | Wmodtypesubst (_, _)
-        | Wmodtype (_, _) ->
-            W.error ~loc:umty.mloc (W.Unsupported "`with' module clause")
-      in
-      let muc, cl = List.fold_left process_constraint (muc, []) cl in
-      let tmty =
-        {
-          mt_desc = Mod_with (tmty2, List.rev cl);
-          mt_loc = umty.mloc;
-          mt_attrs = umty.mattributes;
-        }
-      in
-      (muc, tmty)
+          let muc = muc_subst_ty muc ts td.td_ts ty in
+          (muc, Wty (ts.ts_ident, td) :: cl)
+       | Wmodule (_, _)
+         | Wmodsubst (_, _)
+         | Wmodtypesubst (_, _)
+         | Wmodtype (_, _) ->
+          W.error ~loc:umty.mloc (W.Unsupported "`with' module clause")
+     in
+     let muc, cl = List.fold_left process_constraint (muc, []) cl in
+     let tmty =
+       {
+         mt_desc = Mod_with (tmty2, List.rev cl);
+         mt_loc = umty.mloc;
+         mt_attrs = umty.mattributes;
+       }
+     in
+     (muc, tmty)
   | Mod_functor (mto, mt) ->
-      let nm, mty_arg, loc =
-        match mto with
-        | Unit -> W.error ~loc:umty.mloc (W.Unsupported "generative functor")
-        | Named ({ txt; loc }, mt) -> (Option.value ~default:"_" txt, mt, loc)
-      in
-      let muc = open_module muc nm in
-      let muc, tmty_arg = process_modtype penv muc mty_arg in
-      let muc = close_module_functor muc in
-      let muc, tmty = process_modtype penv muc mt in
-      let tmty =
-        {
-          mt_desc = Mod_functor (Ident.create ~loc nm, Some tmty_arg, tmty);
-          mt_loc = umty.mloc;
-          mt_attrs = umty.mattributes;
-        }
-      in
-      (muc, tmty)
+     let nm, mty_arg, loc =
+       match mto with
+       | Unit -> W.error ~loc:umty.mloc (W.Unsupported "generative functor")
+       | Named ({ txt; loc }, mt) -> (Option.value ~default:"_" txt, mt, loc)
+     in
+     let muc = open_module muc nm in
+     let muc, tmty_arg = process_modtype penv muc mty_arg in
+     let muc = close_module_functor muc in
+     let muc, tmty = process_modtype penv muc mt in
+     let tmty =
+       {
+         mt_desc = Mod_functor (Ident.create ~loc nm, Some tmty_arg, tmty);
+         mt_loc = umty.mloc;
+         mt_attrs = umty.mattributes;
+       }
+     in
+     (muc, tmty)
   | Mod_typeof _ -> W.error ~loc:umty.mloc (W.Unsupported "module type of")
   | Mod_extension _ -> W.error ~loc:umty.mloc (W.Unsupported "module extension")
 
@@ -1380,13 +1381,13 @@ and process_sig_item penv muc { sdesc; sloc } =
     let kid, ns, crcm = (muc.muc_kid, get_top_import muc, muc.muc_crcm) in
     match si with
     | Uast.Sig_type (r, tdl) ->
-        (muc, process_sig_type ~loc:sloc kid crcm ns r tdl)
+       (muc, process_sig_type ~loc:sloc kid crcm ns r tdl)
     | Uast.Sig_val vd -> (muc, process_val ~loc:sloc kid crcm ns vd)
     | Uast.Sig_typext te -> (muc, mk_sig_item (Sig_typext te) sloc)
     | Uast.Sig_module m -> process_mod penv sloc m muc
     | Uast.Sig_recmodule _ -> W.error ~loc:sloc (W.Unsupported "module rec")
     | Uast.Sig_modsubst _ | Uast.Sig_modtypesubst _ | Uast.Sig_typesubst _ ->
-        W.error ~loc:sloc (W.Unsupported "type substitution")
+       W.error ~loc:sloc (W.Unsupported "type substitution")
     | Uast.Sig_modtype mty_decl -> process_modtype_decl penv sloc mty_decl muc
     | Uast.Sig_exception te -> (muc, process_exception_sig sloc ns te)
     | Uast.Sig_open od -> process_open ~loc:sloc ~ghost:Nonghost penv muc od
@@ -1398,9 +1399,9 @@ and process_sig_item penv muc { sdesc; sloc } =
     | Uast.Sig_function f -> (muc, process_function kid crcm ns f)
     | Uast.Sig_axiom a -> (muc, process_axiom sloc kid crcm ns a)
     | Uast.Sig_ghost_type (r, tdl) ->
-        (muc, process_sig_type ~loc:sloc ~ghost:Ghost kid crcm ns r tdl)
+       (muc, process_sig_type ~loc:sloc ~ghost:Ghost kid crcm ns r tdl)
     | Uast.Sig_ghost_val vd ->
-        (muc, process_val ~loc:sloc ~ghost:Ghost kid crcm ns vd)
+       (muc, process_val ~loc:sloc ~ghost:Ghost kid crcm ns vd)
     | Uast.Sig_ghost_open od -> process_open ~loc:sloc ~ghost:Ghost penv muc od
   in
   let rec process_and_import si muc =

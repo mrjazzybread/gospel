@@ -43,6 +43,7 @@ type kind =
   | Pattern_redundant of string
   | Ambiguous_pattern
   | Old_in_precond of string
+  | Bad_spatial_type of string * string
 
 type error = location * kind
 
@@ -153,7 +154,9 @@ let pp_kind ppf = function
          Here is a case that is unused:@\n\
         \  %s" p
   | Old_in_precond precond ->
-      pf ppf "old operator is not allowed in %s clauses" precond
+     pf ppf "old operator is not allowed in %s clauses" precond
+  | Bad_spatial_type(s1, s2) ->
+     pf ppf "the spatial %s cannot be applied to type %s" s1 s2
 
 let styled_list l pp = List.fold_left (fun acc x -> styled x acc) pp l
 

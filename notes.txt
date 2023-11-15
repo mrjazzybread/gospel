@@ -1,92 +1,61 @@
-type t
-(*@ mutable model ... *)
-
-(* function to_loc (x : 'a) : 'a loc *)
-
-val f (x : t)
-(*@ ensures P x *)
-
-What is x's type in the spec?
-
-- x's type is the same as its OCaml type.
-
-How do I access x's model?
-
-- Assuming x has a model field named z, to access it
-  we simply write x.z or z x.
-
-- In the case that z is x's only model field, we create a coercion
-  that allows us to only use x without refering to z. This makes
-  our specs more lightwheight.
-
-- x's model can only be accessed if we have ownership of it.
-
-What does "=" symbolize and where can we use it?
-
-- Like in OCaml, = refers to structural equality.
-  Its type is slightly different to its OCaml
-  counterpart: "'a -> 'a -> Prop" instead of
-  "'a -> 'a -> bool".
-
-- Like in OCaml, we cannot call structural equality on
-  functional values. Slightly dissimilarly to OCaml,
-  structural equality of unowned mutable data structures
-  or non-terminating structures is undefined.
-
-How do I talk about aliasing?
-
-- To talk about aliasing, we use 
+Todo:
+- check fct
+- think of interesting spatial type examples
+- include the OCaml type within tvsymbols
+- refactor translation
+- typecheck spatial types
 
 
+Namespace in gospel:
+
+- Within specifications all variables have logical types
+
+- When using an OCaml variable in a specification, we implicitly lift it to a logical type,
+  depending on its corresponding spatial type.
+
+- Assuming a default spatial specificaction:
+
+  - If the OCaml variable is of a type with a model, its logical type will be its model
+  - If the OCaml variable is of a duplicable type with no model, then its logical type will be a reflection of its OCaml type with the same name.
+  - If the OCaml variable is of a non-duplicable type with no model, then we will have to create a new logical type.
+
+- Duplicable OCaml types cannot be used as arguments for predicates and logical functions.
+
+Spatial type Proposal:
+
+- Use the model type as its spatial type e.g:
+
+  type t
+  (*@ mutable model : integer *)
+
+  val f : t -> unit
+  (*@ f x
+      modifies x : integer @ t
+      requires x = 0
+      requries x <> 0
+   *)
 
 
+   type e
+   (*@ ephemeral *)
+
+   val g : e -> unit
+   (*@ g x
+       ensures x = old x
+   *)
+
+   using both gospel and spatial types in spatial specs?
+
+val ph_eq : 'a -> 'a -> bool
+(* b = st_eq x y
+    requires unowned 'a
+    ensures b <-> x = y
+ *)
+
+poster changes: more realistic handler example (producers).
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-val is_empty 'a t -> bool
-(*@ b = is_empty q
-    ensures b <-> q.view = [] *)
-
-forall (q : loc) L,
-{ RO (R q L) } is_empty q { λb. [b = true ↔ L = []] }
-
-forall (q : loc) L,
-{ R q L } is_empty q { R q L *  λb. [b = true ↔ L = []] }
-
-val is_empty 'a t -> bool
-(*@ b = is_empty q
-    consumes q
-    produces q
-    ensures q = old q
-    ensures b <-> q.view = [] *)
-
-val st_eq : 'a -> 'a -> bool
-(* @ b = st_eq x y
-     ensures b <-> x = y *)
+plenary meeting:
+- ask about ephemeral
+- spatial type changes
+- model as default

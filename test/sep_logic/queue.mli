@@ -15,7 +15,6 @@ val push : t -> int -> unit
 (*@ push q x
     ensures q = cons x (old q)
     modifies q
-    consumes x
 *)
 
 val pop : t -> int

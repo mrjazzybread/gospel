@@ -861,13 +861,11 @@ let process_val_spec kid crcm ns id args ret vs =
   let env, args =
     process_args `Parameter header.sp_hd_args args Mstr.empty []
   in
-
-  let old_denv = assert false in 
   
-  let checks = List.map (fmla Checks kid crcm ns env old_denv) vs.sp_checks in
+  let checks = List.map (fmla Checks kid crcm ns env env) vs.sp_checks in
   let type_spatial whereami t =
-    let dt = dterm whereami kid crcm ns env old_denv t.Uast.s_term in
-    let typed = term env dt in
+    let d_typed = dterm whereami kid crcm ns env env t.Uast.s_term in
+    let typed = term env d_typed in  
     let ty = match typed.t_ty with |Some ty -> ty |_ -> assert false in
     let spatial_type = match t.Uast.s_type with |None -> ty |Some t -> ty_of_pty ns t in
     {s_term = typed; s_type = spatial_type} in
@@ -900,9 +898,16 @@ let process_val_spec kid crcm ns id args ret vs =
       [], cs, [], prod, pres_eq
     else wr, cs, pres, prod, [] in
 
-  
-  let pre = List.map (fmla Requires kid crcm ns env old_denv) vs.sp_pre in
-  
+  let add_arg env spatial =
+    let ty = Option.get spatial.s_term.t_ty in
+    let model_ty = ty_apply_spatial ty spatial.s_type in
+    match spatial.s_term.t_node with
+    |Tvar v -> Mstr.add v.vs_name.id_str {v with vs_ty = model_ty} env 
+    |Tfield _ -> assert false (* TODO *)
+    |_ -> assert false in
+  let old_env = List.fold_left add_arg Mstr.empty cs in 
+  let env = List.fold_left add_arg Mstr.empty prod in 
+  let pre = List.map (fmla Requires kid crcm ns old_env old_env) vs.sp_pre in
   
   let process_xpost (loc, exn) =
     let merge_xpost t tl =
@@ -961,7 +966,7 @@ let process_val_spec kid crcm ns id args ret vs =
          let p, vars = pattern dp in
          let choose_snd _ _ vs = Some vs in
          let env = Mstr.union choose_snd env vars in
-         let t = fmla Raises kid crcm ns env old_denv t in
+         let t = fmla Raises kid crcm ns env old_env t in
          Mxs.update xs (merge_xpost (Some (p, t))) mxs
     in
     List.fold_left process Mxs.empty exn |> Mxs.bindings
@@ -979,7 +984,7 @@ let process_val_spec kid crcm ns id args ret vs =
     | _, _ ->
        process_args `Return header.sp_hd_ret [ (ret, Asttypes.Nolabel) ] env []
   in
-  let post = List.map (fmla Ensures kid crcm ns env old_denv) vs.sp_post @ eq_clauses in
+  let post = List.map (fmla Ensures kid crcm ns env old_env) vs.sp_post @ eq_clauses in
 
   if vs.sp_pure then (
     if vs.sp_diverge then

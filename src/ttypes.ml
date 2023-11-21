@@ -63,7 +63,6 @@ and tysymbol = {
 
 and spatial =
   |Self (* to be used when the OCaml type is a reflection of the logical type *)
-  |Spatial of {spatial : ty; ocaml_ty : ty} (* the spatial type used to obtain the model from the given OCaml type *)
   |Model of ty (* the logical model of the type. Can be instantiated with a spatial type *)
 [@@deriving show]
 
@@ -119,8 +118,7 @@ let ty_apply_spatial ty spatial =
   |Tyapp(ts1, _), Tyapp(ts2, _) when ts_equal ts1 ts2 ->
     begin match ts1.ts_rep with
     |Self -> ty
-    |Model model -> model
-    |_ -> assert false end
+    |Model model -> model end
   |_ -> assert false (*TODO: replace with W.error *)
 
 let rec ty_full_inst ?loc m ty =

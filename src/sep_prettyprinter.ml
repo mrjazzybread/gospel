@@ -11,7 +11,7 @@ let rec print_term fmt term =
   match term.s_node with 
   |Star l -> list ~sep:star print_term fmt l   
   |App(id, l) -> 
-    pp fmt "@[%a@]" Ident.pp id.vs_name;  
+    pp fmt "@[%a@]" Ident.pp id.ls_name;  
     list ~first:lparens ~last:rparens ~sep:comma 
     Ident.pp fmt (List.map (fun x-> x.Symbols.vs_name) l)  
   |RO t ->

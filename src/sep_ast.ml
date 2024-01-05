@@ -13,7 +13,7 @@ type sep_term = {
 and sep_node = 
   |Star of sep_term list
   |Pure of term
-  |App of Symbols.vsymbol * Symbols.vsymbol list
+  |App of Symbols.lsymbol * Symbols.vsymbol list
   |Magic of sep_term * sep_term
   |Forall of Symbols.vsymbol list * sep_term 
   |Exists of Symbols.vsymbol list * sep_term 

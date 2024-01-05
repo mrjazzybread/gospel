@@ -14,18 +14,17 @@ open Tterm
 open Symbols
 module Ident = Identifier.Ident
 
-type lb_arg =
-  | Lunit  (** () *)
-  | Lnone of vsymbol  (** x *)
-  | Loptional of vsymbol  (** ?x *)
-  | Lnamed of vsymbol  (** ~x *)
-  | Lghost of vsymbol  (** \[x: t\] *)
+type arg_label = Lnone | Loptional | Lnamed | Lghost
 [@@deriving show]
 
-type spatial_term = {
-    s_term : term;
-    s_type : ty; (* symbolizes a representation predicate *)
-  }[@@deriving show]
+type lb_arg = {
+    arg_vs : vsymbol option; (** the name and OCaml type of the argument. Is None if the arg_type field is Lunit *)
+    consumes : (ty * ty) option; (**spatial and logical type of the argument when the function is called *)
+    produces : (ty * ty) option; (**spatial and logical type of the argument when the function is exited *)
+    arg_type : arg_label; (** the label of the argument. *)
+    read_only : bool; (** read only flag *)
+  } [@@deriving show]
+
 
 type val_spec = {
   sp_args : lb_arg list;  (** Arguments *)
@@ -36,15 +35,11 @@ type val_spec = {
   sp_post : term list;  (** Postconditions *)
   sp_xpost : (xsymbol * (pattern * term) list) list;
       (** Exceptional postconditions. *)
-  sp_wr : spatial_term list;  (** Writes *)
-  sp_cs : spatial_term list;  (** Consumes *)
-  sp_pres : spatial_term list; (** Preserves *)
-  sp_prod : spatial_term list;
   sp_diverge : bool;  (** Diverges *)
   sp_pure : bool;  (** Pure *)
   sp_equiv : string list;  (** Equivalent *)
   sp_text : string;
-      (** String containing the original specificaion as written by the user *)
+      (** String containing the original specification as written by the user *)
   sp_loc : Location.t; [@printer Utils.Fmt.pp_loc]  (** Specification location *)
 }
 [@@deriving show]

@@ -88,12 +88,14 @@ let print_type_declaration fmt td =
     (list ~sep:(const string " constraint ") print_constraint)
     td.td_cstrs (option print_type_spec) td.td_spec
 
-let print_lb_arg fmt = function
-  | Lunit -> pp fmt "()"
-  | Lnone vs -> print_vs fmt vs
-  | Loptional vs -> pp fmt "?%a" print_vs vs
-  | Lnamed vs -> pp fmt "~%a" print_vs vs
-  | Lghost vs -> pp fmt "[%a: %a]" print_vs vs print_ty vs.vs_ty
+let print_lb_arg fmt arg = match arg.arg_vs with
+  | None -> pp fmt "()"
+  | Some vs -> begin 
+     match arg.arg_type with 
+     | Lnone  -> print_vs fmt vs
+     | Loptional  -> pp fmt "?%a" print_vs vs
+     | Lnamed -> pp fmt "~%a" print_vs vs
+     | Lghost -> pp fmt "[%a: %a]" print_vs vs print_ty vs.vs_ty end 
 
 let print_xposts f xposts =
   if xposts = [] then ()
@@ -112,8 +114,40 @@ let print_xposts f xposts =
     in
     List.iter print_xpost xposts
 
-let print_spatial fmt s_term =
-  pp fmt "%a %@ %a" print_term s_term.s_term print_ty s_term.s_type
+
+let print_permissions fmt arg =
+  let vs = arg.arg_vs in
+  let print_option = option print_vs in
+  match arg.consumes, arg.produces with
+  |None, None -> ()
+  |Some (ty_s, _), None ->
+    pp fmt "%s %a %@ %a" 
+      "consumes"
+      print_option vs
+      print_ty ty_s
+  |None, Some (ty_s, _) ->
+    pp fmt "%s %a %@ %a" 
+      "produces"
+      print_option vs
+      print_ty ty_s
+  |Some(ty_s1, _), Some(ty_s2, _) ->
+    if Ttypes.ty_equal ty_s1 ty_s2 then
+      let clause = if arg.read_only then "preserves" else "modifies" in
+      pp fmt "%s %a %@ %a" 
+        clause
+        print_option vs
+        print_ty ty_s1
+    else
+      let () =
+        pp fmt "%s %a %@ %a" 
+          "produces"
+          print_option vs
+          print_ty ty_s1 in
+      pp fmt "%s %a %@ %a" 
+        "consumes"
+        print_option vs
+        print_ty ty_s2
+
 
 let print_vd_spec val_id fmt spec =
   let print_term f t = pp f "@[%a@]" print_term t in
@@ -121,13 +155,15 @@ let print_vd_spec val_id fmt spec =
   match spec with
   | None -> ()
   | Some vs ->
-      pp fmt "(*@@ @[%a%s@ %a@ %a@]%a%a%a%a%a%a%a%a%a%a*)"
+      pp fmt "(*@@ @[%a%s@ %a@ %a@]%a%a%a%a%a%a%a*)"
         (list ~sep:comma print_lb_arg)
         vs.sp_ret
         (if vs.sp_ret = [] then "" else " =")
         Ident.pp val_id
         (list ~sep:sp print_lb_arg)
         vs.sp_args print_diverges vs.sp_diverge
+        (list ~first:newline print_permissions)
+        vs.sp_args
         (list
            ~first:(newline ++ const string "requires ")
            ~sep:(newline ++ const string "requires ")
@@ -143,26 +179,6 @@ let print_vd_spec val_id fmt spec =
            ~sep:(newline ++ const string "ensures ")
            print_term)
         vs.sp_post print_xposts vs.sp_xpost
-        (list
-           ~first:(newline ++ const string "writes ")
-           ~sep:(newline ++ const string "writes ")
-           print_spatial)
-        vs.sp_wr
-        (list
-           ~first:(newline ++ const string "consumes ")
-           ~sep:(newline ++ const string "consumes ")
-           print_spatial)
-        vs.sp_cs
-        (list
-           ~first:(newline ++ const string "preserves ")
-           ~sep:(newline ++ const string "preserves ")
-           print_spatial)
-        vs.sp_pres
-        (list
-           ~first:(newline ++ const string "produces ")
-           ~sep:(newline ++ const string "produces ")
-           print_spatial)
-        vs.sp_prod
         (list
            ~first:(newline ++ const string "equivalent ")
            ~sep:(newline ++ const string "equivalent ")

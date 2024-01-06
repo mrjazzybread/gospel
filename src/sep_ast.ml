@@ -1,16 +1,8 @@
 open Ppxlib
 open Tterm
 open Tast
-(*open Coq
-open Formula
-open Mytools*)
 
-type sep_term = {
-  s_node : sep_node;
-  s_loc : Location.t;
-} 
-
-and sep_node = 
+type sep_term = 
   |Star of sep_term list
   |Pure of term
   |App of Symbols.lsymbol * Symbols.vsymbol list
@@ -20,8 +12,6 @@ and sep_node =
   |Lambda of Symbols.vsymbol list * sep_term
   |RO of sep_term
   |Top
-
-let mk_sep_term ?(l = Location.none) t = {s_node = t; s_loc = l}
 
 type type_definition = {
   t_name : Ident.t;

@@ -8,7 +8,7 @@ let field fmt t =
     Ttypes.print_ty t.Symbols.vs_ty  
 
 let rec print_term fmt term = 
-  match term.s_node with 
+  match term with 
   |Star l -> list ~sep:star print_term fmt l   
   |App(id, l) -> 
     pp fmt "@[%a@]" Ident.pp id.ls_name;  

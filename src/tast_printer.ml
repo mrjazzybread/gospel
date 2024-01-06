@@ -162,7 +162,7 @@ let print_vd_spec val_id fmt spec =
         Ident.pp val_id
         (list ~sep:sp print_lb_arg)
         vs.sp_args print_diverges vs.sp_diverge
-        (list ~first:newline print_permissions)
+        (list ~first:newline ~sep:newline print_permissions)
         vs.sp_args
         (list
            ~first:(newline ++ const string "requires ")

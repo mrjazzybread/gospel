@@ -903,18 +903,21 @@ let process_val_spec kid crcm ns id args ret vs =
     let prod_ret =
       List.filter
         (fun (_, x) -> not (List.exists (equal_arg x) prod)) ret in
-    prod @ (List.filter_map (fun (_, x) ->
-               Option.map (fun x -> term_of_vs x, x.vs_ty) x) prod_ret)
+    prod @
+      (List.filter_map (fun (_, x) ->
+           Option.map (fun x -> term_of_vs x, x.vs_ty) x) prod_ret)
     in
   
   let cs, prod = cs@read_only@wr, prod@read_only@wr in
 
+  
   let spec_args =
     List.map (fun (l, v) ->
         let ro = v = None || List.exists (equal_arg v) read_only in
         spec_arg v l ro) args in
 
-  let spec_ret = List.map (fun (_, v) -> spec_arg v Lnone false) ret in 
+  let spec_ret = List.map (fun (_, v) ->
+                     spec_arg v Lnone false) ret in 
 
   let apply_spatial l con sa = 
     match List.find_opt (equal_arg sa.arg_vs) l with
@@ -938,7 +941,7 @@ let process_val_spec kid crcm ns id args ret vs =
 
   let add_env (old_env, env) e =
     let old_env = update_env old_env e e.consumes in
-    let env = update_env env e e.consumes in
+    let env = update_env env e e.produces in
     old_env, env in 
   
   let old_env, env = List.fold_left add_env (Mstr.empty, Mstr.empty) (spec_args@spec_ret) in 

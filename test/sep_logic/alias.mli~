@@ -1,5 +1,0 @@
-type a
-
-type b = a
-
-type c = b

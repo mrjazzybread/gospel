@@ -15,23 +15,17 @@ let empty_ns = {
     sns_ns   = Mstr.empty;
   }
 
-
-let ts_loc = mk_ts
-               (Ident.create ~loc:Location.none "loc")
-               [fresh_tv ~loc:Location.none "a" ]
 let ts_prop = mk_ts
                 (Ident.create ~loc:Location.none "Prop")
                 []
 
 let ty_prop = ty_app ts_prop []
-let ty_loc t = ty_app ts_loc [t]
 
-let rep_pred_pref = "@R_"
-let get_rep_pred s = rep_pred_pref ^ s
+let get_rep_pred = String.capitalize_ascii
 
-let val_pref = "@V_"
-let mk_val s = val_pref ^ s
-let mk_update s =  s ^ "'"
+let mk_update s =  "_" ^ s ^ "'"
+let mk_loc s = "_loc_" ^ s
+
 
 let change_id id map =
   Ident.create
@@ -39,33 +33,31 @@ let change_id id map =
     ~loc:id.id_loc
     (map id.id_str)
 
+let is_present ns id =
+  let str = id.id_str in 
+  Mstr.mem str ns.sns_id
+
 let map_id ns vs ty =
-  let id = change_id vs.vs_name mk_val in
   let id =
-    if Mstr.mem id.id_str ns.sns_id then
-      change_id id mk_update
+    if is_present ns vs.vs_name then
+       change_id vs.vs_name mk_update 
     else
-      id in  
+      vs.vs_name in
   let val_vs = {vs_name = id; vs_ty = ty} in
   let new_map = Mstr.add id.id_str val_vs ns.sns_id in
   val_vs, {ns with sns_id = new_map}
 
 let get_id ns is_old id =
-  let map = if is_old then mk_val else mk_update in
-  let name = map id in 
+  let name = if is_old then id else mk_update id in
   try Mstr.find name ns.sns_id with
-  |Not_found -> Mstr.find (mk_val id) ns.sns_id
+  |Not_found -> Mstr.find id ns.sns_id
     
-let is_present ns id =
-  let str = id.id_str in 
-  Mstr.mem (mk_val str) ns.sns_id
-
 let create_rep_pred sym =
   let id = sym.ts_ident in
   let self_type = {ty_node=Tyapp (sym, List.map (fun x -> {ty_node=Tyvar x}) sym.ts_args)} in 
   let model_type = match sym.ts_rep with
     |Self -> self_type
-    |Model m -> m in 
+    |Model (m, _) -> m in 
   let new_id = change_id id get_rep_pred in
   {
     ls_name = new_id;

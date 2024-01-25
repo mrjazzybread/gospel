@@ -644,9 +644,9 @@ let type_type_declaration kid crcm ns r tdl =
       Option.map (parse_core alias tvl) td.tmanifest
     in
     let td_model = Option.bind td.tspec
-                       (fun spec -> Option.map (fun f -> fst(field ns f)) spec.ty_field) in  
+                       (fun spec -> Option.map (fun f -> field ns f) spec.ty_field) in  
 
-    let spatial = Option.fold ~some:(fun t -> Model t) ~none:Self td_model in 
+    let spatial = Option.fold ~some:(fun (t, b) -> Model (t, b)) ~none:Self td_model in 
     let td_ts = mk_ts (Ident.create ~loc:td.tname.loc s)
                   params ~alias:manifest ~spatial in
     Hashtbl.add hts s td_ts;
@@ -762,7 +762,7 @@ let process_sig_type ~loc ?(ghost = Nonghost) kid crcm ns r tdl =
   let sig_desc = Sig_type (r, tdl, ghost) in
   mk_sig_item sig_desc loc
 
-(** Type val declarations *)
+(** Type valid declarations *)
 
 let rec val_parse_core_type ns cty =
   match cty.ptyp_desc with
@@ -861,7 +861,8 @@ let process_val_spec kid crcm ns id args ret vs =
     let d_typed = dterm whereami kid crcm ns env env t.Uast.s_term in
     let typed = term env d_typed in  
     let ty = match typed.t_ty with |Some ty -> ty |_ -> assert false in
-    let spatial_type = match t.Uast.s_type with |None -> ty |Some t -> ty_of_pty ns t in
+    let spatial_ns = {ns with ns_ts = ns.ns_sp}  in 
+    let spatial_type = match t.Uast.s_type with |None -> ty |Some t -> ty_of_pty spatial_ns t in
     typed, spatial_type in
   
   let wr =  List.map (type_spatial Modifies env) vs.sp_writes in
@@ -924,7 +925,7 @@ let process_val_spec kid crcm ns id args ret vs =
     |None -> sa
     |Some (t, s_ty) ->
       let ty = Option.get t.t_ty in
-      let sp = ty, ty_apply_spatial ty s_ty in
+      let sp = s_ty, ty_apply_spatial ty s_ty in
       if con then {sa with consumes = Some sp} else {sa with produces = Some sp} in
 
   let spec_args = List.map (apply_spatial cs true) spec_args in

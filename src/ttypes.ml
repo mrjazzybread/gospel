@@ -63,7 +63,7 @@ and tysymbol = {
 
 and spatial =
   |Self (* to be used when the OCaml type is a reflection of the logical type *)
-  |Model of ty (* the logical model of the type. Can be instantiated with a spatial type *)
+  |Model of ty * bool (* the logical model of the type. Can be instantiated with a spatial type *)
 [@@deriving show]
 
 let ts_equal x y = Ident.equal x.ts_ident y.ts_ident
@@ -112,13 +112,26 @@ let ty_app ?loc ts tyl =
     W.error ~loc
       (W.Bad_type_arity (ts.ts_ident.id_str, ts_arity ts, List.length tyl))
 
+let ts_loc_sp = mk_ts (Ident.create ~loc:Location.none "loc")
+                  [] 
+let ty_loc_sp = ty_app ts_loc_sp []
+
+let ts_loc = mk_ts
+               (Ident.create ~loc:Location.none "loc")
+               [fresh_tv ~loc:Location.none "a" ]
+
+let ty_loc t = ty_app ts_loc [t]
+
+
 let ty_apply_spatial ty spatial =
   match ty.ty_node, spatial.ty_node with
   |Tyvar v1, Tyvar v2 when tv_equal v1 v2 -> ty
   |Tyapp(ts1, _), Tyapp(ts2, _) when ts_equal ts1 ts2 ->
     begin match ts1.ts_rep with
     |Self -> ty
-    |Model model -> model end
+    |Model (model, _) -> model end
+  |_, Tyapp(t, _) when ts_equal t ts_loc_sp ->
+    ty_loc ty
   |_ -> assert false (*TODO: replace with W.error *)
 
 let rec ty_full_inst ?loc m ty =
@@ -207,6 +220,7 @@ let ts_float = mk_ts (Ident.create ~loc:Location.none "float") []
 let ts_bool = mk_ts (Ident.create ~loc:Location.none "bool") []
 let ts_exn = mk_ts (Ident.create ~loc:Location.none "exn") []
 
+
 let ts_array =
   mk_ts
     (Ident.create ~loc:Location.none "array")
@@ -263,6 +277,7 @@ let ts_arrow =
   let tb = fresh_tv ~loc:Location.none "b" in
   let id = Ident.create ~loc:Location.none "->" in
   mk_ts id [ ta; tb ]
+
 
 let is_ts_tuple ts =
   let ts_tuple = ts_tuple (ts_arity ts) in

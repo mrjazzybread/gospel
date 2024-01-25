@@ -59,6 +59,12 @@ let run_file config file =
         pp fmt "@[*******************************@]@.";
         pp fmt "@[%a@]@."
           Sep_prettyprinter.file file);
+    let file = Sep2coq.sep_defs file in
+    if config.verbose then (
+        pp fmt "@[@\n*******************************@]@.";
+        pp fmt "@[********** CFML ********@]@.";
+        pp fmt "@[*******************************@]@.";
+        print_endline (Print_coq.tops file));
     pp fmt "OK\n";
     true
   with W.Error e ->

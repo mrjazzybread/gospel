@@ -1,6 +1,14 @@
-type a
-(*@ model : int *)
+type t
+(*@ mutable model : int *)
 
-type b = a
+val st_eq : t -> t -> bool
+(*@ b = st_eq x y
+    preserves x as t
+    preserves y as t
+    ensures b <-> x = y *)
 
-type c = b
+val ph_eq : t -> t -> bool
+(*@ b = ph_eq x y
+    preserves x as loc
+    preserves y as loc
+    ensures b <-> x = y *)

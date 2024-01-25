@@ -5,6 +5,17 @@ open Ttypes
 open Sep_utilis
 open Tterm    
 
+type value = Pure_val of {vs : vsymbol} 
+           |Impure of {s_ty : ty; arg_loc : vsymbol; vs : vsymbol}
+
+let is_pure_type vs =
+  match vs.vs_ty.ty_node with
+  |Tyapp(ts, _) ->
+    begin match ts.ts_rep with
+    |Self -> true
+    |Model (_, mut) -> not mut end
+  |_ -> false
+
 (** Replaces usages of the logical model defined in the GOSPEL specification with the 
     lifted model from the representation predicate. 
     @param t the term we want to transform
@@ -39,33 +50,35 @@ and val_description ns des =
           match if is_old then arg.consumes else arg.produces with
           |None -> None
           |Some (s_ty, l_ty) ->
-            let arg_vs = Option.get arg.arg_vs in
-            let arg_loc_ty = ty_loc arg_vs.vs_ty in
-            let arg_loc = {arg_vs with vs_ty = arg_loc_ty} in
-            let vs, ns' =
-              if (not is_old) && arg.read_only then
-                get_id !ns true arg_vs.vs_name.id_str, !ns
+            if (not is_old) && arg.read_only then None else
+              let arg_vs = Option.get arg.arg_vs in
+              let arg_id = change_id arg_vs.vs_name mk_loc in 
+              let arg_loc_ty = ty_loc arg_vs.vs_ty in
+              let arg_loc = {vs_name=arg_id; vs_ty = arg_loc_ty} in
+              let vs, ns' = map_id !ns arg_vs l_ty in
+              let () = ns := ns' in
+              if is_pure_type arg_vs then
+                Some (Pure_val {vs})
               else
-                map_id !ns arg_vs l_ty in
-            let () = ns := ns' in
-            Some (s_ty, arg_loc, vs)) in
-    let lifts args =
-      List.map
-        (fun (s_ty, arg_loc, vs) ->
-          let pred = get_pred !ns s_ty in
-          App (pred, [arg_loc; vs]))
-        args in
+                Some (Impure {s_ty; arg_loc; vs})) in
+    let mk_lift = function
+      |Pure_val _ -> None
+      |Impure {s_ty; arg_loc; vs} ->
+        let pred = get_pred !ns s_ty in
+        Some (App (pred, [arg_loc; vs])) in 
+    let lifts args = List.filter_map mk_lift args in
     let args = lifted_args true spec.sp_args in
     let pre = List.map (fun t -> Pure (map_term !ns true t)) spec.sp_pre in
     let triple_pre = Star ((lifts args) @ pre) in
 
-    let updates = lifted_args false spec.sp_args @ lifted_args false spec.sp_ret in
+    let updates = lifted_args false spec.sp_args in 
+    let rets = lifted_args false spec.sp_ret in
     let post = List.map (fun t -> Pure (map_term !ns false t)) spec.sp_post in
-    let post_cond = Star((lifts updates) @ post) in
-    let updated_vars =
-      List.filter_map (fun (_, _, vs) ->
-          if List.exists (fun (_, _, vs2) -> vs2 = vs) args
-          then None else Some vs) updates in 
+    let post_cond = Star(lifts (updates @ rets) @ post) in
+    let mk_updates = function
+      |Pure_val _ -> None
+      |Impure {vs;_} -> Some vs in 
+    let updated_vars = List.filter_map mk_updates (updates@rets) in 
     let updated_model = 
       if updated_vars = [] then
         post_cond 
@@ -75,21 +88,17 @@ and val_description ns des =
       if spec.sp_ret = [] then
         updated_model
       else
-        let eq vs ret =
-          let ret_vs = Option.get ret.arg_vs in
-          ret_vs.vs_name.id_str = vs.vs_name.id_str in 
-        let rets =
-          List.filter_map
-            (fun (_, ret_loc, _) ->
-              if List.exists (fun r -> eq ret_loc r) spec.sp_ret then
-                Some ret_loc
-              else
-                None
-            ) updates in 
+        let mk_ret r =
+          match r with 
+          |Pure_val {vs} -> Some vs
+          |Impure {arg_loc;_} -> Some arg_loc in 
+        let rets = List.filter_map mk_ret rets in 
         Lambda (rets, updated_model) in
     Triple {
         triple_name = des.vd_name;
-        triple_args = List.concat_map (fun (_, x, y) -> [x; y]) args;
+        triple_args =
+          List.concat_map
+            (function |Pure_val {vs} -> [vs] |Impure {arg_loc;vs;_} -> [arg_loc;vs]) args;
         triple_pre;
         triple_type = des.vd_type;
         triple_post;
@@ -99,27 +108,27 @@ and type_declaration ns t =
   let id = t.td_ts.ts_ident in
   let self_type = 
     {ty_node = Tyapp(t.td_ts, List.map (fun (x, _) -> {ty_node=Tyvar x}) t.td_params)} in
-  let pred_fields = 
+  let pred_field, mut = 
+    let arg = Ident.create ~loc:Location.none "model" in
+    let model_to_arg model = 
+      let ty = Option.map fst model in
+      let ty = Option.value ty ~default:self_type in
+      let field = {vs_name = arg; vs_ty = ty} in
+      field, Option.fold ~none:false ~some:snd model in
     match t.td_spec with
     |Some s ->
-      let model_to_arg model = 
-        let arg = Ident.create ~loc:Location.none "model" in
-        let ty = Option.map fst model in
-        let ty = Option.value ty ~default:self_type in
-        let field = {vs_name = arg; vs_ty = ty} in
-        field in
-      let pred_fields = model_to_arg s.ty_fields  in
-      [pred_fields]
-    |None -> [] in 
+      model_to_arg s.ty_fields
+    |None -> {vs_name = arg; vs_ty = self_type}, false in 
   let new_id = (get_pred ns self_type).ls_name in 
   let ty_var_list = List.map fst t.td_params in 
-  [Type(id, ty_var_list); Pred(new_id, {vs_name=id; vs_ty=ty_loc self_type}::pred_fields)]
+  [Type(id, mut, ty_var_list);
+   Pred(new_id, [{vs_name=id; vs_ty=ty_loc self_type};pred_field])]
 
 
 let signature_item_desc ns = function 
   |Sig_type(_, l, _) ->
     List.concat_map (fun t -> type_declaration ns t) l
-  |Sig_val (des, _) ->
+  |Sig_val (des, _) -> print_newline();
     [val_description ns des]
   |Sig_open _ -> []
   |Sig_axiom axiom -> [Axiom axiom]
@@ -127,14 +136,15 @@ let signature_item_desc ns = function
   |_ -> assert false
 
 let signature_item ns s =
-  List.map (fun sep -> {d_node = sep; d_loc = s.sig_loc}) (signature_item_desc ns s.sig_desc)
+  List.map (fun sep -> {d_node  =sep; d_loc = s.sig_loc}) (signature_item_desc ns s.sig_desc)
 
 open Tmodule
 
 let rec convert_ns tns =
-  let preds = Mstr.map create_rep_pred tns.ns_ts in
+  let preds = Mstr.map create_rep_pred tns.ns_sp in
   {sns_pred = preds; sns_id = Mstr.empty; sns_ns = Mstr.map convert_ns tns.ns_ns}
   
 let process_sigs file =
+  let ns = merge_ns file.Tmodule.fl_export ns_with_primitives in 
   List.concat_map
-    (signature_item (convert_ns file.Tmodule.fl_export)) file.Tmodule.fl_sigs
+    (signature_item (convert_ns ns)) file.Tmodule.fl_sigs

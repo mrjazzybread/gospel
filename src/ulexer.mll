@@ -19,8 +19,7 @@
     List.iter
       (fun (x,y) -> Hashtbl.add keywords x y)
       [
-        "as", AS;
-        "axiom", AXIOM;
+	"axiom", AXIOM;
         "coercion", COERCION;
         "else", ELSE;
         "exists", EXISTS;
@@ -215,6 +214,8 @@ rule token = parse
       { DOTDOT }
   | "|"
       { BAR }
+  | "@"
+      { AS }
   | "="
       { EQUAL }
   | "<>"
@@ -228,7 +229,7 @@ rule token = parse
   | lident as id
       { try Hashtbl.find keywords id with Not_found -> LIDENT id }
   | uident as id
-            { UIDENT id }
+      { UIDENT id }
   | "[]"
       { LEFTSQRIGHTSQ }
   | "["

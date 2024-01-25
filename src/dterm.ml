@@ -417,7 +417,7 @@ and term_node ~loc env prop dty dterm_node =
         let p, vars = pattern dp in
         let join _ _ vs = Some vs in
         let env = Mstr.union join env vars in
-        let dt = term env false dt in
+        let dt = term env true dt in
         let guard =
           match guard with None -> None | Some g -> Some (term env true g)
         in

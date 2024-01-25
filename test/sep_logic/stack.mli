@@ -1,67 +1,100 @@
-(*@ type 'a memory *)
+(*@ open Sequence *)
 
-(*@ predicate extend (m m': 'a memory) *)
-(*@ axiom refl: forall m: 'a memory. extend m m *)
-(*@ axiom tran: forall m1 m2 m3: 'a memory.
-      extend m1 m2 -> extend m2 m3 ->
-      extend m1 m3 *)
+type t
+(*@ mutable model : int Sequence.t *)
 
-(*@ val create_mem : unit -> 'a memory *)
+val create : unit -> t
+(*@ q = create ()
+    produces q @ t
+    ensures q = empty
+*)
 
-(* Basic operations on ephemeral stacks. *)
-type 'a estack
-(*@ mutable model eview: 'a memory -> 'a Sequence.t *)
+val push : t -> int -> unit
+(*@ push q x
+    modifies q @ t
+    ensures q = cons x (old q) 
+*)
 
-(*@ axiom estack_mon: forall m m': 'a memory, e: 'a estack.
-      extend m m' -> e.eview m = e.eview m' *)
+val pop_opt : t -> int option
+(*@ r = pop_opt q
+    consumes q @ t
+    produces q @ t
+    
+    ensures match r with
+    |None -> old q = empty && q = empty
+    |Some r -> old q = cons r q
+ *)
 
-val ecreate : 'a -> 'a estack
-(*@ r = ecreate [m: 'a memory] x
-      ensures r.eview m = Sequence.empty *)
+val top_opt : t -> int option
+(*@ r = top_opt q
+    preserves q @ t
+    
+    ensures match r with
+    |None -> q = empty
+    |Some r -> q <> empty && r = hd q
+ *)
 
-val epush : 'a estack -> 'a -> unit
-(*@ epush [m: 'a memory] s x
-      modifies s
-      ensures  s.eview m = Sequence.cons x (old s.eview m) *)
+val clear : t -> unit
+(*@ clear q
+    consumes q @ t
+    produces q @ t
+    ensures q = empty *)
 
-val epop : 'a estack -> 'a
-(*@ r = epop [m: 'a memory] s
-      modifies s
-      requires s.eview m <> Sequence.empty
-      ensures  (old s.eview m) = Sequence.cons r (s.eview m) *)
+val copy : t -> t
+(*@ q2 = copy q1
+    preserves q1 @ t
+    produces q2 @ t
+    ensures q2 = q1
+ *)
 
-(* Basic operations on persistent stacks. *)
-type 'a pstack
-(*@ model pview: 'a memory -> 'a Sequence.t
-    mutable model internal: unit *)
 
-(*@ axiom estack_mon: forall m m': 'a memory, p: 'a pstack.
-      extend m m' -> p.pview m = p.pview m' *)
+val is_empty : t -> bool
+(*@ b = is_empty q
+    preserves q @ t
+    ensures b <-> q = empty *)
 
-val pcreate : 'a -> 'a pstack
-(*@ r, [m': 'a memory] = pcreate [m: 'a memory] x
-      ensures r.pview m' = Sequence.empty
-      ensures extend m m' *)
+val length : t -> int
+(*@ l = length q 
+    preserves q @ t
+    ensures Sequence.length q = l *)
 
-val ppush : 'a pstack -> 'a -> 'a pstack
-(*@ r, [m': 'a memory] = ppush [m: 'a memory] s x
-      modifies s
-      ensures  r.pview m' = Sequence.cons x (s.pview m)
-      ensures  extend m m' *)
+val transfer : t -> t -> unit
+(*@ transfer q1 q2
+    produces q1 @ t
+    produces q2 @ t
+    consumes q1 @ t
+    consumes q2 @ t
 
-val ppop : 'a pstack -> 'a pstack * 'a
-(*@ (rs, res) = ppop [m: 'a memory] s
-      modifies s
-      requires s.pview m <> Sequence.empty
-      ensures  s.pview m = Sequence.cons res (rs.pview m) *)
+    ensures q1 = empty
+    ensures q2 = q2 ++ (old q1) *)
 
-(* Conversions. *)
-val pstack_to_estack : 'a pstack -> 'a estack
-(*@ re = pstack_to_estack [m: 'a memory] ps
-      ensures re.eview m = ps.pview m *)
+(*missing : pop, take, iter, fold, to_seq, add_seq, of_seq *)
+                        
+(* predicate is_eq (A : Type) 
+(* this predicate does not hold for unwoned mutable structures and functions*)
 
-val estack_to_pstack : 'a estack -> 'a pstack
-(*@ rp, [m': 'a memory] = estack_to_pstack [m: 'a memory] es
-      consumes es
-      ensures  rp.pview m' = es.eview m
-      ensures  extend m m' *)
+val st_eq : 'a -> 'a -> bool
+(* b = st_eq x y
+    requires is_eq 'a
+    ensures b <-> x = y
+ *)
+
+(* predicate unowned (A : Type) *)
+
+
+
+(*
+{ R x Mx * R y My * [unowned R] } ph_eq x y {[x = y]}
+
+val ph_eq : 'a -> 'a -> bool
+(* b = st_eq x y
+    requires addressable 'a
+    ensures b <-> &x = &y
+ *)
+
+{ [is_loc x && is_loc y] } ph_eq x y {[x = y]}
+
+ predicates over types, type classes *)
+(* increase clarity in spatial specs
+   adressable vs unowned *)
+ *)

@@ -20,7 +20,8 @@ type type_definition = {
 
 type triple = {
   triple_name : Ident.t;
-  triple_args : Symbols.vsymbol list;
+  triple_args : Symbols.vsymbol option list;
+  triple_vars : Symbols.vsymbol list;
   triple_pre : sep_term;
   triple_type : core_type;
   triple_post : sep_term;

@@ -17,9 +17,9 @@ let rec print_term fmt term =
   |RO t ->
     pp fmt "@[RO (%a)@]" print_term t 
   |Pure t ->
-    pp fmt "[@[%a]@]" (Tterm_printer.print_term ~print_type:false) t
+    pp fmt "@[[%a]@]" (Tterm_printer.print_term ~print_type:false) t
   |Exists(l, t) ->
-    pp fmt "@[∃ %a.@\n@[%a@]"
+    pp fmt "@[∃ %a.@\n@[%a@]]"
     (list 
       (fun fmt x -> 
         pp fmt "(%a : %a)" 
@@ -38,14 +38,22 @@ let rec print_term fmt term =
       print_term s
   |_ -> assert false
 
+let print_app fmt args =
+  match args with
+  |None -> pp fmt "%s" "()"
+  |Some vs -> pp fmt "%s" vs.Symbols.vs_name.id_str
+
+
 let print_triple fmt t = 
-  pp fmt "@[∀ %a. @\n@[{ %a }@\n{ %a }@]" 
+  pp fmt "@[∀ %a. @\n@[{ %a }@]@\n@[%s %a @]@\n{ %a }@]" 
   (list 
         field
         ~sep:comma)
-      t.triple_args
-    print_term t.triple_pre
-    print_term t.triple_post
+      t.triple_vars
+      print_term t.triple_pre
+      t.triple_name.id_str
+      (list print_app ~sep:sp) t.triple_args
+      print_term t.triple_post
 
 let sep_node fmt s = match s.d_node with 
   |Type(t, _, vl) -> pp fmt "@[Type %a %a@]"
@@ -56,7 +64,7 @@ let sep_node fmt s = match s.d_node with
       Ident.pp id 
       (fun fmt args -> List.iter (field fmt) args) args
 |Triple t -> 
-  pp fmt "@[Definition %a :@\n %a@]" 
+  pp fmt "@[Triple %a :@\n %a@]" 
     Ident.pp t.triple_name
     print_triple t 
 |Axiom axiom -> 

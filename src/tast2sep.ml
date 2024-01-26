@@ -5,8 +5,9 @@ open Ttypes
 open Sep_utilis
 open Tterm    
 
-type value = Pure_val of {vs : vsymbol} 
-           |Impure of {s_ty : ty; arg_loc : vsymbol; vs : vsymbol}
+type value =
+  |Pure_val of {vs : vsymbol option} 
+  |Impure of {s_ty : ty; arg_loc : vsymbol; vs : vsymbol}
 
 let is_pure_type vs =
   match vs.vs_ty.ty_node with
@@ -47,22 +48,24 @@ and val_description ns des =
     let lifted_args is_old =
       List.filter_map
         (fun arg ->
-          match if is_old then arg.consumes else arg.produces with
-          |None -> None
-          |Some (s_ty, l_ty) ->
-            if (not is_old) && arg.read_only then None else
-              let arg_vs = Option.get arg.arg_vs in
-              let arg_id = change_id arg_vs.vs_name mk_loc in 
-              let arg_loc_ty = ty_loc arg_vs.vs_ty in
-              let arg_loc = {vs_name=arg_id; vs_ty = arg_loc_ty} in
-              let vs, ns' = map_id !ns arg_vs l_ty in
-              let () = ns := ns' in
-              if is_pure_type arg_vs then
-                Some (Pure_val {vs})
-              else
-                Some (Impure {s_ty; arg_loc; vs})) in
+          match arg.arg_vs with
+          |None -> Some (Pure_val {vs=None})
+          |Some arg_vs -> begin
+              match if is_old then arg.consumes else arg.produces with
+              |None -> None
+              |Some (s_ty, l_ty) ->
+                if (not is_old) && arg.read_only then None else
+                  let arg_id = change_id arg_vs.vs_name mk_loc in 
+                  let arg_loc_ty = ty_loc arg_vs.vs_ty in
+                  let arg_loc = {vs_name=arg_id; vs_ty = arg_loc_ty} in
+                  let vs, ns' = map_id !ns arg_vs l_ty in
+                  let () = ns := ns' in
+                  if is_pure_type arg_vs then
+                    Some (Pure_val {vs=Some vs})
+                  else
+                    Some (Impure {s_ty; arg_loc; vs}) end) in
     let mk_lift = function
-      |Pure_val _ -> None
+      |Pure_val _  -> None
       |Impure {s_ty; arg_loc; vs} ->
         let pred = get_pred !ns s_ty in
         Some (App (pred, [arg_loc; vs])) in 
@@ -76,7 +79,7 @@ and val_description ns des =
     let post = List.map (fun t -> Pure (map_term !ns false t)) spec.sp_post in
     let post_cond = Star(lifts (updates @ rets) @ post) in
     let mk_updates = function
-      |Pure_val _ -> None
+      |Pure_val _  -> None
       |Impure {vs;_} -> Some vs in 
     let updated_vars = List.filter_map mk_updates (updates@rets) in 
     let updated_model = 
@@ -90,15 +93,19 @@ and val_description ns des =
       else
         let mk_ret r =
           match r with 
-          |Pure_val {vs} -> Some vs
+          |Pure_val {vs} -> vs
           |Impure {arg_loc;_} -> Some arg_loc in 
         let rets = List.filter_map mk_ret rets in 
         Lambda (rets, updated_model) in
     Triple {
         triple_name = des.vd_name;
-        triple_args =
+        triple_vars =
           List.concat_map
-            (function |Pure_val {vs} -> [vs] |Impure {arg_loc;vs;_} -> [arg_loc;vs]) args;
+            (function |Pure_val {vs} -> Option.fold vs ~some:(fun vs -> [vs]) ~none:[]
+                      |Impure {arg_loc;vs;_} -> [arg_loc;vs]) args;
+        triple_args =
+          List.map (function |Pure_val {vs} -> vs
+                             |Impure {arg_loc;_} -> Some arg_loc) args;
         triple_pre;
         triple_type = des.vd_type;
         triple_post;

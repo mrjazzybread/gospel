@@ -89,7 +89,7 @@ let print_type_declaration fmt td =
     td.td_cstrs (option print_type_spec) td.td_spec
 
 let print_lb_arg fmt arg = match arg.arg_vs with
-  | None -> pp fmt "()"
+  | None -> pp fmt "%s" "()"
   | Some vs -> begin 
      match arg.arg_type with 
      | Lnone  -> print_vs fmt vs

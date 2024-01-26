@@ -29,9 +29,11 @@ let sep_def d = match d.d_node with
     else
       Some (Coqtop_param(id.id_str, Coq_type))
   |Pred(id, args) ->
+    let args = List.rev args in 
     let types = List.map (fun v -> var_of_ty v.vs_ty) args in
     let t = coq_impls types (Coq_var hprop_name) in 
     Some (Coqtop_param(id.id_str, t))
+  |Triple _ -> assert false
   |_ -> None
 
 let sep_defs = List.filter_map sep_def

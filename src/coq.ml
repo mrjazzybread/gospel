@@ -110,7 +110,7 @@ and mod_expr = vars
 and mod_binding = vars * mod_typ
 
 and mod_bindings = mod_binding list
-
+ 
 (** Inductive definitions *)
 
 and coqind = {
@@ -427,7 +427,6 @@ let coq_fun arg c =
 
 let coq_funs args c =
   List.fold_right coq_fun args c
-
 (** Recursive function [fix f (x1:T1) .. (xn:Tn) : Tr => c]
     represented as [Coq_fix f n Tr body] where [body] is the
     representation of [fun (x1:T1) .. (xn:Tn) => c]. *)

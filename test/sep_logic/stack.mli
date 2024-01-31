@@ -22,7 +22,8 @@ val pop_opt : t -> int option
     
     ensures match r with
     |None -> old q = empty && q = empty
-    |Some r -> old q = cons r q
+    |Some r ->
+      old q = cons r q && r = hd q
  *)
 
 val top_opt : t -> int option

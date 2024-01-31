@@ -54,27 +54,26 @@ and val_description ns des =
               match if is_old then arg.consumes else arg.produces with
               |None -> None
               |Some (s_ty, l_ty) ->
-                if (not is_old) && arg.read_only then None else
-                  let arg_id = change_id arg_vs.vs_name mk_loc in 
-                  let arg_loc_ty = ty_loc arg_vs.vs_ty in
-                  let arg_loc = {vs_name=arg_id; vs_ty = arg_loc_ty} in
-                  let vs, ns' = map_id !ns arg_vs l_ty in
-                  let () = ns := ns' in
-                  if is_pure_type arg_vs then
-                    Some (Pure_val {vs=Some vs})
-                  else
-                    Some (Impure {s_ty; arg_loc; vs}) end) in
+                let arg_id = change_id arg_vs.vs_name mk_loc in 
+                let arg_loc_ty = ty_loc arg_vs.vs_ty in
+                let arg_loc = {vs_name=arg_id; vs_ty = arg_loc_ty} in
+                let vs, ns' = map_id !ns (is_old || arg.read_only) arg_vs l_ty in
+                let () = ns := ns' in
+                if is_pure_type arg_vs then
+                  Some (Pure_val {vs=Some vs})
+                else
+                  Some (Impure {s_ty; arg_loc; vs}) end) in
     let mk_lift = function
       |Pure_val _  -> None
       |Impure {s_ty; arg_loc; vs} ->
         let pred = get_pred !ns s_ty in
         Some (App (pred, [arg_loc; vs])) in 
-    let lifts args = List.filter_map mk_lift args in
+    let lifts = List.filter_map mk_lift in
     let args = lifted_args true spec.sp_args in
     let pre = List.map (fun t -> Pure (map_term !ns true t)) spec.sp_pre in
     let triple_pre = Star ((lifts args) @ pre) in
 
-    let updates = lifted_args false spec.sp_args in 
+    let updates = lifted_args false spec.sp_args in
     let rets = lifted_args false spec.sp_ret in
     let post = List.map (fun t -> Pure (map_term !ns false t)) spec.sp_post in
     let post_cond = Star(lifts (updates @ rets) @ post) in

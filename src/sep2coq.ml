@@ -7,13 +7,35 @@ module M = Map.Make(String)
 
 let to_triple s = "_" ^ s ^ "_spec"
 
+let some = "Coq.Init.Datatypes.Some"
+let none = "Coq.Init.Datatypes.None"
+let nil = "Coq.Lists.List.nil"
+let cons = "Coq.Lists.List.cons"
+let list = "Coq.Lists.List.list"
+let option = "Coq.Init.Datatypes.option"
+let length = "LibListZ.length"
+let head = "Coq.Lists.List.head"
 
-let type_mapping_list = ["sequence", "list"]
+let type_mapping_list = ["sequence", list;
+                         "option", option]
+let id_mapping_list = [
+    "Some", some;
+    "None", none;
+    "empty", nil;
+    "cons", cons;
+    "infix =", "Coq.Init.Logic.eq";
+    "infix ++", "Coq.Lists.List.app";
+    "length", length]
 
 let ty_map = List.fold_left (fun m (k, v) -> M.add k v m) M.empty type_mapping_list
+let id_map = List.fold_left (fun m (k, v) -> M.add k v m) M.empty id_mapping_list
 
 let map_ty v =
   try M.find v ty_map with
+  |Not_found -> v
+
+let map_id v =
+  try M.find v id_map with
   |Not_found -> v
 
 let rec var_of_ty t =
@@ -26,7 +48,7 @@ let rec var_of_ty t =
 
 exception WIP
 
-let coq_id id = coq_var id.Ident.id_str
+let coq_id id = coq_var (map_id id.Ident.id_str)
 
 let gen_args vs = vs.vs_name.id_str, var_of_ty vs.vs_ty
 
@@ -37,12 +59,60 @@ let gen_args_opt arg = match arg with
          , val_type
   |Some vs -> gen_args vs
 
+let rec coq_pattern p = match p.Tterm.p_node with
+  |Pwild -> Coq_wild
+  |Pvar vs -> coq_id vs.vs_name
+  |Papp (ls, l) -> coq_apps (coq_id ls.ls_name) (List.map coq_pattern l)
+  |Por _ |Pas _ |Pinterval _ |Pconst _ -> assert false
+
+let coq_const c =
+  match c with
+  |Ppxlib.Pconst_integer(v, _) -> coq_int (int_of_string v)
+  |_ -> assert false
+
+let rec coq_term t = match t.Tterm.t_node with
+  |Tvar v -> coq_id v.vs_name
+  |Tconst c -> coq_const c
+  |Tapp (f, [arg]) when f.ls_name.id_str = "hd" ->
+    coq_match (coq_app (coq_var head) (coq_term arg))
+      [coq_app (coq_var some) (coq_var "r"), coq_var "r";
+       coq_var none, coq_var "r"]
+  |Tapp (f, args) ->
+    if f.ls_name.id_str = "integer_of_int" then
+      coq_term (List.hd args)
+    else
+      let var = coq_id f.ls_name in
+      coq_apps var (List.map coq_term args)
+  |Tfield _ -> assert false
+  |Tif _ -> assert false
+  |Tcase(t, l) ->
+    let case (p, _, t) =
+      coq_pattern p, coq_term t in 
+    coq_match (coq_term t) (List.map case l)
+  |Tquant _ -> assert false
+  |Tlambda _ -> assert false
+  |Tlet _ -> assert false
+  |Tbinop (b, t1, t2) ->
+    let ct1 = coq_term t1 in
+    let ct2 = coq_term t2 in
+    begin match b with
+    |Tand | Tand_asym -> coq_app_conj ct1 ct2
+    |Tor | Tor_asym -> coq_app_disj ct1 ct2
+    |Timplies -> Coq_impl (ct1, ct2)
+    |Tiff -> coq_impl ct1 ct2
+    end
+  |Tnot t -> coq_app coq_not (coq_term t)
+  |Told t -> coq_term t
+  |Ttrue -> coq_prop_true
+  |Tfalse -> coq_prop_false
+
 let rec cfml_term = function
   |Star l -> hstars (List.map cfml_term l)
-  |Pure _ -> hpure coq_prop_true
+  |Pure t -> hpure (coq_term t)
   |App(sym, l) ->
-    let args = List.map (fun v -> coq_id v.vs_name) (List.rev l) in 
-    coq_apps (coq_id sym.ls_name) args 
+    let loc = List.hd l in
+    let rep = List.nth l (List.length l - 1) in 
+    hdata (coq_id loc.vs_name) (coq_app (coq_id sym.ls_name) (coq_id rep.vs_name))
   |Exists(l, term) ->
     let coq_term = cfml_term term in 
     List.fold_right
@@ -80,12 +150,10 @@ let sep_def d = match d.d_node with
     let t = coq_impls types hprop in 
     [Coqtop_param(id.id_str, t)]
   |Triple triple ->
-    begin try 
       let fun_def = triple.triple_name.id_str, Formula.func_type in
       let fun_triple = gen_spec triple in
       let triple_name = to_triple triple.triple_name.id_str in 
       coqtop_params [fun_def; triple_name, fun_triple]
-    with |_ -> [] end
   |_ -> []
 
 let sep_defs l =

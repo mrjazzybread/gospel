@@ -37,9 +37,9 @@ let is_present ns id =
   let str = id.id_str in 
   Mstr.mem str ns.sns_id
 
-let map_id ns vs ty =
+let map_id ns is_old vs ty =
   let id =
-    if is_present ns vs.vs_name then
+    if not is_old && is_present ns vs.vs_name then
        change_id vs.vs_name mk_update 
     else
       vs.vs_name in

@@ -26,6 +26,8 @@ let rec var_of_ty t =
 
 exception WIP
 
+let coq_id id = coq_var id.Ident.id_str
+
 let gen_args vs = vs.vs_name.id_str, var_of_ty vs.vs_ty
 
 let gen_args_opt arg = match arg with
@@ -35,14 +37,32 @@ let gen_args_opt arg = match arg with
          , val_type
   |Some vs -> gen_args vs
 
+let rec cfml_term = function
+  |Star l -> hstars (List.map cfml_term l)
+  |Pure _ -> hpure coq_prop_true
+  |App(sym, l) ->
+    let args = List.map (fun v -> coq_id v.vs_name) (List.rev l) in 
+    coq_apps (coq_id sym.ls_name) args 
+  |Exists(l, term) ->
+    let coq_term = cfml_term term in 
+    List.fold_right
+      (fun v acc -> hexists v.vs_name.id_str (var_of_ty v.vs_ty) acc)
+      l coq_term
+  |_ -> assert false
+
 let gen_spec triple =
   let args = List.map gen_args_opt triple.triple_args in
   let all_vars = List.map gen_args triple.triple_vars in 
   let dynargs = List.map (fun (x, t) -> coq_dyn_of t (coq_var x)) args in 
   let trm = trm_apps_lifted (coq_var triple.triple_name.id_str) dynargs in
-  let pre = hempty in
-  let post_body = hempty in
-  let post = coq_fun ("__UNUSED__", val_type) post_body in
+  let pre = cfml_term triple.triple_pre in
+  let post =
+    let args, body = match triple.triple_post with
+      |Lambda(args, b) ->
+        List.map (fun v -> v.vs_name.id_str, var_of_ty v.vs_ty) args,
+        b
+      |b -> ["__UNUSED__", val_type], b in 
+    coq_funs args (cfml_term body) in 
   let triple = coq_apps_var "CFML.SepLifted.Triple" [trm; pre; post] in
   coq_foralls all_vars triple
   
@@ -73,12 +93,12 @@ let sep_defs l =
   let imports = 
       [Coqtop_set_implicit_args ;
       Coqtop_require [ "Coq.ZArith.BinInt"; "TLC.LibLogic"; "TLC.LibRelation"; "TLC.LibInt"; "TLC.LibListZ" ] ;
-      Coqtop_require (cfml ["SepBase"; "SepLifted"; "WPLib"; "WPLifted"; "WPRecord"; "WPArray"; "WPBuiltin"; "WPLib" ]);
+      Coqtop_require_import (cfml ["SepBase"; "SepLifted"; "WPLib"; "WPLifted"; "WPRecord"; "WPArray"; "WPBuiltin" ]);
       (*coqtop_require_unless no_mystd_include*)
       Coqtop_require (cfml [ "Stdlib.Array_ml"; "Stdlib.List_ml"; "Stdlib.Sys_ml" ]) ;
       Coqtop_require_import [ "Coq.ZArith.BinIntDef"; "CFML.Semantics"; "CFML.WPHeader" ];
-      Coqtop_custom "Delimit Scope Z_scope with Z.";
-        Coqtop_custom "Existing Instance WPHeader.Enc_any | 99."] in
+      Coqtop_custom "Delimit Scope Z_scope with Z."
+       (*Coqtop_custom "Existing Instance WPHeader.Enc_any | 99."*)] in
   
   imports @ List.concat_map sep_def l
 

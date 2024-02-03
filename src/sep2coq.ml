@@ -14,7 +14,9 @@ let cons = "Coq.Lists.List.cons"
 let list = "Coq.Lists.List.list"
 let option = "Coq.Init.Datatypes.option"
 let length = "LibListZ.length"
-let head = "Coq.Lists.List.head"
+let head = "Gospel.hd_gospel"
+let eq = "Coq.Init.Logic.eq"
+let app = "Coq.Lists.List.app"
 
 let type_mapping_list = ["sequence", list;
                          "option", option]
@@ -23,8 +25,9 @@ let id_mapping_list = [
     "None", none;
     "empty", nil;
     "cons", cons;
-    "infix =", "Coq.Init.Logic.eq";
-    "infix ++", "Coq.Lists.List.app";
+    "hd", head;
+    "infix =", eq;
+    "infix ++", app;
     "length", length]
 
 let ty_map = List.fold_left (fun m (k, v) -> M.add k v m) M.empty type_mapping_list
@@ -73,10 +76,6 @@ let coq_const c =
 let rec coq_term t = match t.Tterm.t_node with
   |Tvar v -> coq_id v.vs_name
   |Tconst c -> coq_const c
-  |Tapp (f, [arg]) when f.ls_name.id_str = "hd" ->
-    coq_match (coq_app (coq_var head) (coq_term arg))
-      [coq_app (coq_var some) (coq_var "r"), coq_var "r";
-       coq_var none, coq_var "r"]
   |Tapp (f, args) ->
     if f.ls_name.id_str = "integer_of_int" then
       coq_term (List.hd args)
@@ -159,7 +158,8 @@ let sep_def d = match d.d_node with
 let sep_defs l =
   let cfml = List.map (fun s -> "CFML." ^ s) in 
   let imports = 
-      [Coqtop_set_implicit_args ;
+    [Coqtop_set_implicit_args ;
+     Coqtop_require_import ["Gospel"];
       Coqtop_require [ "Coq.ZArith.BinInt"; "TLC.LibLogic"; "TLC.LibRelation"; "TLC.LibInt"; "TLC.LibListZ" ] ;
       Coqtop_require_import (cfml ["SepBase"; "SepLifted"; "WPLib"; "WPLifted"; "WPRecord"; "WPArray"; "WPBuiltin" ]);
       (*coqtop_require_unless no_mystd_include*)

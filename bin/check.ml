@@ -62,10 +62,11 @@ let run_file config file =
     let file = Sep2coq.sep_defs file in
     if config.verbose then (
         pp fmt "@[@\n*******************************@]@.";
-        pp fmt "@[********** CFML ********@]@.";
+        pp fmt "@[******* CFML ******@]@.";
         pp fmt "@[*******************************@]@.";
         print_endline (Print_coq.tops file));
-    pp fmt "OK\n";
+    
+    let () = pp fmt "OK\n" in 
     true
   with W.Error e ->
     let bt = Printexc.get_backtrace () in

@@ -8,6 +8,8 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 
+
+
 module W = Warnings
 open Ppxlib
 open Utils
@@ -387,6 +389,7 @@ let rec dterm whereami kid crcm ns denv old_denv { term_desc; term_loc = loc } :
   | Uast.Tlet (pid, t1, t2) ->
      let dt1 = dterm whereami kid crcm ns denv old_denv t1 in
      let denv = denv_add_var denv pid.pid_str (dty_of_dterm dt1) in
+     let old_denv = denv_add_var old_denv pid.pid_str (dty_of_dterm dt1) in
      let dt2 = dterm whereami kid crcm ns denv old_denv t2 in
      mk_dterm ~loc (DTlet (pid, dt1, dt2)) dt2.dt_dty
   | Uast.Tinfix (t1, op1, t23) ->

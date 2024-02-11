@@ -32,7 +32,8 @@ let type_check load_path name sigs =
 let run_file config file =
   try
     let ocaml = parse_ocaml file in
-    if config.verbose then (
+    let verbose = false (*config.verbose*) in 
+    if verbose then (
       pp fmt "@[@\n*******************************@]@.";
       pp fmt "@[********** Parsed file ********@]@.";
       pp fmt "@[*******************************@]@.";
@@ -40,33 +41,28 @@ let run_file config file =
 
     let module_nm = path2module file in
     let sigs = parse_gospel ~filename:file ocaml module_nm in
-    if config.verbose then (
+    if verbose then (
       pp fmt "@[@\n*******************************@]@.";
       pp fmt "@[****** GOSPEL translation *****@]@.";
       pp fmt "@[*******************************@]@.";
       pp fmt "@[%a@]@." Upretty_printer.s_signature sigs);
 
     let file = type_check config.load_path file sigs in
-    if config.verbose then (
+    if verbose then (
       pp fmt "@[@\n*******************************@]@.";
       pp fmt "@[********* Typed GOSPEL ********@]@.";
       pp fmt "@[*******************************@]@.";
       pp fmt "@[%a@]@." print_file file);
     let file = Tast2sep.process_sigs file in
-    if config.verbose then (
+    if true then (
         pp fmt "@[@\n*******************************@]@.";
         pp fmt "@[******* Seperation Logic ******@]@.";
         pp fmt "@[*******************************@]@.";
         pp fmt "@[%a@]@."
-          Sep_prettyprinter.file file);
-    let file = Sep2coq.sep_defs file in
-    if config.verbose then (
-        pp fmt "@[@\n*******************************@]@.";
-        pp fmt "@[******* CFML ******@]@.";
-        pp fmt "@[*******************************@]@.";
-        print_endline (Print_coq.tops file));
+          Sep_prettyprinter.file file); 
     
-    let () = pp fmt "OK\n" in 
+    let file = Sep2coq.sep_defs file in
+    print_endline (Print_coq.tops file);
     true
   with W.Error e ->
     let bt = Printexc.get_backtrace () in

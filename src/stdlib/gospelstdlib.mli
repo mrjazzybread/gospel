@@ -541,11 +541,15 @@ module Set : sig
   (*@ function of_seq (s: 'a Sequence.t) : 'a t *)
 end
 
-(*@ function ( [->] ) (f: 'a -> 'b) (x:'a) (y: 'b) : 'a -> 'b *)
-
 module Map : sig
   (** Maps from keys of type ['a] to values of type ['b] are represented by
       Gospel functions of type ['a -> 'b]. *)
+  (*@ type ('a, 'b) t = 'a -> 'b *)
+
+  (*@ function ([->]) (f: 'a -> 'b) (x:'a) (y: 'b) : 'a -> 'b *)
+  
+  (*@ function dom (f : ('a, 'b) t) : 'a Set.t *)
+
 end
 
 module Order : sig

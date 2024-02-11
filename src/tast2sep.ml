@@ -72,7 +72,7 @@ and val_description ns des =
     let args = lifted_args true spec.sp_args in
     let pre = List.map (fun t -> Pure (map_term !ns true t)) spec.sp_pre in
     let triple_pre = Star ((lifts args) @ pre) in
-
+    
     let updates = lifted_args false spec.sp_args in
     let rets = lifted_args false spec.sp_ret in
     let post = List.map (fun t -> Pure (map_term !ns false t)) spec.sp_post in

@@ -12,7 +12,7 @@ val create : unit -> t
 val push : t -> int -> unit
 (*@ push q x
     modifies q @ t
-    ensures q = cons x (old q) 
+    ensures q = cons x (old q)
 *)
 
 val pop_opt : t -> int option
@@ -22,8 +22,7 @@ val pop_opt : t -> int option
     
     ensures match r with
     |None -> old q = empty && q = empty
-    |Some r_val ->
-    old q = cons r_val q
+    |Some r_val -> old q = cons r_val q
  *)
 
 val top_opt : t -> int option
@@ -32,8 +31,7 @@ val top_opt : t -> int option
     
     ensures match r with
     |None -> q = empty
-    |Some r ->
-      q <> empty && r = hd q
+    |Some r -> q <> empty && r = hd q
  *)
 
 val clear : t -> unit
@@ -68,7 +66,7 @@ val transfer : t -> t -> unit
     consumes q2 @ t
 
     ensures q1 = empty
-    ensures q2 = q2 ++ (old q1) *)
+    ensures q2 = old (q2 ++ q1) *)
 
 (*missing : pop, take, iter, fold, to_seq, add_seq, of_seq *)
                         

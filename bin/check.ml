@@ -60,9 +60,6 @@ let run_file config file =
         pp fmt "@[*******************************@]@.";
         pp fmt "@[%a@]@."
           Sep_prettyprinter.file file); 
-    
-    let file = Sep2coq.sep_defs file in
-    print_endline (Print_coq.tops file);
     true
   with W.Error e ->
     let bt = Printexc.get_backtrace () in

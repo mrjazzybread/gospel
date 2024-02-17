@@ -47,6 +47,13 @@
 (*@ type 'a set *)
 (** The type for finite unordered sets. *)
 
+(*@ type ('a, 'b) map = 'a -> 'b *)
+(** The type for infinite maps *)
+
+(*@ type ('a, 'b) fmap *)
+(** The type for finite maps *)
+
+
 (** {1 Arithmetic}
 
     The type [integer] is built-in. This is the type of arbitrary precision
@@ -541,15 +548,29 @@ module Set : sig
   (*@ function of_seq (s: 'a Sequence.t) : 'a t *)
 end
 
-module Map : sig
-  (** Maps from keys of type ['a] to values of type ['b] are represented by
-      Gospel functions of type ['a -> 'b]. *)
-  (*@ type ('a, 'b) t = 'a -> 'b *)
+module Fmap : sig
+  (** Finite maps from keys of type ['a] to values of type ['b].  *)
 
-  (*@ function ([->]) (f: 'a -> 'b) (x:'a) (y: 'b) : 'a -> 'b *)
+  (*@ type ('a, 'b) t = ('a, 'b) fmap *)
+
+  (*@ function empty : ('a, 'b) fmap *)
+  
+  (*@ function ([->]) (f: ('a, 'b) t) (x:'a) (y: 'b) : ('a, 'b) t *)
+
+  (*@ function ([_]) (f : ('a, 'b) t) (x:'a) : 'b *)
+  
+  (*@ function remove (f: ('a, 'b) t) (x:'a) : ('a, 'b) t *)
   
   (*@ function dom (f : ('a, 'b) t) : 'a Set.t *)
 
+  (*@ function cardinality (f: ('a, 'b) t) : integer *)
+end
+
+module Map : sig
+  (** Infinite maps from keys of type ['a] to values of type ['b] *)
+  (*@ type ('a, 'b) t = ('a, 'b) map*)
+
+  (*@ function ([->]) (f: ('a, 'b) t) (x:'a) (y: 'b) : ('a, 'b) t *)
 end
 
 module Order : sig

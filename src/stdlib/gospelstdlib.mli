@@ -553,7 +553,7 @@ module Fmap : sig
 
   (*@ type ('a, 'b) t = ('a, 'b) fmap *)
 
-  (*@ function empty : ('a, 'b) fmap *)
+  (*@ function mempty : ('a, 'b) fmap *)
   
   (*@ function ([->]) (f: ('a, 'b) t) (x:'a) (y: 'b) : ('a, 'b) t *)
 
@@ -562,6 +562,8 @@ module Fmap : sig
   (*@ function remove (f: ('a, 'b) t) (x:'a) : ('a, 'b) t *)
   
   (*@ function dom (f : ('a, 'b) t) : 'a Set.t *)
+
+  (*@ predicate mem (f : ('a, 'b) t) (k : 'a) *)
 
   (*@ function cardinality (f: ('a, 'b) t) : integer *)
 end

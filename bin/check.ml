@@ -32,7 +32,7 @@ let type_check load_path name sigs =
 let run_file config file =
   try
     let ocaml = parse_ocaml file in
-    let verbose = false (*config.verbose*) in 
+    let verbose = config.verbose in 
     if verbose then (
       pp fmt "@[@\n*******************************@]@.";
       pp fmt "@[********** Parsed file ********@]@.";
@@ -53,6 +53,7 @@ let run_file config file =
       pp fmt "@[********* Typed GOSPEL ********@]@.";
       pp fmt "@[*******************************@]@.";
       pp fmt "@[%a@]@." print_file file);
+    
     let file = Tast2sep.process_sigs file in
     if true then (
         pp fmt "@[@\n*******************************@]@.";

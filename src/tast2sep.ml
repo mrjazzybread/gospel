@@ -134,7 +134,7 @@ and type_declaration ns t =
 let signature_item_desc ns = function 
   |Sig_type(_, l, _) ->
     List.concat_map (fun t -> type_declaration ns t) l
-  |Sig_val (des, _) -> print_newline();
+  |Sig_val (des, _) -> 
     [val_description ns des]
   |Sig_open _ -> []
   |Sig_axiom axiom -> [Axiom axiom]
@@ -154,3 +154,5 @@ let process_sigs file =
   let ns = merge_ns file.Tmodule.fl_export ns_with_primitives in 
   List.concat_map
     (signature_item (convert_ns ns)) file.Tmodule.fl_sigs
+
+

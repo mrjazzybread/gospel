@@ -220,7 +220,6 @@ let ts_float = mk_ts (Ident.create ~loc:Location.none "float") []
 let ts_bool = mk_ts (Ident.create ~loc:Location.none "bool") []
 let ts_exn = mk_ts (Ident.create ~loc:Location.none "exn") []
 
-
 let ts_array =
   mk_ts
     (Ident.create ~loc:Location.none "array")

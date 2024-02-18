@@ -6,11 +6,11 @@ type t
 
 val create : int -> t
 (*@ tbl = create n
-    ensures tbl = empty *)
+    ensures tbl = mempty *)
 
 val clear : t -> t
 (*@ clear tbl
-    ensures tbl = empty *)
+    ensures tbl = mempty *)
 
 val copy : t -> t
 (*@ c = copy tbl
@@ -36,14 +36,14 @@ val find_all : t -> int -> int list
 
 val mem :  t -> int -> bool
 (*@ b = mem tbl k
-    ensures b <-> tbl[k] <> Sequence.empty 
+    ensures b <-> mem tbl k
  *)
 
 val remove : t -> int -> unit
 (*@ remove tbl k
     modifies tbl
-    ensures tbl[k] = Sequence.empty -> tbl = old tbl
-    ensures tbl[k] <> Sequence.empty -> tbl = old (tbl[k -> tl (tbl[k])])
+    ensures not (mem tbl k) -> tbl = old tbl
+    ensures mem tbl k -> tbl = old (tbl[k -> tl (tbl[k])])
  *)
 
 val replace : t -> int -> int -> unit

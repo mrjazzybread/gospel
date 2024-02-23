@@ -2,7 +2,7 @@
 (*@ open Fmap *)
 
 type t
-(*@ mutable model : (int, int sequence) fmap  *)
+(*@ mutable model : (int, int sequence) fmap *)
 
 val create : int -> t
 (*@ tbl = create n
@@ -19,20 +19,23 @@ val copy : t -> t
 val add : t -> int -> int -> unit
 (*@ add tbl k v
     modifies tbl
-    ensures tbl = old(tbl[k -> cons v (tbl[k])]) 
+    ensures mem tbl k -> tbl = old(tbl[k -> cons v (tbl[k])])
+    ensures not (mem tbl k) -> tbl = tbl[k -> cons v empty]
 *)
 
 val find_opt : t -> int -> int option
 (*@ r = find_opt tbl k
     preserves tbl
     ensures match r with 
-    |None -> tbl[k] = Sequence.empty
+    |None -> not (mem tbl k)
     |Some x -> hd (tbl[k]) = x
  *)
 
 val find_all : t -> int -> int list
 (*@ l = find_all tbl k
-    ensures l = tbl[k] *)
+    ensures mem tbl k -> l = tbl[k]
+    ensures mem tbl k -> l = empty
+*)
 
 val mem :  t -> int -> bool
 (*@ b = mem tbl k
@@ -43,7 +46,10 @@ val remove : t -> int -> unit
 (*@ remove tbl k
     modifies tbl
     ensures not (mem tbl k) -> tbl = old tbl
-    ensures mem tbl k -> tbl = old (tbl[k -> tl (tbl[k])])
+    ensures mem tbl k -> 
+    let tail = old (tl (tbl[k])) in
+      tail = empty  -> tbl = old (remove tbl k) &&
+      tail <> empty -> tbl = old (tbl[k -> tl (tbl[k])])
  *)
 
 val replace : t -> int -> int -> unit

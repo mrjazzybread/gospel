@@ -786,7 +786,7 @@ let process_val_spec kid crcm ns id args ret vs =
   let id_spec = header.sp_hd_nm.pid_str in
   let cmp_ids =
     match String.split_on_char ' ' id_spec with
-    | [ "infix"; s ] -> String.equal s id_val
+    | [ "infix"; s ] | [ "prefix"; s ] -> String.equal s id_val
     | [ _ ] -> id_val = id_spec
     | _ -> assert false
   in

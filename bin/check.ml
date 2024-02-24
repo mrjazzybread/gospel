@@ -23,10 +23,11 @@ let path2module p =
 
 let type_check load_path name sigs =
   let md = init_muc name in
+  let mod_name = path2module name in 
   let penv =
-    path2module name |> Utils.Sstr.singleton |> Typing.penv load_path
+    Utils.Sstr.singleton mod_name |> Typing.penv load_path
   in
-  let md = List.fold_left (Typing.type_sig_item penv) md sigs in
+  let md = List.fold_left (Typing.type_sig_item [mod_name] penv) md sigs in
   wrap_up_muc md
 
 let run_file config file =

@@ -28,6 +28,7 @@ module Ident = struct
   type t = {
     id_str : string;
     id_attrs : string list;
+    id_path : string list;
     id_loc : Location.t;
     id_tag : int;
   }
@@ -54,12 +55,18 @@ module Ident = struct
 
   let create =
     let tag = ref 0 in
-    fun ?(attrs = []) ~loc str ->
+    fun ?(attrs = []) ?(path=[]) ~loc str ->
+    if path <> [] then (List.iter (fun x -> print_string x; print_char '.') path; print_endline str);
       incr tag;
-      { id_str = str; id_attrs = attrs; id_loc = loc; id_tag = !tag }
+      { id_str = str;
+        id_attrs = attrs;
+        id_path = path;
+        id_loc = loc;
+        id_tag = !tag;
+      }
 
-  let of_preid (pid : Preid.t) =
-    create pid.pid_str ~attrs:pid.pid_attrs ~loc:pid.pid_loc
+  let of_preid ?(path=[]) (pid : Preid.t) =
+    create pid.pid_str ~path ~attrs:pid.pid_attrs ~loc:pid.pid_loc
 
   let set_loc t loc = { t with id_loc = loc }
   let add_attr t attr = { t with id_attrs = attr :: t.id_attrs }

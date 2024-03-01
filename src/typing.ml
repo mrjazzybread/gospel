@@ -742,7 +742,11 @@ let type_type_declaration path kid crcm ns r tdl =
     in
     Hts.add type_declarations td_ts inv_td;
 
-    let spec = Option.map (process_type_spec kid crcm ns ty) td.tspec in
+    let model_ty =
+      match td_model with
+      |Some (ty, _) -> ty
+      |None -> ty in 
+    let spec = Option.map (process_type_spec kid crcm ns model_ty) td.tspec in
 
     if td.tcstrs != [] then
       W.error ~loc:td.tloc (W.Unsupported "type constraints");

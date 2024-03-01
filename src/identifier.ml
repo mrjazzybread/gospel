@@ -82,12 +82,17 @@ let is_somefix f s =
   let sl = String.split_on_char ' ' s in
   List.length sl > 1 && List.hd sl = f
 
+let create_base_id name =
+  let built_in_path = "#Base_lang" in 
+  Ident.create ~loc:Location.none ~path:[built_in_path] name
+
 let is_prefix = is_somefix "prefix"
 let is_infix = is_somefix "infix"
 let is_mixfix = is_somefix "mixfix"
-let eq = Ident.create ~loc:Location.none (infix "=")
-let neq = Ident.create ~loc:Location.none (infix "<>")
-let none = Ident.create ~loc:Location.none "None"
-let some = Ident.create ~loc:Location.none "Some"
-let nil = Ident.create ~loc:Location.none "[]"
-let cons = Ident.create ~loc:Location.none (infix "::")
+
+let eq = create_base_id (infix "=")
+let neq = create_base_id (infix "<>")
+let none = create_base_id "None"
+let some = create_base_id "Some"
+let nil = create_base_id "[]"
+let cons = create_base_id (infix "::")

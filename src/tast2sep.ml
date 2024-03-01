@@ -5,9 +5,12 @@ open Ttypes
 open Sep_utilis
 open Tterm    
 
-type value =
-  |Pure_val of {vs : vsymbol option} 
-  |Impure of {s_ty : ty; arg_loc : vsymbol; vs : vsymbol}
+type value = {
+    s_ty : ty; (* spatial type *)
+    arg_prog : vsymbol; (* program variable *)
+    arg_log : vsymbol; (* logical value *)
+    ro : bool;
+  }
 
 let is_pure_type vs =
   match vs.vs_ty.ty_node with
@@ -49,37 +52,36 @@ and val_description ns des =
       List.filter_map
         (fun arg ->
           match arg.arg_vs with
-          |None -> Some (Pure_val {vs=None})
+          |None -> None
           |Some arg_vs -> begin
               match if is_old then arg.consumes else arg.produces with
               |None -> None
               |Some (s_ty, l_ty) ->
-                let arg_id = change_id arg_vs.vs_name mk_loc in 
-                let arg_loc_ty = ty_loc arg_vs.vs_ty in
-                let arg_loc = {vs_name=arg_id; vs_ty = arg_loc_ty} in
-                let vs, ns' = map_id !ns (is_old || arg.read_only) arg_vs l_ty in
+                let arg_id = change_id arg_vs.vs_name mk_prog in
+                let ro = arg.read_only in
+                let arg_loc_ty =
+                  if is_pure_type arg_vs then
+                    s_ty
+                  else
+                    ty_loc in
+                let arg_prog = {vs_name=arg_id; vs_ty = arg_loc_ty} in
+                let arg_log, ns' = map_id !ns (is_old || arg.read_only) arg_vs l_ty in
                 let () = ns := ns' in
-                if is_pure_type arg_vs then
-                  Some (Pure_val {vs=Some vs})
-                else
-                  Some (Impure {s_ty; arg_loc; vs}) end) in
+                Some {s_ty; arg_prog; ro; arg_log} end) in
     let mk_lift = function
-      |Pure_val _  -> None
-      |Impure {s_ty; arg_loc; vs} ->
+        {s_ty; arg_prog; arg_log; _} ->
         let pred = get_pred !ns s_ty in
-        Some (App (pred, [arg_loc; vs])) in 
+        Some (App (pred, [arg_prog; arg_log])) in 
     let lifts = List.filter_map mk_lift in
     let args = lifted_args true spec.sp_args in
     let pre = List.map (fun t -> Pure (map_term !ns true t)) spec.sp_pre in
-    let triple_pre = Star ((lifts args) @ pre) in
-    
+    let triple_pre = Star ((lifts args) @ pre) in    
     let updates = lifted_args false spec.sp_args in
     let rets = lifted_args false spec.sp_ret in
     let post = List.map (fun t -> Pure (map_term !ns false t)) spec.sp_post in
     let post_cond = Star(lifts (updates @ rets) @ post) in
     let mk_updates = function
-      |Pure_val _  -> None
-      |Impure {vs;_} -> Some vs in 
+      |{arg_log;ro;_} -> if ro then None else Some arg_log in 
     let updated_vars = List.filter_map mk_updates (updates@rets) in 
     let updated_model = 
       if updated_vars = [] then
@@ -92,24 +94,21 @@ and val_description ns des =
       else
         let mk_ret r =
           match r with 
-          |Pure_val {vs} -> vs
-          |Impure {arg_loc;_} -> Some arg_loc in 
+          |{arg_prog;_} -> Some arg_prog in 
         let rets = List.filter_map mk_ret rets in 
         Lambda (rets, updated_model) in
     Triple {
         triple_name = des.vd_name;
         triple_vars =
           List.concat_map
-            (function |Pure_val {vs} -> Option.fold vs ~some:(fun vs -> [vs]) ~none:[]
-                      |Impure {arg_loc;vs;_} -> [arg_loc;vs]) args;
+            (function  |{arg_prog; arg_log;_} -> [arg_prog;arg_log]) args;
         triple_args =
-          List.map (function |Pure_val {vs} -> vs
-                             |Impure {arg_loc;_} -> Some arg_loc) args;
+          List.map (function |{arg_prog;_} -> Some arg_prog) args;
         triple_pre;
         triple_type = des.vd_type;
         triple_post;
       }
-      
+
 and type_declaration ns t = 
   let id = t.td_ts.ts_ident in
   let self_type = 
@@ -126,17 +125,19 @@ and type_declaration ns t =
       model_to_arg s.ty_fields
     |None -> {vs_name = arg; vs_ty = self_type}, false in 
   let new_id = (get_pred ns self_type).ls_name in 
-  let ty_var_list = List.map fst t.td_params in 
-  [Type(id, mut, ty_var_list);
-   Pred(new_id, [{vs_name=id; vs_ty=ty_loc self_type};pred_field])]
-
-
+  let ty_var_list = List.map fst t.td_params in
+  if mut then
+    [Pred(new_id, [{vs_name=id; vs_ty=ty_loc};pred_field])]
+  else
+    [Type (id, ty_var_list);
+      Pred(new_id, [{vs_name=id; vs_ty=self_type};pred_field])]
+    
 let signature_item_desc ns = function 
   |Sig_type(_, l, _) ->
     List.concat_map (fun t -> type_declaration ns t) l
   |Sig_val (des, _) -> 
     [val_description ns des]
-  |Sig_open _ -> []
+  |Sig_open _ |Sig_use _ -> []
   |Sig_axiom axiom -> [Axiom axiom]
   |Sig_function f -> [Function f]
   |_ -> assert false

@@ -56,7 +56,7 @@ let print_triple fmt t =
       print_term t.triple_post
 
 let sep_node fmt s = match s.d_node with 
-  |Type(t, _, vl) -> pp fmt "@[Type %a %a@]"
+  |Type(t, vl) -> pp fmt "@[Type %a %a@]"
                     (list Ttypes.print_tv) vl
                     Ident.pp t
 |Pred(id, args) -> 

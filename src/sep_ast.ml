@@ -29,7 +29,7 @@ type triple = {
 
 type definition_node = 
   |Pred of Ident.t * Symbols.vsymbol list
-  |Type of Ident.t * bool * Ttypes.tvsymbol list
+  |Type of Ident.t * Ttypes.tvsymbol list
   |Triple of triple
   |Axiom of Tast.axiom
   |Function of Tast.function_

@@ -24,7 +24,7 @@ let ty_prop = ty_app ts_prop []
 let get_rep_pred = String.capitalize_ascii
 
 let mk_update s =  "_" ^ s ^ "'"
-let mk_loc s = "_loc_" ^ s
+let mk_prog s = "_prog_" ^ s
 
 
 let change_id id map =

@@ -82,7 +82,7 @@ val nil : Ident.t
 val cons : Ident.t
 
 (* Utils *)
-
+val create_base_id : string -> Ident.t
 val prefix : string -> string
 val infix : string -> string
 val mixfix : string -> string

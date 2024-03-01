@@ -118,20 +118,24 @@ let ty_loc_sp = ty_app ts_loc_sp []
 
 let ts_loc = mk_ts
                (Ident.create ~loc:Location.none "loc")
-               [fresh_tv ~loc:Location.none "a" ]
+               []
 
-let ty_loc t = ty_app ts_loc [t]
+let ts_val = mk_ts
+               (Ident.create ~loc:Location.none "val")
+               []
 
+let ty_loc = ty_app ts_loc []
+let ty_val = ty_app ts_val []
 
-let ty_apply_spatial ty spatial =
+let rec ty_apply_spatial ty spatial =
   match ty.ty_node, spatial.ty_node with
   |Tyvar v1, Tyvar v2 when tv_equal v1 v2 -> ty
-  |Tyapp(ts1, _), Tyapp(ts2, _) when ts_equal ts1 ts2 ->
+  |Tyapp(ts1, l1), Tyapp(ts2, l2) when ts_equal ts1 ts2 ->
     begin match ts1.ts_rep with
-    |Self -> ty
+    |Self -> {ty_node=Tyapp (ts1, List.map2 ty_apply_spatial l1 l2)}
     |Model (model, _) -> model end
   |_, Tyapp(t, _) when ts_equal t ts_loc_sp ->
-    ty_loc ty
+    ty_loc
   |_ -> assert false (*TODO: replace with W.error *)
 
 let rec ty_full_inst ?loc m ty =
@@ -209,39 +213,39 @@ let ty_equal_check ty1 ty2 =
   if not (ty_equal ty1 ty2) then raise (TypeMismatch (ty1, ty2))
 
 (** Built-in symbols *)
-
-let ts_unit = mk_ts (Ident.create ~loc:Location.none "unit") []
-let ts_integer = mk_ts (Ident.create ~loc:Location.none "integer") []
-let ts_int = mk_ts (Ident.create ~loc:Location.none "int") []
-let ts_char = mk_ts (Ident.create ~loc:Location.none "char") []
-let ts_bytes = mk_ts (Ident.create ~loc:Location.none "bytes") []
-let ts_string = mk_ts (Ident.create ~loc:Location.none "string") []
-let ts_float = mk_ts (Ident.create ~loc:Location.none "float") []
-let ts_bool = mk_ts (Ident.create ~loc:Location.none "bool") []
-let ts_exn = mk_ts (Ident.create ~loc:Location.none "exn") []
+let create_base_id = Identifier.create_base_id
+  
+let ts_unit = mk_ts (create_base_id "unit") []
+let ts_integer = mk_ts (create_base_id "integer") []
+let ts_char = mk_ts (create_base_id "char") []
+let ts_bytes = mk_ts (create_base_id "bytes") []
+let ts_string = mk_ts (create_base_id "string") []
+let ts_float = mk_ts (create_base_id "float") []
+let ts_bool = mk_ts (create_base_id "bool") []
+let ts_exn = mk_ts (create_base_id "exn") []
 
 let ts_array =
   mk_ts
-    (Ident.create ~loc:Location.none "array")
+    (create_base_id "array")
     [ fresh_tv ~loc:Location.none "a" ]
 
 let ts_list =
   mk_ts
-    (Ident.create ~loc:Location.none "list")
+    (create_base_id "list")
     [ fresh_tv ~loc:Location.none "a" ]
 
 let ts_option =
   mk_ts
-    (Ident.create ~loc:Location.none "option")
+    (create_base_id "option")
     [ fresh_tv ~loc:Location.none "a" ]
 
-let ts_int32 = mk_ts (Ident.create ~loc:Location.none "int32") []
-let ts_int64 = mk_ts (Ident.create ~loc:Location.none "int64") []
-let ts_nativeint = mk_ts (Ident.create ~loc:Location.none "nativeint") []
+let ts_int32 = mk_ts (create_base_id "int32") []
+let ts_int64 = mk_ts (create_base_id "int64") []
+let ts_nativeint = mk_ts (create_base_id "nativeint") []
 
 let ts_format6 =
   mk_ts
-    (Ident.create ~loc:Location.none "format6")
+    (create_base_id "format6")
     [
       fresh_tv ~loc:Location.none "a";
       fresh_tv ~loc:Location.none "b";
@@ -253,7 +257,7 @@ let ts_format6 =
 
 let ts_lazy =
   mk_ts
-    (Ident.create ~loc:Location.none "lazy")
+    (create_base_id "lazy")
     [ fresh_tv ~loc:Location.none "a" ]
 
 let ts_tuple =
@@ -262,7 +266,7 @@ let ts_tuple =
   fun n ->
     try Hashtbl.find ts_tuples n
     with Not_found ->
-      let ts_id = Ident.create ~loc:Location.none ("tuple" ^ string_of_int n) in
+      let ts_id = create_base_id ("tuple" ^ string_of_int n) in
       let ts_args =
         List.init n (fun x ->
             fresh_tv ~loc:Location.none ("a" ^ string_of_int x))
@@ -274,7 +278,7 @@ let ts_tuple =
 let ts_arrow =
   let ta = fresh_tv ~loc:Location.none "a" in
   let tb = fresh_tv ~loc:Location.none "b" in
-  let id = Ident.create ~loc:Location.none "->" in
+  let id = create_base_id "->" in
   mk_ts id [ ta; tb ]
 
 
@@ -285,7 +289,10 @@ let is_ts_tuple ts =
 let is_ts_arrow ts = Ident.equal ts_arrow.ts_ident ts.ts_ident
 let ty_unit = ty_app ts_unit []
 let ty_integer = ty_app ts_integer []
+
+let ts_int = mk_ts ~spatial:(Model (ty_integer,false)) (create_base_id "int") []
 let ty_int = ty_app ts_int []
+                                     
 let ty_bool = ty_app ts_bool []
 let ty_float = ty_app ts_float []
 let ty_char = ty_app ts_char []

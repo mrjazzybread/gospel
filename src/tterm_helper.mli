@@ -19,8 +19,6 @@ val t_free_vs_in_set : Svs.t -> Tterm.term -> unit
 val t_prop : Tterm.term -> Tterm.term
 val t_type : term -> ty
 val t_ty_check : term -> ty option -> unit
-val ls_arg_inst : lsymbol -> term list -> ty Mtv.t
-val ls_app_inst : lsymbol -> term list -> ty option -> Location.t -> ty Mtv.t
 val mk_pattern : pattern_node -> ty -> Location.t -> pattern
 val p_wild : ty -> Location.t -> pattern
 val p_var : vsymbol -> Location.t -> pattern

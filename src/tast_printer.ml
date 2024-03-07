@@ -236,6 +236,8 @@ let exception_declaration ctxt f x =
   pp f "@[<hov2>exception@ %a@]%a"
     (print_extension_constructor ctxt)
     x.exn_constructor (item_attributes ctxt) x.exn_attributes
+let print_axiom f x =
+  pp f "(*@@ axiom %a: %a *)" Ident.pp x.ax_name print_term x.ax_term
 
 let rec print_signature_item f x =
   let print_val f vd =
@@ -336,7 +338,7 @@ let rec print_signature_item f x =
       item_attributes reset_ctxt f a
   | Sig_function x -> print_function f x
   | Sig_axiom x ->
-      pp f "(*@@ axiom %a: %a *)" Ident.pp x.ax_name print_term x.ax_term
+     print_axiom f x
   | Sig_use s -> pp f "(*@@ use %s *)" s
   | _ -> assert false
 

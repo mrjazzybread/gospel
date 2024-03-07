@@ -97,23 +97,23 @@ let drop n xs =
   in
   if n < 0 then invalid_arg "drop" else aux n xs
 
-let ls_app_inst ls tl ty loc =
+let mk_ty = Option.value ~default:ty_bool
+
+let ls_app_inst ls tl ty _loc =
   let s = ls_arg_inst ls tl in
-  match (ls.ls_value, ty) with
-  | Some _, None -> W.error ~loc (W.Predicate_symbol_expected ls.ls_name.id_str)
-  | None, Some _ -> W.error ~loc (W.Function_symbol_expected ls.ls_name.id_str)
-  | Some vty, Some ty ->
-      let vty =
-        let ntl = List.length tl in
-        if ntl >= List.length ls.ls_args then vty
-        else
-          (* build the result type in case of a partial application *)
-          List.fold_right
-            (fun t1 t2 -> { ty_node = Tyapp (ts_arrow, [ t1; t2 ]) })
-            (drop ntl ls.ls_args) vty
-      in
-      ty_match s vty ty
-  | None, None -> s
+  let vty = mk_ty ls.ls_value in 
+  let ty = mk_ty ty in
+  let vty =
+    let ntl = List.length tl in
+    if ntl >= List.length ls.ls_args then vty
+    else
+      (* build the result type in case of a partial application *)
+      List.fold_right
+        (fun t1 t2 -> { ty_node = Tyapp (ts_arrow, [ t1; t2 ]) })
+        (drop ntl ls.ls_args) vty
+  in
+  let _ = ty_match s vty ty in ()
+
 
 (** Pattern constructors *)
 
@@ -145,11 +145,11 @@ let t_var vs = mk_term (Tvar vs) (Some vs.vs_ty)
 let t_const c ty = mk_term (Tconst c) (Some ty)
 
 let t_app ls tl ty loc =
-  ignore (ls_app_inst ls tl ty loc : ty Mtv.t);
+  let () = ls_app_inst ls tl ty loc in 
   mk_term (Tapp (ls, tl)) ty loc
 
 let t_field t ls ty loc =
-  ignore (ls_app_inst ls [ t ] ty loc : ty Mtv.t);
+  let () = ls_app_inst ls [ t ] ty loc in
   mk_term (Tfield (t, ls)) ty loc
 
 let t_if t1 t2 t3 = mk_term (Tif (t1, t2, t3)) t2.t_ty

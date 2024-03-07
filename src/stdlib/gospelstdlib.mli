@@ -323,7 +323,7 @@ module Set : sig
   (*@ function singleton (x: 'a) : 'a t = add x empty  *)
   (** [singleton x] is [{x}]. *)
 
-  (*@ function remove (x: 'a) (s: 'a t) : 'a *)
+  (*@ function remove (x: 'a) (s: 'a t) : 'a t *)
   (*@ axiom remove_mem : forall s x. not (mem x (add x s)) *)
   (*@ axiom remove_mem_neq : forall s x y. x <> y -> (mem x s <-> mem x (add y s)) *)
   (** [remove x s] is [s ∖ {x}]. *)

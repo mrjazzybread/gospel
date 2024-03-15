@@ -35,8 +35,6 @@ type pattern = { pat_desc : pat_desc; pat_loc : Location.t }
 and pat_desc =
   | Pwild
   | Pvar of Preid.t
-  | Ptrue
-  | Pfalse
   | Papp of qualid * pattern list
   | Prec of (qualid * pattern) list
   | Ptuple of pattern list
@@ -56,8 +54,6 @@ type quant = Tforall | Texists
 type term = { term_desc : term_desc; term_loc : Location.t }
 
 and term_desc =
-  | Ttrue
-  | Tfalse
   | Tconst of constant
   | Tpreid of qualid
   | Tidapp of qualid * term list

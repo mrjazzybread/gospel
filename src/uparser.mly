@@ -85,13 +85,13 @@
 (* keywords *)
 
 %token AXIOM
-%token EPHEMERAL ELSE EXISTS FALSE FORALL FUNCTION FUN
+%token EPHEMERAL ELSE EXISTS FORALL FUNCTION FUN
 %token REC
 %token INVARIANT
 %token COERCION
 %token IF IN
 %token OLD NOT RAISES
-%token THEN TRUE EQUIVALENT CHECKS DIVERGES PURE
+%token THEN EQUIVALENT CHECKS DIVERGES PURE
 
 %token AS
 %token LET MATCH PREDICATE
@@ -107,7 +107,7 @@
 %token LEFTSQRIGHTSQ
 %token STAR TILDE UNDERSCORE
 %token WHEN
-
+%token TRUE FALSE PTRUE PFALSE
 (* priorities *)
 
 %nonassoc IN
@@ -287,7 +287,7 @@ raises:
 | q=uqualid p=pat_arg ARROW t=term
   { q, Some (p, t) }
 | q=uqualid p=pat_arg
-  { q, Some (p, mk_term Ttrue $loc(p)) }
+  { q, Some (p, mk_term (Tpreid (Qpreid (mk_pid "True" $loc(p)))) $loc(p)) }
 | q=uqualid
   { q, None}
 ;
@@ -400,8 +400,6 @@ term_dot: mk_term(term_dot_) { $1 }
 term_arg_:
 | qualid                    { Tpreid $1 }
 | constant                  { Tconst $1 }
-| TRUE                      { Ttrue }
-| FALSE                     { Tfalse }
 | o = oppref ; a = term_arg { Tidapp (Qpreid o, [a]) }
 | term_sub_                 { $1 }
 ;
@@ -564,11 +562,9 @@ pat_arg_:
 pat_arg_no_lpar_:
 | attrs(lident)                         { Pvar $1 }
 | UNDERSCORE                            { Pwild }
-| uqualid                               { Papp ($1,[]) }
+| uqualid                               { Papp ($1,[])}
 | constant                              { Pconst $1 }
 | CHAR DOTDOT CHAR                      { Pinterval ($1,$3) }
-| TRUE                                  { Ptrue }
-| FALSE                                 { Pfalse }
 | LEFTSQRIGHTSQ
   { Papp (Qpreid (mk_pid "[]"  $loc), []) }
 | LEFTBRC field_pattern(pattern) RIGHTBRC { Prec $2 }
@@ -621,10 +617,14 @@ prefix_op:
 
 lident:
 | LIDENT        { mk_pid $1 $loc }
+| TRUE          { mk_pid "true" $loc }
+| FALSE         { mk_pid "false" $loc }
 ;
 
 uident:
 | UIDENT        { mk_pid $1 $loc }
+| PTRUE         { mk_pid "True" $loc }
+| PFALSE        { mk_pid "False" $loc } 
 ;
 
 quote_lident:
@@ -676,7 +676,7 @@ lqualid:
 ;
 
 uqualid:
-| uident              { Qpreid $1 }
+| uident  { Qpreid $1 }
 | uqualid DOT uident  { Qdot ($1, $3) }
 ;
 

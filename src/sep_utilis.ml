@@ -62,7 +62,7 @@ let create_rep_pred sym =
   {
     ls_name = new_id;
     ls_args = [self_type; model_type];
-    ls_value = None;
+    ls_value = ty_prop;
     ls_constr = false;
     ls_field = false;
   } 

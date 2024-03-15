@@ -221,7 +221,7 @@ let ts_char = mk_ts (create_base_id "char") []
 let ts_bytes = mk_ts (create_base_id "bytes") []
 let ts_string = mk_ts (create_base_id "string") []
 let ts_float = mk_ts (create_base_id "float") []
-let ts_bool = mk_ts (create_base_id "bool") []
+let ts_prop = mk_ts (create_base_id "prop") []
 let ts_exn = mk_ts (create_base_id "exn") []
 
 let ts_array =
@@ -293,7 +293,11 @@ let ty_integer = ty_app ts_integer []
 let ts_int = mk_ts ~spatial:(Model (ty_integer,false)) (create_base_id "int") []
 let ty_int = ty_app ts_int []
                                      
+let ty_prop = ty_app ts_prop []
+
+let ts_bool = mk_ts (create_base_id "bool") ~spatial:(Model(ty_prop, false)) []
 let ty_bool = ty_app ts_bool []
+
 let ty_float = ty_app ts_float []
 let ty_char = ty_app ts_char []
 let ty_string = ty_app ts_string []

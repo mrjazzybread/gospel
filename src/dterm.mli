@@ -28,7 +28,7 @@ and dpattern_node =
 
 type dbinder = Preid.t * dty
 
-type dterm = { dt_node : dterm_node; dt_dty : dty option; dt_loc : Location.t }
+type dterm = { dt_node : dterm_node; dt_dty : dty; dt_loc : Location.t }
 
 and dterm_node =
   | DTattr of dterm * string list
@@ -43,8 +43,6 @@ and dterm_node =
   | DTbinop of binop * dterm * dterm
   | DTnot of dterm
   | DTold of dterm
-  | DTtrue
-  | DTfalse
 
 type 'a full_env = {env : 'a Mstr.t; old_env : 'a Mstr.t}
 
@@ -63,14 +61,14 @@ val dty_float : dty
 val dty_string : dty
 val dty_integer : dty
 val dty_int : dty
-val dty_of_dterm : dterm -> dty
 val dty_of_ty : Ttypes.ty -> dty
 val dty_fresh : unit -> dty
-val max_dty : Coercion.t -> dterm list -> dty option
-val specialize_ls : lsymbol -> dty list * dty option
+val specialize_ls : lsymbol -> dty list * dty
 val specialize_cs : loc:Location.t -> lsymbol -> dty list * dty
 val dty_unify : loc:Location.t -> dty -> dty -> unit
 val dterm_unify : dterm -> dty -> unit
+val dfmla_unify : dterm -> unit
+val max_dty : Coercion.t -> dterm list -> dty
 
 val app_unify :
   loc:Location.t -> lsymbol -> ('a -> 'b -> unit) -> 'a list -> 'b list -> unit
@@ -78,17 +76,14 @@ val app_unify :
 val app_unify_map :
   loc:Location.t -> lsymbol -> ('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
 
-val dfmla_unify : dterm -> unit
 val dpattern_unify : dpattern -> dty -> unit
-val unify : dterm -> dty option -> unit
+val unify : dterm -> dty -> unit
 val dterm_expected : Coercion.t -> dterm -> dty -> dterm
 val dfmla_expected : Coercion.t -> dterm -> dterm
-val dterm_expected_op : Coercion.t -> dterm -> dty option -> dterm
 val denv_get_opt : 'a full_env -> string -> 'a option
 val denv_find : loc:Location.t -> string -> denv -> dty
 val is_in_denv : denv -> string -> bool
 val denv_add_var : denv -> string -> dty -> denv
 val denv_add_var_quant : denv -> (Identifier.Preid.t * dty) list -> denv
 val term : env -> dterm -> term
-val fmla : env -> dterm -> term
 val pattern : dpattern -> Tterm.pattern * vsymbol Mstr.t

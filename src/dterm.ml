@@ -74,13 +74,13 @@ let specialize_ls ls =
     | Tyvar tv -> find_tv tv
     | Tyapp (ts, tyl) -> Tapp (ts, List.map spec tyl)
   in
-  (List.map spec ls.ls_args, Option.map spec ls.ls_value)
+  (List.map spec ls.ls_args, spec ls.ls_value)
 
 let specialize_cs ~loc cs =
   if cs.ls_constr = false then
     W.error ~loc (W.Not_a_constructor cs.ls_name.id_str);
   let dtyl, dty = specialize_ls cs in
-  (dtyl, Option.get dty)
+  (dtyl, dty)
 
 (* terms *)
 
@@ -105,7 +105,7 @@ and dpattern_node =
 
 type dbinder = Preid.t * dty
 
-type dterm = { dt_node : dterm_node; dt_dty : dty option; dt_loc : Location.t }
+type dterm = { dt_node : dterm_node; dt_dty : dty; dt_loc : Location.t }
 
 and dterm_node =
   | DTattr of dterm * string list
@@ -120,8 +120,6 @@ and dterm_node =
   | DTbinop of binop * dterm * dterm
   | DTnot of dterm
   | DTold of dterm
-  | DTtrue
-  | DTfalse
 
 
 type 'a full_env = {env : 'a Mstr.t; old_env : 'a Mstr.t}
@@ -129,8 +127,9 @@ type 'a full_env = {env : 'a Mstr.t; old_env : 'a Mstr.t}
 type env = vsymbol full_env
 
 let add_env env x y = {env = Mstr.add x y env.env; old_env = Mstr.add x y env.old_env}
-
-let dty_of_dterm dt = match dt.dt_dty with None -> dty_bool | Some dty -> dty
+let env_union f env m =
+  { env=Mstr.union f env.env m;
+    old_env = Mstr.union f env.old_env m }
 
 (* type unification *)
 
@@ -191,29 +190,13 @@ let dty_unify ~loc dty1 dty2 =
   try unify dty1 dty2 with Exit -> W.error ~loc (W.Bad_type (t1, t2))
 
 let dterm_unify dt dty =
-  match dt.dt_dty with
-  | Some dt_dty -> dty_unify ~loc:dt.dt_loc dt_dty dty
-  | None -> (
-      try unify dty_bool dty
-      with Exit -> W.error ~loc:dt.dt_loc W.Term_expected)
+  dty_unify ~loc:dt.dt_loc dt.dt_dty dty
 
-let dfmla_unify dt =
-  match dt.dt_dty with
-  | None -> ()
-  | Some dt_dty -> (
-      try unify dt_dty dty_bool
-      with Exit -> W.error ~loc:dt.dt_loc W.Formula_expected)
+let dfmla_unify dt = dterm_unify dt (dty_of_ty ty_prop)
 
-let unify dt dty =
-  match dty with None -> dfmla_unify dt | Some dt_dty -> dterm_unify dt dt_dty
-
-(* environment *)
+let unify dt dty = dterm_unify dt dty
 
 type denv = dty full_env
-
-let env_union f env m =
-  { env=Mstr.union f env.env m;
-   old_env = Mstr.union f env.old_env m }
 
 let denv_find ~loc s denv =
   try Mstr.find s denv.env with Not_found -> W.error ~loc (W.Unbound_variable s)
@@ -252,8 +235,6 @@ let rec ts_of_dty = function
   | Tvar { dtv_def = None; _ } | Tty { ty_node = Tyvar _ } -> raise Exit
   | Tty { ty_node = Tyapp (ts, _) } | Tapp (ts, _) -> ts
 
-let ts_of_dty = function Some dt_dty -> ts_of_dty dt_dty | None -> ts_bool
-
 (* NB: this function is not a morphism w.r.t.
    the identity of type variables. *)
 let rec ty_of_dty_raw = function
@@ -262,10 +243,6 @@ let rec ty_of_dty_raw = function
   | Tvar _ -> fresh_ty_var ~loc:Location.none "xi"
   | Tapp (ts, dl) -> ty_app ts (List.map ty_of_dty_raw dl)
   | Tty ty -> ty
-
-let ty_of_dty_raw = function
-  | Some dt_dty -> ty_of_dty_raw dt_dty
-  | None -> ty_bool
 
 let max_dty crcmap dtl =
   let rec aux = function
@@ -284,39 +261,28 @@ let max_dty crcmap dtl =
   let l =
     List.fold_left
       (fun acc { dt_dty; _ } ->
-        try (dt_dty, ts_of_dty dt_dty, ty_of_dty_raw dt_dty) :: acc
+        try (dt_dty, ts_of_dty dt_dty, ty_of_dty dt_dty) :: acc
         with Exit -> acc)
       [] dtl
   in
   if l = [] then (List.hd dtl).dt_dty else aux l
-
-let max_dty crcmap dtl =
-  match max_dty crcmap dtl with
-  | Some (Tty ty)
-    when ty_equal ty ty_bool
-         && List.exists (fun { dt_dty; _ } -> dt_dty = None) dtl ->
-      (* favor prop over bool *)
-      None
-  | dty -> dty
 
 let dterm_expected crcmap dt dty =
   try
     let ts1, ts2 = (ts_of_dty dt.dt_dty, ts_of_dty dty) in
     if ts_equal ts1 ts2 then dt
     else
-      let ty1, ty2 = (ty_of_dty_raw dt.dt_dty, ty_of_dty_raw dty) in
+      let ty1, ty2 = (ty_of_dty_raw dt.dt_dty, (ty_of_dty_raw dty)) in
       let crc = Coercion.find crcmap ty1 ty2 in
       apply_coercion crc dt
   with Not_found | Exit -> dt
 
-let dterm_expected_op crcmap dt dty =
+let dterm_expected crcmap dt dty =
   let dt = dterm_expected crcmap dt dty in
   unify dt dty;
   dt
 
-let dfmla_expected crcmap dt = dterm_expected_op crcmap dt None
-let dterm_expected crcmap dt dty = dterm_expected_op crcmap dt (Some dty)
-
+let dfmla_expected crcmap dt = dterm_expected crcmap dt (dty_of_ty ty_prop)
 (** dterm to tterm *)
 
 let pattern dp =
@@ -347,67 +313,56 @@ let pattern dp =
   let p = pattern_node dp in
   (p, !vars)
 
-let rec term env prop dt =
+let rec term env dt =
   let loc = dt.dt_loc in
-  let t = term_node ~loc env prop dt.dt_dty dt.dt_node in
-  match t.t_ty with
-  | Some _ when prop -> (
-      try t_equ t (t_bool_true loc) loc
-      with TypeMismatch (ty1, ty2) ->
-        let t1 = Fmt.str "%a" print_ty ty1 in
-        let t2 = Fmt.str "%a" print_ty ty2 in
-        W.error ~loc (W.Bad_type (t1, t2)))
-  | None when not prop -> t_if t (t_bool_true loc) (t_bool_false loc) loc
-  | _ -> t
+  term_node ~loc env dt.dt_dty dt.dt_node 
 
-and term_node ~loc env prop dty dterm_node =
+and term_node ~loc env dty dterm_node =
   match dterm_node with
   | DTvar pid ->
       let vs = denv_find ~loc:pid.pid_loc pid.pid_str env in
       (* TODO should I match vs.vs_ty with dty? *)
       t_var vs loc
-  | DTconst c -> t_const c (ty_of_dty (Option.get dty)) loc
+  | DTconst c -> t_const c (ty_of_dty dty) loc
   | DTapp (ls, []) when ls_equal ls fs_bool_true ->
-      if prop then t_true loc else t_bool_true loc
+      t_bool_true loc
   | DTapp (ls, []) when ls_equal ls fs_bool_false ->
-      if prop then t_false loc else t_bool_false loc
+     t_bool_false loc
+  | DTapp (ls, []) when ls_equal ls fs_prop_true ->
+     t_true loc
+  | DTapp (ls, []) when ls_equal ls fs_bool_true ->
+     t_false loc
   | DTapp (ls, [ dt1; dt2 ]) when ls_equal ls ps_equ ->
-      if dt1.dt_dty = None || dt2.dt_dty = None then
-        f_iff (term env true dt1) (term env true dt2) loc
-      else t_equ (term env false dt1) (term env false dt2) loc
+      t_equ (term env dt1) (term env dt2) loc
   | DTapp (ls, [ dt1 ]) when ls.ls_field ->
-      t_field (term env false dt1) ls (Option.map ty_of_dty dty) loc
+      t_field (term env dt1) ls (ty_of_dty dty) loc
   | DTapp (ls, dtl) ->
-      t_app ls (List.map (term env false) dtl) (Option.map ty_of_dty dty) loc
+      t_app ls (List.map (term env) dtl) (ty_of_dty dty) loc
   | DTif (dt1, dt2, dt3) ->
-      let prop = prop || dty = None in
-      t_if (term env true dt1) (term env prop dt2) (term env prop dt3) loc
+      t_if (term env dt1) (term env dt2) (term env dt3) loc
   | DTlet (pid, dt1, dt2) ->
-      let prop = prop || dty = None in
-      let t1 = term env false dt1 in
-      let vs = create_vsymbol pid (t_type t1) in
+      let t1 = term env dt1 in
+      let vs = create_vsymbol pid t1.t_ty in
       let old_env = Mstr.add pid.pid_str vs env.old_env in       
       let env = Mstr.add pid.pid_str vs env.env in
-      let t2 = term {env; old_env} prop dt2 in
+      let t2 = term {env; old_env} dt2 in
       t_let vs t1 t2 loc
   | DTbinop (b, dt1, dt2) ->
-      let t1, t2 = (term env true dt1, term env true dt2) in
+      let t1, t2 = (term env dt1, term env dt2) in
       t_binop b t1 t2 loc
-  | DTnot dt -> t_not (term env true dt) loc
-  | DTtrue -> if prop then t_true loc else t_bool_true loc
-  | DTfalse -> if prop then t_false loc else t_bool_false loc
+  | DTnot dt -> t_not (term env dt) loc
   | DTattr (dt, at) ->
-      let t = term env prop dt in
+      let t = term env dt in
       t_attr_set at t
-  | DTold dt -> t_old (term env prop dt) loc
+  | DTold dt -> t_old (term env dt) loc
   | DTquant (q, bl, dt) ->
       let add_var (env, vsl) (pid, dty) =
         let vs = create_vsymbol pid (ty_of_dty dty) in
         (add_env env pid.pid_str vs, vs :: vsl)
       in
       let env, vsl = List.fold_left add_var (env, []) bl in
-      let t = term env prop dt in
-      t_quant q (List.rev vsl) t (Option.map ty_of_dty dty) loc
+      let t = term env dt in
+      t_quant q (List.rev vsl) t (ty_of_dty dty) loc
   | DTlambda (dpl, dt) ->
       let ty = ty_of_dty_raw dty and pl = List.map pattern dpl in
       let env =
@@ -415,7 +370,7 @@ and term_node ~loc env prop dty dterm_node =
         let union env vs = {env = Mstr.union join env.env vs; old_env = Mstr.union join env.env vs} in
         List.fold_left (fun env (_, vs) -> union env vs) env pl
       in
-      let t = term env false dt in
+      let t = term env dt in
       (* Are the patterns exhaustive? *)
       List.iter
         (fun (p, _) ->
@@ -424,24 +379,21 @@ and term_node ~loc env prop dty dterm_node =
             [ (p, None, t (* [t] is really just a place holder *)) ]
             ~loc)
         pl;
-      t_lambda (List.map fst pl) t (Some ty) loc
+      t_lambda (List.map fst pl) t ty loc
   | DTcase (dt, ptl) ->
-      let t = term env false dt in
+      let t = term env dt in
       let branch (dp, guard, dt) =
         let p, vars = pattern dp in
         let join _ _ vs = Some vs in
         let union env vs = {env = Mstr.union join env.env vs; old_env = Mstr.union join env.env vs} in
         let env = union env vars in
-        let dt = term env true dt in
+        let dt = term env dt in
         let guard =
-          match guard with None -> None | Some g -> Some (term env true g)
+          match guard with None -> None | Some g -> Some (term env g)
         in
         (p, guard, dt)
       in
       let pl = List.map branch ptl in
-      let ty = ty_of_dty (Option.get dt.dt_dty) in
+      let ty = ty_of_dty dt.dt_dty in
       Patmat.checks ty pl ~loc;
       t_case t pl loc
-
-let fmla env dt = term env true dt
-let term env dt = term env false dt

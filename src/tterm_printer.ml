@@ -18,7 +18,7 @@ let print_vs fmt { vs_name; vs_ty } =
   pp fmt "@[%a:%a@]" Ident.pp vs_name print_ty vs_ty
 
 let print_ls_decl fmt { ls_name; ls_args; ls_value; _ } =
-  let is_func = Option.is_some ls_value in
+  let is_func = not (ty_equal ty_prop ls_value) in
   let print_unnamed_arg fmt ty = pp fmt "(_:%a)" print_ty ty in
   pp fmt "%s %a %a%s%a"
     (if is_func then "function" else "predicate")
@@ -26,7 +26,7 @@ let print_ls_decl fmt { ls_name; ls_args; ls_value; _ } =
     (list ~sep:sp print_unnamed_arg)
     ls_args
     (if is_func then " : " else "")
-    (option print_ty) ls_value
+    print_ty ls_value
 
 let print_ls_nm fmt { ls_name; _ } = pp fmt "%a" Ident.pp ls_name
 let protect_on x s = if x then "(" ^^ s ^^ ")" else s
@@ -67,16 +67,13 @@ let print_quantifier fmt = function
 (* TODO use pretty printer from why3 *)
 let rec print_term ?(print_type = true) fmt { t_node; t_ty; t_attrs; _ } =
   let print_term = print_term ~print_type in 
-  let print_ty fmt ty =
-    if print_type then 
-    match ty with None -> pp fmt ":prop" | Some ty -> pp fmt ":%a" print_ty ty
-    else ()
+  let print_ty =
+    if print_type then print_ty else
+      fun fmt _ -> pp fmt "" 
   in
   let print_t_node fmt t_node =
     match t_node with
     | Tconst c -> pp fmt "%a%a" Opprintast.constant c print_ty t_ty
-    | Ttrue -> pp fmt "true%a" print_ty t_ty
-    | Tfalse -> pp fmt "false%a" print_ty t_ty
     | Tvar vs ->
         if print_type then pp fmt "%a" print_vs vs else pp fmt "%a" Ident.pp vs.vs_name
         (*assert (vs.vs_ty = Option.get t_ty)  TODO remove this *)

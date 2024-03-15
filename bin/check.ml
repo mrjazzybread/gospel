@@ -27,7 +27,7 @@ let type_check load_path name sigs =
   let penv =
     Utils.Sstr.singleton mod_name |> Typing.penv load_path
   in
-  let md = List.fold_left (Typing.type_sig_item [mod_name] penv) md sigs in
+  let md = List.fold_left (Typing.type_sig_item penv) md sigs in
   wrap_up_muc md
 
 let run_file config file =

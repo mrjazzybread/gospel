@@ -51,8 +51,6 @@ let rec t_free_vars t =
   | Tbinop (_, t1, t2) -> Svs.union (t_free_vars t1) (t_free_vars t2)
   | Tnot t -> t_free_vars t
   | Told t -> t_free_vars t
-  | Ttrue -> Svs.empty
-  | Tfalse -> Svs.empty
 
 let t_free_vs_in_set svs t =
   let diff = Svs.diff (t_free_vars t) svs in
@@ -64,19 +62,14 @@ let t_free_vs_in_set svs t =
 (** type checking *)
 
 let t_prop t =
-  if t.t_ty = None then t else W.error ~loc:t.t_loc W.Formula_expected
-
+  if t.t_ty = ty_prop then t else W.error ~loc:t.t_loc W.Formula_expected
+(*
 let t_type t =
   match t.t_ty with
   | Some ty -> ty
   | None -> W.error ~loc:t.t_loc W.Formula_expected
-
-let t_ty_check t ty =
-  match (ty, t.t_ty) with
-  | Some l, Some r -> ty_equal_check l r
-  | Some _, None -> W.error ~loc:t.t_loc W.Term_expected
-  | None, Some _ -> W.error ~loc:t.t_loc W.Formula_expected
-  | None, None -> ()
+ *)
+let t_ty_check ty t = ty_equal_check ty t.t_ty 
 
 let ls_arg_inst ls tl =
   let rec short_fold_left2 f accu l1 l2 =
@@ -85,7 +78,7 @@ let ls_arg_inst ls tl =
     | _, _ -> accu
   in
   short_fold_left2
-    (fun tvm ty t -> ty_match tvm ty (t_type t))
+    (fun tvm ty t -> ty_match tvm ty t.t_ty)
     Mtv.empty ls.ls_args tl
 
 let drop n xs =
@@ -97,12 +90,9 @@ let drop n xs =
   in
   if n < 0 then invalid_arg "drop" else aux n xs
 
-let mk_ty = Option.value ~default:ty_bool
-
 let ls_app_inst ls tl ty _loc =
   let s = ls_arg_inst ls tl in
-  let vty = mk_ty ls.ls_value in 
-  let ty = mk_ty ty in
+  let vty = ls.ls_value in 
   let vty =
     let ntl = List.length tl in
     if ntl >= List.length ls.ls_args then vty
@@ -141,8 +131,8 @@ let p_const c =
 (** Terms constructors *)
 
 let mk_term t_node t_ty t_loc = { t_node; t_ty; t_attrs = []; t_loc }
-let t_var vs = mk_term (Tvar vs) (Some vs.vs_ty)
-let t_const c ty = mk_term (Tconst c) (Some ty)
+let t_var vs = mk_term (Tvar vs) vs.vs_ty
+let t_const c ty = mk_term (Tconst c) ty
 
 let t_app ls tl ty loc =
   let () = ls_app_inst ls tl ty loc in 
@@ -162,15 +152,15 @@ let t_case t1 ptl =
 
 let t_quant q vsl t ty = mk_term (Tquant (q, vsl, t)) ty
 let t_lambda ps t ty = mk_term (Tlambda (ps, t)) ty
-let t_binop b t1 t2 = mk_term (Tbinop (b, t1, t2)) None
-let t_not t = mk_term (Tnot t) None
+let t_binop b t1 t2 = mk_term (Tbinop (b, t1, t2)) ty_prop
+let t_not t = mk_term (Tnot t) ty_prop
 let t_old t = mk_term (Told t) t.t_ty
-let t_true = mk_term Ttrue None
-let t_false = mk_term Tfalse None
+let t_true = mk_term (Tapp (fs_prop_true, [])) ty_prop
+let t_false = mk_term (Tapp (fs_prop_false, [])) ty_prop
 let t_attr_set attr t = { t with t_attrs = attr }
-let t_bool_true = mk_term (Tapp (fs_bool_true, [])) (Some ty_bool)
-let t_bool_false = mk_term (Tapp (fs_bool_false, [])) (Some ty_bool)
-let t_equ t1 t2 = t_app ps_equ [ t1; t2 ] None
+let t_bool_true = mk_term (Tapp (fs_bool_true, [])) ty_bool
+let t_bool_false = mk_term (Tapp (fs_bool_false, [])) ty_bool
+let t_equ t1 t2 = t_app ps_equ [ t1; t2 ] ty_prop
 let t_neq t1 t2 loc = t_not (t_equ t1 t2 loc)
 let f_binop op f1 f2 = t_binop op (t_prop f1) (t_prop f2)
 let f_not f = t_not (t_prop f)
@@ -179,8 +169,8 @@ let t_quant q vsl t ty loc =
   match vsl with
   | [] -> t_prop t
   | _ ->
-      if ty <> None then W.error ~loc W.Formula_expected;
-      t_quant q vsl (t_prop t) None loc
+      if ty <> ty_prop then W.error ~loc W.Formula_expected;
+      t_quant q vsl (t_prop t) ty_prop loc
 
 let f_forall = t_quant Tforall
 let f_exists = t_quant Texists

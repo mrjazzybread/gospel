@@ -20,41 +20,41 @@
       (fun (x,y) -> Hashtbl.add keywords x y)
       [
 	"axiom", AXIOM;
+        "checks", CHECKS;
         "coercion", COERCION;
+        "consumes", CONSUMES;
+        "diverges", DIVERGES;
         "else", ELSE;
+        "ensures", ENSURES;
+        "ephemeral", EPHEMERAL;
+        "equivalent", EQUIVALENT;
         "exists", EXISTS;
-        "false", FALSE;
+	"false", FALSE;
         "forall", FORALL;
+        "fun", FUN;
         "function", FUNCTION;
         "if", IF;
         "in", IN;
         "invariant", INVARIANT;
         "let", LET;
         "match", MATCH;
+        "model", MODEL;
+        "modifies", MODIFIES;
+        "mutable", MUTABLE;	
         "not", NOT;
+        "old", OLD;
         "predicate", PREDICATE;
-        "then", THEN;
-        "true", TRUE;
-        "with", WITH;
-        "mutable", MUTABLE;
-        "ensures", ENSURES;
-        "consumes", CONSUMES;
         "preserves", PRESERVES;
         "produces", PRODUCES;
-        "fun", FUN;
-        "old", OLD;
+        "pure", PURE;
         "raises", RAISES;
         "rec", REC;
         "requires", REQUIRES;
+        "then", THEN;
+	"true", TRUE;
         "variant", VARIANT;
-        "modifies", MODIFIES;
-        "equivalent", EQUIVALENT;
-        "checks", CHECKS;
-        "diverges", DIVERGES;
-        "pure", PURE;
-        "ephemeral", EPHEMERAL;
-        "model", MODEL;
         "when", WHEN;
+        "with", WITH;
       ]
 
   (* to translate escape sequences *)
@@ -228,6 +228,10 @@ rule token = parse
       { UNDERSCORE }
   | lident as id
       { try Hashtbl.find keywords id with Not_found -> LIDENT id }
+  | "True" 
+      { PTRUE }
+  | "False"
+      { PFALSE }
   | uident as id
       { UIDENT id }
   | "[]"

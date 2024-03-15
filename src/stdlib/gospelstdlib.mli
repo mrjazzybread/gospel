@@ -18,6 +18,7 @@
     - [type char]
     - [type float]
     - [type bool]
+    - [type prop]
     - [type integer]
     - [type int]
 
@@ -97,9 +98,10 @@ module Sequence : sig
   
 
   (*@ axiom length_nonneg : forall s. 0 <= length s *)
+  (*@ axiom length_emtpy : true*)
   (*@ axiom append_length : forall s s'. length (s++s') = length s'+ length s *)
 
-  (*@ axiom append_elems_left :  forall s s' i. i <= 0 < length s -> (s ++ s')[i] = s[i] *)
+  (*@ axiom append_elems_left :  forall s s' i. in_range s i -> (s ++ s')[i] = s[i] *)
   (*@ axiom append_elems_right : 
      forall s s' i. 
       length s <= i < length s + length s' -> 
@@ -157,7 +159,7 @@ module Sequence : sig
   (** [map f s] is a sequence whose elements are the elements of [s],
       transformed by [f]. *)
    
-  (*@ function filter (f: 'a -> bool) (s: 'a t) : 'a t *)
+  (*@ function filter (f: 'a -> prop) (s: 'a t) : 'a t *)
   (*@ axiom filter_elems : 
         forall f s i. 0 <= i < length (filter f s) -> 
           f ((filter f s)[i]) && mem ((filter f s)[i]) s *)
@@ -194,7 +196,14 @@ module Sequence : sig
 end
 (** {1 Bags} *)
 
-(* TODO : List module *)
+module List : sig
+
+  (*@ function rec sequence_of_list (l : 'a list) : 'a sequence = 
+      match l with
+      |[] -> Sequence.empty 
+      |x::t -> Sequence.cons x (sequence_of_list t) *)
+  
+end
 
 module Bag : sig
   (*@ type 'a t = 'a bag *)
@@ -209,7 +218,7 @@ module Bag : sig
   (** [empty] is the empty bag. *)
 
   (*@ function init (f : 'a -> integer) : 'a t *)
-  (*@ axiom init_axiom : forall f x. min 0 (f x) = multiplicity x (init f) *)
+  (*@ axiom init_axiom : forall f x. max 0 (f x) = multiplicity x (init f) *)
   
   (*@ function add (x: 'a) (b: 'a t) : 'a t *)
   (*@ axiom add_mult_x : forall b x. multiplicity x (add x b) = 1 + multiplicity x b *)
@@ -263,7 +272,7 @@ module Bag : sig
   (** [subset b b'] holds iff for all element [x],
       [multiplicity x b <= multiplicity x b']. *)
 
-  (*@ function filter (f: 'a -> bool) (b: 'a t) : 'a t *) 
+  (*@ function filter (f: 'a -> prop) (b: 'a t) : 'a t *) 
   (*@ axiom filter_mem : forall b x f. f x -> 
         multiplicity x (filter f b) = multiplicity x b *) 
   (*@ axiom filter_mem_neg : 

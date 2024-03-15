@@ -192,8 +192,6 @@ let rec dpattern kid ns { pat_desc; pat_loc = loc } =
      let dty = dty_fresh () in
      let vars = Mstr.singleton pid.pid_str dty in
      mk_dpattern ~loc (DPvar pid) dty vars
-  | Ptrue -> mk_papp ~loc fs_bool_true []
-  | Pfalse -> mk_papp ~loc fs_bool_false []
   | Papp (q, pl) ->
      let cs = find_q_ls ns q in
      let dpl = List.map (dpattern kid ns) pl in
@@ -232,7 +230,7 @@ let rec dpattern kid ns { pat_desc; pat_loc = loc } =
      let cs, pjl, fll = parse_record ~loc kid ns qpl in
      let get_pattern pj =
        try dpattern kid ns (Mls.find pj fll)
-       with Not_found -> mk_pwild loc (dty_of_ty (Option.get pj.ls_value))
+       with Not_found -> mk_pwild loc (dty_of_ty pj.ls_value)
      in
      let dpl = List.map get_pattern pjl in
      mk_papp ~loc cs dpl
@@ -266,9 +264,9 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
   let apply dt1 t2 =
     let dt2 = dterm whereami kid crcm ns denv t2 in
     let dty = dty_fresh () in
-    unify dt1 (Some (Tapp (ts_arrow, [ dty_of_dterm dt2; dty ])));
+    unify dt1 (Tapp (ts_arrow, [ dt2.dt_dty; dty ]));
     let dt_app = DTapp (fs_apply, [ dt1; dt2 ]) in
-    mk_dterm ~loc:dt2.dt_loc dt_app (Some dty)
+    mk_dterm ~loc:dt2.dt_loc dt_app dty
   in
   (* CHECK location *)
   let map_apply dt tl = List.fold_left apply dt tl in
@@ -285,13 +283,12 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
     if ntl < nls then
       let dtyl1, dtyl2 = split_at_i ntl dtyl in
       let dtl = List.map2 (dterm_expected crcm) dtl dtyl1 in
-      let dty = Option.value ~default:dty_bool dty in
       let dty =
         List.fold_right
           (fun t1 t2 -> Dterm.Tapp (ts_arrow, [ t1; t2 ]))
           dtyl2 dty
       in
-      mk_dterm ~loc (DTapp (ls, dtl)) (Some dty)
+      mk_dterm ~loc (DTapp (ls, dtl)) dty
     else
       let dtl = List.map2 (dterm_expected crcm) dtl dtyl in
       let dt = mk_dterm ~loc (DTapp (ls, dtl)) dty in
@@ -324,7 +321,7 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
     | Qpreid ({ pid_loc = loc; pid_str = s; _ } as pid) -> (
       match denv_get_opt denv s with
       | Some dty ->
-         let dtv = mk_dterm ~loc (DTvar pid) (Some dty) in
+         let dtv = mk_dterm ~loc (DTvar pid) dty in
          map_apply dtv tl
       | None -> fun_app ~loc (find_q_ls ns q) tl)
     | _ -> fun_app ~loc (find_q_ls ns q) tl
@@ -338,8 +335,6 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
        map_apply dt1 (t2 :: tl)
   in
   match term_desc with
-  | Uast.Ttrue -> mk_dterm ~loc DTtrue (Some dty_bool)
-  | Uast.Tfalse -> mk_dterm ~loc DTfalse (Some dty_bool)
   | Uast.Tconst c ->
      let dty =
        match c with
@@ -354,10 +349,10 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
        | Pconst_string _ -> dty_string
        | Pconst_float _ -> dty_float
      in
-     mk_dterm ~loc (DTconst c) (Some dty)
+     mk_dterm ~loc (DTconst c) dty
   | Uast.Tpreid (Qpreid pid) when is_in_denv denv pid.pid_str ->
      let dty = denv_find ~loc:pid.pid_loc pid.pid_str denv in
-     mk_dterm ~loc (DTvar pid) (Some dty)
+     mk_dterm ~loc (DTvar pid) dty
   | Uast.Tpreid q ->
      (* in this case it must be a constant *)
      let ls = find_q_ls ns q in
@@ -373,22 +368,24 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
   | Uast.Tapply (t1, t2) -> unfold_app t1 t2 []
   | Uast.Tnot t ->
      let dt = dterm whereami kid crcm ns denv  t in
-     dfmla_unify dt;
+     dterm_unify dt (dty_of_ty ty_prop);
      mk_dterm ~loc (DTnot dt) dt.dt_dty
   | Uast.Tif (t1, t2, t3) ->
      let dt1 = dterm whereami kid crcm ns denv  t1 in
      let dt2 = dterm whereami kid crcm ns denv  t2 in
      let dt3 = dterm whereami kid crcm ns denv  t3 in
-     let dt1 = dfmla_expected crcm dt1 in
+     let dt1 =
+       try dterm_expected crcm dt1 dty_bool with
+       |_ -> dterm_expected crcm dt1 (dty_of_ty ty_prop) in 
      let dty = max_dty crcm [ dt2; dt3 ] in
-     let dt2 = dterm_expected_op crcm dt2 dty in
-     let dt3 = dterm_expected_op crcm dt3 dty in
+     let dt2 = dterm_expected crcm dt2 dty in
+     let dt3 = dterm_expected crcm dt3 dty in
      mk_dterm ~loc (DTif (dt1, dt2, dt3)) dt2.dt_dty
   | Uast.Ttuple [] -> fun_app ~loc fs_unit []
   | Uast.Ttuple tl -> fun_app ~loc (fs_tuple (List.length tl)) tl
   | Uast.Tlet (pid, t1, t2) ->
      let dt1 = dterm whereami kid crcm ns denv  t1 in
-     let denv = denv_add_var denv pid.pid_str (dty_of_dterm dt1) in
+     let denv = denv_add_var denv pid.pid_str (dt1.dt_dty) in
      let dt2 = dterm whereami kid crcm ns denv t2 in
      mk_dterm ~loc (DTlet (pid, dt1, dt2)) dt2.dt_dty
   | Uast.Tinfix (t1, op1, t23) ->
@@ -401,13 +398,13 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
        (if ls_equal ls ps_equ then
           let max = max_dty crcm [ de1; de2 ] in
           try
-            dty_unify ~loc (Option.value max ~default:dty_bool) (List.hd dtyl)
+            dty_unify ~loc max (List.hd dtyl)
           with Exit -> ());
        let dtl =
          app_unify_map ~loc ls (dterm_expected crcm) [ de1; de2 ] dtyl
        in
        if op.pid_str = neq.id_str then
-         mk_dterm ~loc (DTnot (mk_dterm ~loc (DTapp (ls, dtl)) dty)) None
+         mk_dterm ~loc (DTnot (mk_dterm ~loc (DTapp (ls, dtl)) dty)) (dty_of_ty ty_prop)
        else mk_dterm ~loc (DTapp (ls, dtl)) dty
      in
      let rec chain _ de1 op1 t23 =
@@ -420,7 +417,7 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
           let de23 = chain loc23 de2 op2 t3 in
           dfmla_unify de12;
           dfmla_unify de23;
-          mk_dterm ~loc (DTbinop (Tand, de12, de23)) None
+          mk_dterm ~loc (DTbinop (Tand, de12, de23)) (dty_of_ty ty_prop)
        | _ -> apply de1 op1 (dterm whereami kid crcm ns denv  t23)
      in
      chain loc (dterm whereami kid crcm ns denv  t1) op1 t23
@@ -429,7 +426,7 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
      let dt2 = dterm whereami kid crcm ns denv  t2 in
      dfmla_unify dt1;
      dfmla_unify dt2;
-     mk_dterm ~loc (DTbinop (binop op, dt1, dt2)) None
+     mk_dterm ~loc (DTbinop (binop op, dt1, dt2)) (dty_of_ty ty_prop)
   | Uast.Tquant (q, vl, t) ->
      let get_dty pty =
        match pty with None -> dty_fresh () | Some pty -> dty_of_pty ns pty
@@ -441,10 +438,10 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
        match q with
        | Uast.Tforall ->
           dfmla_unify dt;
-          (None, Tforall)
+          (dty_of_ty ty_prop, Tforall)
        | Uast.Texists ->
           dfmla_unify dt;
-          (None, Texists)
+          (dty_of_ty ty_prop, Texists)
      in
      mk_dterm ~loc (DTquant (q, vl, dt)) dty
   | Uast.Tlambda (pl, t, pty) ->
@@ -467,15 +464,15 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
        | Some pty -> dterm_expected crcm dt (dty_of_pty ns pty)
        | _ -> dt
      in
-     let dt_dty = dty_of_dterm dt in
+     let dt_dty = dt.dt_dty in
      let dty =
        let apply (_, dty1) dty2 = Dterm.Tapp (ts_arrow, [ dty1; dty2 ]) in
-       Some (List.fold_right apply args dt_dty)
+       List.fold_right apply args dt_dty
      in
      mk_dterm ~loc (DTlambda (List.map fst args, dt)) dty
   | Uast.Tcase (t, ptl) ->
      let dt = dterm whereami kid crcm ns denv  t in
-     let dt_dty = dty_of_dterm dt in
+     let dt_dty = dt.dt_dty in
      let branch (p, g, t) =
        let dp = dpattern kid ns p in
        dpattern_unify dp dt_dty;
@@ -498,7 +495,7 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
              (match guard with
               | None -> None
               | Some g -> Some (dfmla_expected crcm g)),
-             dterm_expected_op crcm dt dty ))
+             dterm_expected crcm dt dty ))
          pdtl
      in
      mk_dterm ~loc (DTcase (dt, pdtl)) dty
@@ -547,7 +544,7 @@ let term_with_unify whereami kid crcm ty ns env t =
 
 let fmla whereami kid crcm ns env t =
   let dt = dterm whereami kid crcm ns env t in
-  let tt = fmla env dt in
+  let tt = term env dt in
   { tt with t_loc = t.term_loc }
 
 let private_flag = function
@@ -869,7 +866,7 @@ let process_val_spec kid crcm ns id args ret vs =
   let type_spatial whereami env t =
     let d_typed = dterm whereami kid crcm ns env t.Uast.s_term in
     let typed = term env d_typed in  
-    let ty = match typed.t_ty with |Some ty -> ty |_ -> assert false in
+    let ty = typed.t_ty in
     let spatial_ns = {ns with ns_ts = ns.ns_sp}  in 
     let spatial_type = match t.Uast.s_type with |None -> ty |Some t -> ty_of_pty spatial_ns t in
     typed, spatial_type in
@@ -897,7 +894,7 @@ let process_val_spec kid crcm ns id args ret vs =
         |_ -> false) ~none:false arg in 
   let term_of_vs x = 
     {t_node =Tvar x;
-     t_ty = Some x.vs_ty;
+     t_ty = x.vs_ty;
      t_attrs=[];
      t_loc= Location.none} in
   
@@ -933,7 +930,7 @@ let process_val_spec kid crcm ns id args ret vs =
     match List.find_opt (equal_arg sa.arg_vs) l with
     |None -> sa
     |Some (t, s_ty) ->
-      let ty = Option.get t.t_ty in
+      let ty = t.t_ty in
       let sp = s_ty, ty_apply_spatial ty s_ty in
       if con then {sa with consumes = Some sp} else {sa with produces = Some sp} in
 
@@ -983,8 +980,7 @@ let process_val_spec kid crcm ns id args ret vs =
              | (Pvar _ | Pwild), Exn_tuple [] ->
                 W.type_checking_error ~loc "Exception pattern not expected"
              | ( ( Pvar _ | Pwild | Ptuple _ | Pconst _
-                   | Pinterval (_, _)
-                   | Ptrue | Pfalse ),
+                   | Pinterval (_, _)),
                  Exn_tuple [ ty ] ) ->
                 ty
              | (Pvar _ | Pwild), Exn_tuple (_ :: _ :: _) ->
@@ -1111,7 +1107,9 @@ let process_val path ~loc ?(ghost = Nonghost) kid crcm ns vd =
 (* Currently checking:
    1 - arguments have different names *)
 let process_function path kid crcm ns f =
-  let f_ty = Option.map (ty_of_pty ns) f.fun_type in
+  let f_ty =
+    Option.fold ~some:(ty_of_pty ns)
+      ~none:ty_prop f.fun_type in
 
   let params =
     List.map
@@ -1140,21 +1138,15 @@ let process_function path kid crcm ns f =
       Mstr.empty params
   in
   let env, result =
-    match f_ty with
-    | None -> (env, None)
-    | Some ty ->
-       let result = create_vsymbol (Preid.create ~loc:f.fun_loc "result") ty in
+       let result = create_vsymbol (Preid.create ~loc:f.fun_loc "result") f_ty in
        (Mstr.add "result" result env, Some result)
   in
   let env = {env; old_env = Mstr.empty} in
   
   let def =
-    match f_ty with
-    | None -> Option.map (fmla Function_or_predicate kid crcm ns env) f.fun_def
-    | Some ty ->
-       Option.map
-         (term_with_unify Function_or_predicate kid crcm ty ns env)
-         f.fun_def
+    Option.map
+      (term_with_unify Function_or_predicate kid crcm f_ty ns env)
+      f.fun_def
   in
 
   let spec =
@@ -1171,7 +1163,7 @@ let process_function path kid crcm ns f =
       f.fun_spec
   in
   let f =
-    mk_function ?result ls f.fun_rec params def spec f.fun_loc f.fun_text
+    mk_function ~result ls f.fun_rec params def spec f.fun_loc f.fun_text
   in
   mk_sig_item (Sig_function f) f.fun_loc
 
@@ -1466,3 +1458,6 @@ and process_sig_item path penv muc { sdesc; sloc } =
 and type_sig_item path penv muc sig_item =
   let muc, _ = process_sig_item path penv muc sig_item in
   muc
+
+let type_sig_item penv muc sig_item =
+  type_sig_item [muc.muc_nm.id_str] penv muc sig_item

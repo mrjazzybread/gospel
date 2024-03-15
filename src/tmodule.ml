@@ -202,6 +202,7 @@ let ns_with_primitives =
       ("string", ts_string);
       ("float", ts_float);
       ("bool", ts_bool);
+      ("prop", ts_prop);
       ("unit", ts_unit);
       ("exn", ts_exn);
       ("array", ts_array);
@@ -499,13 +500,13 @@ let add_sig_contents muc sig_ =
      let ty = List.map ty_of_lb_arg v.vd_ret in
      let model ty = Ttypes.ty_apply_spatial ty ty in
      let tyl = ty_tuple (List.map model ty) in 
-     let ls = lsymbol ~field:false v.vd_name [] (Some tyl) in
+     let ls = lsymbol ~field:false v.vd_name []  tyl in
      let muc = add_ls ~export:true muc ls.ls_name.id_str ls in
      add_kid muc ls.ls_name sig_
   | Sig_val (({ vd_spec = Some { sp_pure = true; _ }; _ } as v), _) ->
       let tyl = List.map ty_of_lb_arg v.vd_args in
       let ty = ty_tuple (List.map ty_of_lb_arg v.vd_ret) in
-      let ls = lsymbol ~field:false v.vd_name tyl (Some ty) in
+      let ls = lsymbol ~field:false v.vd_name tyl ty in
       let muc = add_ls ~export:true muc ls.ls_name.id_str ls in
       add_kid muc ls.ls_name sig_
   | Sig_function f ->

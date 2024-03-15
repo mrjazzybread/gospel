@@ -11,7 +11,8 @@ val create : unit -> t
 
 val push : t -> int -> unit
 (*@ push q x
-    modifies q @ t
+    consumes q @ t
+    produces q @ t
     ensures q = cons x (old q)
 *)
 
@@ -46,7 +47,6 @@ val copy : t -> t
     produces q2 @ t
     ensures q2 = q1
  *)
-
 
 val is_empty : t -> bool
 (*@ b = is_empty q

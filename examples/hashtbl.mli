@@ -2,7 +2,7 @@
 (*@ open Map *)
 
 type t
-(*@ mutable model : int -> int sequence *)
+(*@ mutable model : integer -> integer sequence *)
 
 val create : int -> t
 (*@ tbl = create n
@@ -30,7 +30,7 @@ val find_opt : t -> int -> int option
 
 val find_all : t -> int -> int list
 (*@ l = find_all tbl k
-    ensures l = tbl k *)
+    ensures (List.sequence_of_list l) = tbl k *)
 
 val mem :  t -> int -> bool
 (*@ b = mem tbl k
@@ -52,4 +52,4 @@ val replace : t -> int -> int -> unit
 
 val length : t -> int
 (*@ n = length tbl
-    ensures n = Set.cardinal (domain tbl empty) *)
+    ensures n = Set.cardinal (domain empty tbl) *)

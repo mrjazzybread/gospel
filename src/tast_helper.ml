@@ -134,7 +134,7 @@ let mk_function result ls r params def spec loc =
   Option.iter (fun spec -> List.iter (t_free_vs_in_set args) spec.fun_req) spec;
   let args_r =
     let vs = result in
-    let ty = ls.ls_value in 
+    let ty = ls.ls_value in
     ty_equal_check vs.vs_ty ty;
     Svs.add vs args
   in
@@ -145,7 +145,7 @@ let mk_function result ls r params def spec loc =
   (* check 4 and 5 *)
   let check_ty ty t = t_ty_check t ty in
   Option.iter (check_ty ls.ls_value) def;
-  Option.iter 
+  Option.iter
     (fun spec ->
       List.iter (check_ty ty_integer) spec.fun_variant;
       List.iter (check_ty ty_bool) spec.fun_ens)

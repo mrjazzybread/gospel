@@ -17,8 +17,7 @@ let print_variant_field fmt ld =
 let print_rec_field fmt ld =
   pp fmt "%s%a:%a"
     (if ld.ld_mut = Mutable then "mutable " else "")
-    Ident.pp_simpl ld.ld_field.ls_name print_ty
-    ld.ld_field.ls_value
+    Ident.pp_simpl ld.ld_field.ls_name print_ty ld.ld_field.ls_value
 
 let print_label_decl_list print_field fmt fields =
   pp fmt "{%a}" (list ~sep:semi print_field) fields
@@ -54,8 +53,7 @@ let print_type_spec fmt { ty_ephemeral; ty_fields; ty_invariants; _ } =
     let print_field f (ls, mut) =
       pp f "@[%s%a : %a@]"
         (if mut then "mutable model " else "model ")
-        print_ls_nm ls print_ty
-        ls.ls_value
+        print_ls_nm ls print_ty ls.ls_value
     in
     let print_invariants ppf i =
       pf ppf "with %a@;%a" print_vs (fst i)

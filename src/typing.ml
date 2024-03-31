@@ -564,6 +564,7 @@ let field ns f =
   (f_ty, f.f_mutable)
 
 let process_type_spec kid crcm ns ty spec =
+<<<<<<< HEAD
   let fields = Option.map (field ns) spec.ty_field in
   let self_vs =
     Option.map (fun x -> create_vsymbol x ty) (fst spec.ty_invariant)
@@ -580,6 +581,24 @@ let process_type_spec kid crcm ns ty spec =
   in
   type_spec spec.ty_ephemeral fields (self_vs, invariants) spec.ty_text
     spec.ty_loc
+=======
+  let field (ns, fields) f =
+    let f_ty = ty_of_pty ns f.f_pty in
+    let ls = fsymbol ~field:true (Ident.of_preid f.f_preid) [ ty ] f_ty in
+    ( ns_add_fd ~allow_duplicate:true ns f.f_preid.pid_str ls,
+      (ls, f.f_mutable) :: fields )
+  in
+  let ns, fields = List.fold_left field (ns, []) spec.ty_field in
+  let fields = List.rev fields in
+  let aux = function
+    | vs, xs ->
+        let self_vs = create_vsymbol vs ty in
+        let env = Mstr.singleton self_vs.vs_name.id_str self_vs in
+        (self_vs, List.map (fmla Invariant kid crcm ns env) xs)
+  in
+  let invariants = Option.map aux spec.ty_invariant in
+  type_spec spec.ty_ephemeral fields invariants spec.ty_text spec.ty_loc
+>>>>>>> main
 
 (* TODO compare manifest with td_kind *)
 let type_type_declaration path kid crcm ns r tdl =
@@ -645,6 +664,7 @@ let type_type_declaration path kid crcm ns r tdl =
       in
       Option.map (parse_core alias tvl) td.tmanifest
     in
+<<<<<<< HEAD
     let td_model =
       Option.bind td.tspec (fun spec ->
           Option.map (fun f -> field ns f) spec.ty_field)
@@ -657,6 +677,10 @@ let type_type_declaration path kid crcm ns r tdl =
       mk_ts
         (Ident.create ~loc:td.tname.loc ~path s)
         params ~alias:manifest ~spatial
+=======
+    let td_ts =
+      mk_ts (Ident.create ~path ~loc:td.tname.loc s) params manifest
+>>>>>>> main
     in
     Hashtbl.add hts s td_ts;
 
@@ -732,7 +756,7 @@ let type_type_declaration path kid crcm ns r tdl =
     (* invariants are only allowed on abstract/private types *)
     (match ((td.tkind, td.tmanifest), td.tspec) with
     | ( ((Ptype_variant _ | Ptype_record _), _ | _, Some _),
-        Some { ty_invariant = _, _ :: _; _ } )
+        Some { ty_invariant = Some _; _ } )
       when td.tprivate = Public ->
         W.error ~loc:td.tloc (W.Public_type_invariant td_ts.ts_ident.id_str)
     | _, _ -> ());
@@ -1137,7 +1161,11 @@ let process_val path ~loc ?(ghost = Nonghost) kid crcm ns vd =
 (* Currently checking:
    1 - arguments have different names *)
 let process_function path kid crcm ns f =
+<<<<<<< HEAD
   let f_ty = Option.fold ~some:(ty_of_pty ns) ~none:ty_prop f.fun_type in
+=======
+  let f_ty = Option.map (ty_of_pty ns) f.fun_type in
+>>>>>>> main
 
   let params =
     List.map
@@ -1197,11 +1225,15 @@ let process_function path kid crcm ns f =
 
 let process_axiom path loc kid crcm ns a =
   let id = Ident.of_preid ~path a.Uast.ax_name in
+<<<<<<< HEAD
   let t =
     fmla Axiom kid crcm ns
       { env = Mstr.empty; old_env = Mstr.empty }
       a.Uast.ax_term
   in
+=======
+  let t = fmla Axiom kid crcm ns Mstr.empty a.Uast.ax_term in
+>>>>>>> main
   let ax = mk_axiom id t a.ax_loc a.ax_text in
   mk_sig_item (Sig_axiom ax) loc
 
@@ -1327,7 +1359,6 @@ and process_modtype path penv muc umty =
                 Nonrecursive [ tyd ]
             in
             let td = match tdl with [ td ] -> td | _ -> assert false in
-
             let q = Longident.flatten_exn li.txt in
             let ns = get_top_import muc in
             let ts = find_ts ~loc:li.loc ns q in
@@ -1420,7 +1451,7 @@ and process_mod path penv loc m muc =
   let muc, mty = process_modtype (path @ [ nm ]) penv muc m.mdtype in
   let decl =
     {
-      md_name = Ident.create ~loc:m.mdname.loc nm;
+      md_name = Ident.create ~loc:m.mdname.loc ~path nm;
       md_type = mty;
       md_attrs = m.mdattributes;
       md_loc = m.mdloc;
@@ -1437,7 +1468,7 @@ and process_modtype_decl path penv loc decl muc =
   in
   let decl =
     {
-      mtd_name = Ident.create ~loc:decl.mtdname.loc nm;
+      mtd_name = Ident.create ~path ~loc:decl.mtdname.loc nm;
       mtd_type = mty;
       mtd_attrs = decl.mtdattributes;
       mtd_loc = decl.mtdloc;

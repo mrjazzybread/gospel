@@ -1,3 +1,24 @@
+# 0.3
+
+## Added
+
+- Created a gallery of Gospel examples that might serve as a working ground
+  to experiment with Gospel syntax and future extensions of the language.
+  [#361] (https://github.com/ocaml-gospel/gospel/pull/361)
+
+## Improved
+
+- Make the `with` necessary when declaring type invariants
+  [\#372](https://github.com/ocaml-gospel/gospel/pull/372) and
+  [\#374](https://github.com/ocaml-gospel/gospel/pull/374)
+
+## Internals
+
+- Use unique identifiers rather than physical equality for `Symbols.ls_equal`
+  [\#380](https://github.com/ocaml-gospel/gospel/pull/380)
+- Remove the `gospel_expected` prologue at the end of successful tests
+  [\#363](https://github.com/ocaml-gospel/gospel/pull/363)
+
 # 0.2
 
 ## Added

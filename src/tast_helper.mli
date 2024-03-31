@@ -9,8 +9,13 @@ val ty_of_lb_arg : lb_arg -> ty
 
 val type_spec :
   bool ->
+<<<<<<< HEAD
   (ty * bool) option ->
   vsymbol option * term list ->
+=======
+  (lsymbol * bool) list ->
+  (vsymbol * term list) option ->
+>>>>>>> main
   string ->
   Location.t ->
   type_spec

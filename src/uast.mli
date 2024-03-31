@@ -110,8 +110,13 @@ type field = { f_loc : Location.t; f_pty : pty; f_mutable : bool }
 
 type type_spec = {
   ty_ephemeral : bool;
+<<<<<<< HEAD
   ty_field : field option;
   ty_invariant : Preid.t option * term list;
+=======
+  ty_field : field list;
+  ty_invariant : (Preid.t * term list) option;
+>>>>>>> main
   ty_text : string;
   ty_loc : Location.t;
 }

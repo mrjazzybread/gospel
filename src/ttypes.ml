@@ -16,6 +16,7 @@ module Ident = Identifier.Ident
 (** type variables *)
 
 type tvsymbol = { tv_name : Ident.t } [@@deriving show]
+
 let tv_equal x y = Ident.equal x.tv_name y.tv_name
 
 module Tvar = struct
@@ -62,8 +63,10 @@ and tysymbol = {
 [@@deriving show]
 
 and spatial =
-  |Self (* to be used when the OCaml type is a reflection of the logical type *)
-  |Model of ty * bool (* the logical model of the type. Can be instantiated with a spatial type *)
+  | Self
+    (* to be used when the OCaml type is a reflection of the logical type *)
+  | Model of ty * bool
+    (* the logical model of the type. Can be instantiated with a spatial type *)
 [@@deriving show]
 
 let ts_equal x y = Ident.equal x.ts_ident y.ts_ident
@@ -86,12 +89,8 @@ end
 module Mts = Map.Make (Ts)
 module Hts = Hashtbl.Make (Ts)
 
-let mk_ts ?(alias=None) ?(spatial=Self) id args =
-  { ts_ident = id;
-    ts_args = args;
-    ts_alias = alias;
-    ts_rep = spatial;
-  }
+let mk_ts ?(alias = None) ?(spatial = Self) id args =
+  { ts_ident = id; ts_args = args; ts_alias = alias; ts_rep = spatial }
 
 let ts_ident ts = ts.ts_ident
 let ts_args ts = ts.ts_args
@@ -112,31 +111,22 @@ let ty_app ?loc ts tyl =
     W.error ~loc
       (W.Bad_type_arity (ts.ts_ident.id_str, ts_arity ts, List.length tyl))
 
-let ts_loc_sp = mk_ts (Ident.create ~loc:Location.none "loc")
-                  [] 
+let ts_loc_sp = mk_ts (Ident.create ~loc:Location.none "loc") []
 let ty_loc_sp = ty_app ts_loc_sp []
-
-let ts_loc = mk_ts
-               (Ident.create ~loc:Location.none "loc")
-               []
-
-let ts_val = mk_ts
-               (Ident.create ~loc:Location.none "val")
-               []
-
+let ts_loc = mk_ts (Ident.create ~loc:Location.none "loc") []
+let ts_val = mk_ts (Ident.create ~loc:Location.none "val") []
 let ty_loc = ty_app ts_loc []
 let ty_val = ty_app ts_val []
 
 let rec ty_apply_spatial ty spatial =
-  match ty.ty_node, spatial.ty_node with
-  |Tyvar v1, Tyvar v2 when tv_equal v1 v2 -> ty
-  |Tyapp(ts1, l1), Tyapp(ts2, l2) when ts_equal ts1 ts2 ->
-    begin match ts1.ts_rep with
-    |Self -> {ty_node=Tyapp (ts1, List.map2 ty_apply_spatial l1 l2)}
-    |Model (model, _) -> model end
-  |_, Tyapp(t, _) when ts_equal t ts_loc_sp ->
-    ty_loc
-  |_ -> assert false (*TODO: replace with W.error *)
+  match (ty.ty_node, spatial.ty_node) with
+  | Tyvar v1, Tyvar v2 when tv_equal v1 v2 -> ty
+  | Tyapp (ts1, l1), Tyapp (ts2, l2) when ts_equal ts1 ts2 -> (
+      match ts1.ts_rep with
+      | Self -> { ty_node = Tyapp (ts1, List.map2 ty_apply_spatial l1 l2) }
+      | Model (model, _) -> model)
+  | _, Tyapp (t, _) when ts_equal t ts_loc_sp -> ty_loc
+  | _ -> assert false (*TODO: replace with W.error *)
 
 let rec ty_full_inst ?loc m ty =
   match ty.ty_node with
@@ -214,7 +204,7 @@ let ty_equal_check ty1 ty2 =
 
 (** Built-in symbols *)
 let create_base_id = Identifier.create_base_id
-  
+
 let ts_unit = mk_ts (create_base_id "unit") []
 let ts_integer = mk_ts (create_base_id "integer") []
 let ts_char = mk_ts (create_base_id "char") []
@@ -225,27 +215,19 @@ let ts_prop = mk_ts (create_base_id "prop") []
 let ts_exn = mk_ts (create_base_id "exn") []
 
 let ts_array =
-  mk_ts
-    (create_base_id "array")
-    [ fresh_tv ~loc:Location.none "a" ]
+  mk_ts (create_base_id "array") [ fresh_tv ~loc:Location.none "a" ]
 
-let ts_list =
-  mk_ts
-    (create_base_id "list")
-    [ fresh_tv ~loc:Location.none "a" ]
+let ts_list = mk_ts (create_base_id "list") [ fresh_tv ~loc:Location.none "a" ]
 
 let ts_option =
-  mk_ts
-    (create_base_id "option")
-    [ fresh_tv ~loc:Location.none "a" ]
+  mk_ts (create_base_id "option") [ fresh_tv ~loc:Location.none "a" ]
 
 let ts_int32 = mk_ts (create_base_id "int32") []
 let ts_int64 = mk_ts (create_base_id "int64") []
 let ts_nativeint = mk_ts (create_base_id "nativeint") []
 
 let ts_format6 =
-  mk_ts
-    (create_base_id "format6")
+  mk_ts (create_base_id "format6")
     [
       fresh_tv ~loc:Location.none "a";
       fresh_tv ~loc:Location.none "b";
@@ -255,10 +237,7 @@ let ts_format6 =
       fresh_tv ~loc:Location.none "f";
     ]
 
-let ts_lazy =
-  mk_ts
-    (create_base_id "lazy")
-    [ fresh_tv ~loc:Location.none "a" ]
+let ts_lazy = mk_ts (create_base_id "lazy") [ fresh_tv ~loc:Location.none "a" ]
 
 let ts_tuple =
   let ts_tuples = Hashtbl.create 0 in
@@ -281,7 +260,6 @@ let ts_arrow =
   let id = create_base_id "->" in
   mk_ts id [ ta; tb ]
 
-
 let is_ts_tuple ts =
   let ts_tuple = ts_tuple (ts_arity ts) in
   Ident.equal ts_tuple.ts_ident ts.ts_ident
@@ -290,14 +268,13 @@ let is_ts_arrow ts = Ident.equal ts_arrow.ts_ident ts.ts_ident
 let ty_unit = ty_app ts_unit []
 let ty_integer = ty_app ts_integer []
 
-let ts_int = mk_ts ~spatial:(Model (ty_integer,false)) (create_base_id "int") []
+let ts_int =
+  mk_ts ~spatial:(Model (ty_integer, false)) (create_base_id "int") []
+
 let ty_int = ty_app ts_int []
-                                     
 let ty_prop = ty_app ts_prop []
-
-let ts_bool = mk_ts (create_base_id "bool") ~spatial:(Model(ty_prop, false)) []
+let ts_bool = mk_ts (create_base_id "bool") ~spatial:(Model (ty_prop, false)) []
 let ty_bool = ty_app ts_bool []
-
 let ty_float = ty_app ts_float []
 let ty_char = ty_app ts_char []
 let ty_string = ty_app ts_string []

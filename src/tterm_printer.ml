@@ -66,17 +66,15 @@ let print_quantifier fmt = function
 
 (* TODO use pretty printer from why3 *)
 let rec print_term ?(print_type = true) fmt { t_node; t_ty; t_attrs; _ } =
-  let print_term = print_term ~print_type in 
-  let print_ty =
-    if print_type then print_ty else
-      fun fmt _ -> pp fmt "" 
-  in
+  let print_term = print_term ~print_type in
+  let print_ty = if print_type then print_ty else fun fmt _ -> pp fmt "" in
   let print_t_node fmt t_node =
     match t_node with
     | Tconst c -> pp fmt "%a%a" Opprintast.constant c print_ty t_ty
     | Tvar vs ->
-        if print_type then pp fmt "%a" print_vs vs else pp fmt "%a" Ident.pp vs.vs_name
-        (*assert (vs.vs_ty = Option.get t_ty)  TODO remove this *)
+        if print_type then pp fmt "%a" print_vs vs
+        else pp fmt "%a" Ident.pp vs.vs_name
+          (*assert (vs.vs_ty = Option.get t_ty)  TODO remove this *)
     | Tapp (ls, [ x1; x2 ]) when Identifier.is_infix ls.ls_name.id_str ->
         let op_nm =
           match String.split_on_char ' ' ls.ls_name.id_str with

@@ -4,19 +4,14 @@ open Symbols
 open Tterm_helper
 module W = Warnings
 
-let spec_arg arg_vs arg_type read_only = {
-    arg_vs;
-    consumes = None;
-    produces = None;
-    arg_type;
-    read_only;
-  }
+let spec_arg arg_vs arg_type read_only =
+  { arg_vs; consumes = None; produces = None; arg_type; read_only }
 
-let ty_of_lb_arg arg = match arg.arg_vs with
-  |None -> ty_unit
-  |Some v -> v.vs_ty
+let ty_of_lb_arg arg =
+  match arg.arg_vs with None -> ty_unit | Some v -> v.vs_ty
 
-let val_spec sp_args sp_ret sp_pre sp_checks sp_post sp_xpost sp_diverge sp_pure sp_equiv sp_text sp_loc =
+let val_spec sp_args sp_ret sp_pre sp_checks sp_post sp_xpost sp_diverge sp_pure
+    sp_equiv sp_text sp_loc =
   {
     sp_args;
     sp_ret;
@@ -39,7 +34,8 @@ let val_spec sp_args sp_ret sp_pre sp_checks sp_post sp_xpost sp_diverge sp_pure
    1 - check what to do with writes
    2 - sp_xpost sp_reads sp_alias *)
 let mk_val_spec args ret pre checks post xpost dv pure equiv txt loc =
-  let add args arg = match arg.arg_vs with 
+  let add args arg =
+    match arg.arg_vs with
     | None -> args
     | Some vs ->
         if Svs.mem vs args then
@@ -118,7 +114,7 @@ let function_ fun_ls fun_rec fun_params fun_def fun_spec fun_loc fun_text =
    5 - elements of v are of type integer, and elements of treq and
    tens are of type None
 *)
-let mk_function ?(result=None) ls r params def spec loc =
+let mk_function ?(result = None) ls r params def spec loc =
   (* check 1 *)
   let add_v s vs ty =
     if Svs.mem vs s then W.error ~loc (W.Duplicated_argument vs.vs_name.id_str);
@@ -130,24 +126,22 @@ let mk_function ?(result=None) ls r params def spec loc =
   (* check 3 *)
   Option.iter (t_free_vs_in_set args) def;
   Option.iter (fun spec -> List.iter (t_free_vs_in_set args) spec.fun_req) spec;
-  Option.iter
-    (fun spec -> List.iter (t_free_vs_in_set args) spec.fun_ens)
-    spec;
+  Option.iter (fun spec -> List.iter (t_free_vs_in_set args) spec.fun_ens) spec;
 
-  
   let args_r =
     match result with
-    |Some vs ->
-      ty_equal_check vs.vs_ty ls.ls_value;
-      Svs.add vs args
-    |None -> args in 
-  
+    | Some vs ->
+        ty_equal_check vs.vs_ty ls.ls_value;
+        Svs.add vs args
+    | None -> args
+  in
+
   (* check 4 and 5 *)
   Option.iter (t_ty_check ls.ls_value) def;
   Option.iter
     (fun spec -> List.iter (t_free_vs_in_set args_r) spec.fun_ens)
     spec;
-  
+
   Option.iter
     (fun spec ->
       List.iter (t_ty_check ty_integer) spec.fun_variant;

@@ -44,16 +44,12 @@ and dterm_node =
   | DTnot of dterm
   | DTold of dterm
 
-type 'a full_env = {env : 'a Mstr.t; old_env : 'a Mstr.t}
-
+type 'a full_env = { env : 'a Mstr.t; old_env : 'a Mstr.t }
 type denv = dty full_env
 type env = vsymbol full_env
 
 val env_union :
-  (label -> 'a -> 'a -> 'a option) ->
-  'a full_env ->
-  'a Mstr.t  ->
-  'a full_env
+  (label -> 'a -> 'a -> 'a option) -> 'a full_env -> 'a Mstr.t -> 'a full_env
 
 val dty_bool : dty
 val dty_char : dty

@@ -17,7 +17,7 @@ open Symbols
 val t_free_vars : Tterm.term -> Svs.t
 val t_free_vs_in_set : Svs.t -> Tterm.term -> unit
 val t_prop : Tterm.term -> Tterm.term
-val t_ty_check :  ty -> term -> unit
+val t_ty_check : ty -> term -> unit
 val mk_pattern : pattern_node -> ty -> Location.t -> pattern
 val p_wild : ty -> Location.t -> pattern
 val p_var : vsymbol -> Location.t -> pattern

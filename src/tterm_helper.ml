@@ -63,13 +63,14 @@ let t_free_vs_in_set svs t =
 
 let t_prop t =
   if t.t_ty = ty_prop then t else W.error ~loc:t.t_loc W.Formula_expected
+
 (*
 let t_type t =
   match t.t_ty with
   | Some ty -> ty
   | None -> W.error ~loc:t.t_loc W.Formula_expected
  *)
-let t_ty_check ty t = ty_equal_check ty t.t_ty 
+let t_ty_check ty t = ty_equal_check ty t.t_ty
 
 let ls_arg_inst ls tl =
   let rec short_fold_left2 f accu l1 l2 =
@@ -92,7 +93,7 @@ let drop n xs =
 
 let ls_app_inst ls tl ty _loc =
   let s = ls_arg_inst ls tl in
-  let vty = ls.ls_value in 
+  let vty = ls.ls_value in
   let vty =
     let ntl = List.length tl in
     if ntl >= List.length ls.ls_args then vty
@@ -102,8 +103,8 @@ let ls_app_inst ls tl ty _loc =
         (fun t1 t2 -> { ty_node = Tyapp (ts_arrow, [ t1; t2 ]) })
         (drop ntl ls.ls_args) vty
   in
-  let _ = ty_match s vty ty in ()
-
+  let _ = ty_match s vty ty in
+  ()
 
 (** Pattern constructors *)
 
@@ -135,7 +136,7 @@ let t_var vs = mk_term (Tvar vs) vs.vs_ty
 let t_const c ty = mk_term (Tconst c) ty
 
 let t_app ls tl ty loc =
-  let () = ls_app_inst ls tl ty loc in 
+  let () = ls_app_inst ls tl ty loc in
   mk_term (Tapp (ls, tl)) ty loc
 
 let t_field t ls ty loc =

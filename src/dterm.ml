@@ -121,15 +121,14 @@ and dterm_node =
   | DTnot of dterm
   | DTold of dterm
 
-
-type 'a full_env = {env : 'a Mstr.t; old_env : 'a Mstr.t}
-
+type 'a full_env = { env : 'a Mstr.t; old_env : 'a Mstr.t }
 type env = vsymbol full_env
 
-let add_env env x y = {env = Mstr.add x y env.env; old_env = Mstr.add x y env.old_env}
+let add_env env x y =
+  { env = Mstr.add x y env.env; old_env = Mstr.add x y env.old_env }
+
 let env_union f env m =
-  { env=Mstr.union f env.env m;
-    old_env = Mstr.union f env.old_env m }
+  { env = Mstr.union f env.env m; old_env = Mstr.union f env.old_env m }
 
 (* type unification *)
 
@@ -189,24 +188,23 @@ let dty_unify ~loc dty1 dty2 =
   let t2 = Fmt.str "%a" print_ty (ty_of_dty dty2) in
   try unify dty1 dty2 with Exit -> W.error ~loc (W.Bad_type (t1, t2))
 
-let dterm_unify dt dty =
-  dty_unify ~loc:dt.dt_loc dt.dt_dty dty
-
+let dterm_unify dt dty = dty_unify ~loc:dt.dt_loc dt.dt_dty dty
 let dfmla_unify dt = dterm_unify dt (dty_of_ty ty_prop)
-
 let unify dt dty = dterm_unify dt dty
 
 type denv = dty full_env
 
 let denv_find ~loc s denv =
-  try Mstr.find s denv.env with Not_found -> W.error ~loc (W.Unbound_variable s)
+  try Mstr.find s denv.env
+  with Not_found -> W.error ~loc (W.Unbound_variable s)
 
 let is_in_denv denv s = Mstr.mem s denv.env
 
 (* let denv_empty = Mstr.empty *)
 let denv_get_opt denv s = Mstr.find_opt s denv.env
+
 let denv_add_var denv s dty =
-  {env = Mstr.add s dty denv.env; old_env = Mstr.add s dty denv.env}
+  { env = Mstr.add s dty denv.env; old_env = Mstr.add s dty denv.env }
 
 let denv_add_var_quant denv vl =
   let add acc (pid, dty) =
@@ -216,7 +214,10 @@ let denv_add_var_quant denv vl =
   in
   let vl = List.fold_left add Mstr.empty vl in
   let choose_snd _ _ x = Some x in
-  {env = Mstr.union choose_snd denv.env vl; old_env = Mstr.union choose_snd denv.env vl}
+  {
+    env = Mstr.union choose_snd denv.env vl;
+    old_env = Mstr.union choose_snd denv.env vl;
+  }
 
 (** coercions *)
 
@@ -272,7 +273,7 @@ let dterm_expected crcmap dt dty =
     let ts1, ts2 = (ts_of_dty dt.dt_dty, ts_of_dty dty) in
     if ts_equal ts1 ts2 then dt
     else
-      let ty1, ty2 = (ty_of_dty_raw dt.dt_dty, (ty_of_dty_raw dty)) in
+      let ty1, ty2 = (ty_of_dty_raw dt.dt_dty, ty_of_dty_raw dty) in
       let crc = Coercion.find crcmap ty1 ty2 in
       apply_coercion crc dt
   with Not_found | Exit -> dt
@@ -282,8 +283,8 @@ let dterm_expected crcmap dt dty =
   unify dt dty;
   dt
 
-let dfmla_expected crcmap dt = dterm_expected crcmap dt (dty_of_ty ty_prop)
 (** dterm to tterm *)
+let dfmla_expected crcmap dt = dterm_expected crcmap dt (dty_of_ty ty_prop)
 
 let pattern dp =
   let vars = ref Mstr.empty in
@@ -315,7 +316,7 @@ let pattern dp =
 
 let rec term env dt =
   let loc = dt.dt_loc in
-  term_node ~loc env dt.dt_dty dt.dt_node 
+  term_node ~loc env dt.dt_dty dt.dt_node
 
 and term_node ~loc env dty dterm_node =
   match dterm_node with
@@ -324,28 +325,23 @@ and term_node ~loc env dty dterm_node =
       (* TODO should I match vs.vs_ty with dty? *)
       t_var vs loc
   | DTconst c -> t_const c (ty_of_dty dty) loc
-  | DTapp (ls, []) when ls_equal ls fs_bool_true ->
-      t_bool_true loc
-  | DTapp (ls, []) when ls_equal ls fs_bool_false ->
-     t_bool_false loc
-  | DTapp (ls, []) when ls_equal ls fs_prop_true ->
-     t_true loc
-  | DTapp (ls, []) when ls_equal ls fs_bool_true ->
-     t_false loc
+  | DTapp (ls, []) when ls_equal ls fs_bool_true -> t_bool_true loc
+  | DTapp (ls, []) when ls_equal ls fs_bool_false -> t_bool_false loc
+  | DTapp (ls, []) when ls_equal ls fs_prop_true -> t_true loc
+  | DTapp (ls, []) when ls_equal ls fs_bool_true -> t_false loc
   | DTapp (ls, [ dt1; dt2 ]) when ls_equal ls ps_equ ->
       t_equ (term env dt1) (term env dt2) loc
   | DTapp (ls, [ dt1 ]) when ls.ls_field ->
       t_field (term env dt1) ls (ty_of_dty dty) loc
-  | DTapp (ls, dtl) ->
-      t_app ls (List.map (term env) dtl) (ty_of_dty dty) loc
+  | DTapp (ls, dtl) -> t_app ls (List.map (term env) dtl) (ty_of_dty dty) loc
   | DTif (dt1, dt2, dt3) ->
       t_if (term env dt1) (term env dt2) (term env dt3) loc
   | DTlet (pid, dt1, dt2) ->
       let t1 = term env dt1 in
       let vs = create_vsymbol pid t1.t_ty in
-      let old_env = Mstr.add pid.pid_str vs env.old_env in       
+      let old_env = Mstr.add pid.pid_str vs env.old_env in
       let env = Mstr.add pid.pid_str vs env.env in
-      let t2 = term {env; old_env} dt2 in
+      let t2 = term { env; old_env } dt2 in
       t_let vs t1 t2 loc
   | DTbinop (b, dt1, dt2) ->
       let t1, t2 = (term env dt1, term env dt2) in
@@ -367,7 +363,12 @@ and term_node ~loc env dty dterm_node =
       let ty = ty_of_dty_raw dty and pl = List.map pattern dpl in
       let env =
         let join _ _ vs = Some vs in
-        let union env vs = {env = Mstr.union join env.env vs; old_env = Mstr.union join env.env vs} in
+        let union env vs =
+          {
+            env = Mstr.union join env.env vs;
+            old_env = Mstr.union join env.env vs;
+          }
+        in
         List.fold_left (fun env (_, vs) -> union env vs) env pl
       in
       let t = term env dt in
@@ -385,7 +386,12 @@ and term_node ~loc env dty dterm_node =
       let branch (dp, guard, dt) =
         let p, vars = pattern dp in
         let join _ _ vs = Some vs in
-        let union env vs = {env = Mstr.union join env.env vs; old_env = Mstr.union join env.env vs} in
+        let union env vs =
+          {
+            env = Mstr.union join env.env vs;
+            old_env = Mstr.union join env.env vs;
+          }
+        in
         let env = union env vars in
         let dt = term env dt in
         let guard =

@@ -21,7 +21,11 @@ val penv : string list -> Utils.Sstr.t -> parse_env
     for modules dependencies. *)
 
 val process_sig_item :
-  string list -> parse_env -> module_uc -> Uast.s_signature_item -> module_uc * signature_item
+  string list ->
+  parse_env ->
+  module_uc ->
+  Uast.s_signature_item ->
+  module_uc * signature_item
 (** `process_sig_item penv muc s` returns a new module under construction after
     type checking `s` and the typed signature obtained from `s` and `muc`. *)
 

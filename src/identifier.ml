@@ -37,7 +37,7 @@ module Ident = struct
     let current = Hashtbl.create 0 in
     let output = Hashtbl.create 0 in
     let current s =
-      let x = Hashtbl.find_opt current s  |>Option.fold ~none:0 ~some:succ in
+      let x = Hashtbl.find_opt current s |> Option.fold ~none:0 ~some:succ in
       Hashtbl.replace current s x;
       x
     in
@@ -55,16 +55,17 @@ module Ident = struct
 
   let create =
     let tag = ref 0 in
-    fun ?(attrs = []) ?(path=[]) ~loc str ->
+    fun ?(attrs = []) ?(path = []) ~loc str ->
       incr tag;
-      { id_str = str;
+      {
+        id_str = str;
         id_attrs = attrs;
         id_path = path;
         id_loc = loc;
         id_tag = !tag;
       }
 
-  let of_preid ?(path=[]) (pid : Preid.t) =
+  let of_preid ?(path = []) (pid : Preid.t) =
     create pid.pid_str ~path ~attrs:pid.pid_attrs ~loc:pid.pid_loc
 
   let set_loc t loc = { t with id_loc = loc }
@@ -83,13 +84,12 @@ let is_somefix f s =
   List.length sl > 1 && List.hd sl = f
 
 let create_base_id name =
-  let built_in_path = "#Base_lang" in 
-  Ident.create ~loc:Location.none ~path:[built_in_path] name
+  let built_in_path = "#Base_lang" in
+  Ident.create ~loc:Location.none ~path:[ built_in_path ] name
 
 let is_prefix = is_somefix "prefix"
 let is_infix = is_somefix "infix"
 let is_mixfix = is_somefix "mixfix"
-
 let eq = create_base_id (infix "=")
 let neq = create_base_id (infix "<>")
 let none = create_base_id "None"

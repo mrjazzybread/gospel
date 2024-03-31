@@ -5,7 +5,6 @@ open Symbols
 open Ttypes
 
 val spec_arg : vsymbol option -> arg_label -> bool -> lb_arg
-
 val ty_of_lb_arg : lb_arg -> ty
 
 val type_spec :

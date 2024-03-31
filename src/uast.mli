@@ -85,12 +85,9 @@ type spec_header = {
   sp_hd_ret : labelled_arg list;
   (* Can only be LNone or LGhost *)
   sp_hd_args : labelled_arg list; (* header arguments' names *)
-  }
-
-type spatial_term = {
-   s_term : term;
-   s_type : pty option;
 }
+
+type spatial_term = { s_term : term; s_type : pty option }
 
 type val_spec = {
   sp_header : spec_header option;
@@ -109,11 +106,7 @@ type val_spec = {
   sp_loc : Location.t;
 }
 
-type field = {
-  f_loc : Location.t;
-  f_pty : pty;
-  f_mutable : bool;
-}
+type field = { f_loc : Location.t; f_pty : pty; f_mutable : bool }
 
 type type_spec = {
   ty_ephemeral : bool;

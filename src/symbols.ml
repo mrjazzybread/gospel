@@ -15,7 +15,8 @@ module Ident = Identifier.Ident
 (* Variable Symbols *)
 type vsymbol = { vs_name : Ident.t; vs_ty : ty } [@@deriving show]
 
-let create_vsymbol ?(path=[]) pid ty = { vs_name = Ident.of_preid ~path pid; vs_ty = ty }
+let create_vsymbol ?(path = []) pid ty =
+  { vs_name = Ident.of_preid ~path pid; vs_ty = ty }
 
 module Vs = struct
   type t = vsymbol
@@ -44,7 +45,7 @@ let ls_equal : lsymbol -> lsymbol -> bool = ( == )
 module LS = struct
   type t = lsymbol
 
-  let compare = Stdlib.compare 
+  let compare = Stdlib.compare
   let e = Stdlib.compare
   let equal = ls_equal
   let hash = (Hashtbl.hash : lsymbol -> int)
@@ -102,7 +103,6 @@ let fs_prop_false =
   fsymbol ~constr:true ~field:false
     (Ident.create ~loc:Location.none "False")
     [] ty_prop
-
 
 let fs_apply =
   let ty_a, ty_b = (fresh_ty_var "a", fresh_ty_var "b") in

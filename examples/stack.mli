@@ -20,20 +20,20 @@ val pop_opt : t -> int option
 (*@ r = pop_opt q
     consumes q @ t
     produces q @ t
-    
+
     ensures match r with
     |None -> old q = empty && q = empty
     |Some r_val -> old q = cons r_val q
- *)
+*)
 
 val top_opt : t -> int option
 (*@ r = top_opt q
     preserves q @ t
-    
+
     ensures match r with
     |None -> q = empty
     |Some r -> q <> empty && r = hd q
- *)
+*)
 
 val clear : t -> unit
 (*@ clear q
@@ -46,7 +46,7 @@ val copy : t -> t
     preserves q1 @ t
     produces q2 @ t
     ensures q2 = q1
- *)
+*)
 
 val is_empty : t -> bool
 (*@ b = is_empty q
@@ -54,7 +54,7 @@ val is_empty : t -> bool
     ensures b <-> q = empty *)
 
 val length : t -> int
-(*@ l = length q 
+(*@ l = length q
     preserves q @ t
     ensures Sequence.length q = l *)
 
@@ -69,7 +69,7 @@ val transfer : t -> t -> unit
     ensures q2 = old (q2 ++ q1) *)
 
 (*missing : pop, take, iter, fold, to_seq, add_seq, of_seq *)
-                        
+
 (* predicate is_eq (A : Type) 
 (* this predicate does not hold for unwoned mutable structures and functions*)
 

@@ -62,7 +62,6 @@ let ns_add_sp ~allow_duplicate ns s ts =
     add ~allow_duplicate ~equal:ts_equal ~loc:ts.ts_ident.id_loc ns.ns_sp s ts
   in
   { ns with ns_sp }
-  
 
 let ns_add_ls ~allow_duplicate:_ ns s ls =
   let ns_ls =
@@ -110,7 +109,7 @@ let rec ns_find get_map ns = function
   | [ x ] -> Mstr.find x (get_map ns)
   | x :: xs -> ns_find get_map (Mstr.find x ns.ns_ns) xs
 
-let ns_find_ts ns s = ns_find (fun ns -> ns.ns_ts) ns s 
+let ns_find_ts ns s = ns_find (fun ns -> ns.ns_ts) ns s
 let ns_find_ls ns s = ns_find (fun ns -> ns.ns_ls) ns s
 let ns_find_fd ns s = ns_find (fun ns -> ns.ns_fd) ns s
 let ns_find_xs ns s = ns_find (fun ns -> ns.ns_xs) ns s
@@ -134,8 +133,8 @@ let rec ns_replace_ts new_ts sl ns =
       let ns_ns = ns_replace_ts new_ts xs ns_ns in
       { ns with ns_ns = Mstr.add x ns_ns ns.ns_ns }
 
-let rec ns_subst_ts old_ns new_ts { ns_ts; ns_sp; ns_ls; ns_fd; ns_xs; ns_ns; ns_tns }
-    =
+let rec ns_subst_ts old_ns new_ts
+    { ns_ts; ns_sp; ns_ls; ns_fd; ns_xs; ns_ns; ns_tns } =
   {
     ns_ts = Mstr.map (ts_subst_ts old_ns new_ts) ns_ts;
     ns_sp = Mstr.map (ts_subst_ts old_ns new_ts) ns_sp;
@@ -174,7 +173,12 @@ let mk_td ts kind =
 
 let mk_abstract_td ts =
   mk_td
-    { Ttypes.ts_ident = ts.ts_ident; ts_args = []; ts_alias = None; ts_rep = Self }
+    {
+      Ttypes.ts_ident = ts.ts_ident;
+      ts_args = [];
+      ts_alias = None;
+      ts_rep = Self;
+    }
     Tast.Pty_abstract
 
 let ns_with_primitives =
@@ -292,17 +296,19 @@ let ns_with_primitives =
   let ns =
     List.fold_left
       (fun ns (s, ts) -> ns_add_ts ~allow_duplicate:true ns s ts)
-      empty_ns (("loc", ts_loc)::primitive_tys)
+      empty_ns
+      (("loc", ts_loc) :: primitive_tys)
   in
-  let ns = List.fold_left
-    (fun ns (s, ls) -> ns_add_ls ~allow_duplicate:true ns s ls)
-    ns
-    (primitive_ls @ primitive_ps) in
+  let ns =
+    List.fold_left
+      (fun ns (s, ls) -> ns_add_ls ~allow_duplicate:true ns s ls)
+      ns
+      (primitive_ls @ primitive_ps)
+  in
   List.fold_left
     (fun ns (s, ts) -> ns_add_sp ~allow_duplicate:true ns s ts)
     ns
-    (("loc", ts_loc_sp)::primitive_tys)
-
+    (("loc", ts_loc_sp) :: primitive_tys)
 
 (** Modules *)
 
@@ -497,12 +503,12 @@ let add_sig_contents muc sig_ =
   in
   match sig_.sig_desc with
   | Sig_val (({ vd_args = []; _ } as v), _) ->
-     let ty = List.map ty_of_lb_arg v.vd_ret in
-     let model ty = Ttypes.ty_apply_spatial ty ty in
-     let tyl = ty_tuple (List.map model ty) in 
-     let ls = lsymbol ~field:false v.vd_name []  tyl in
-     let muc = add_ls ~export:true muc ls.ls_name.id_str ls in
-     add_kid muc ls.ls_name sig_
+      let ty = List.map ty_of_lb_arg v.vd_ret in
+      let model ty = Ttypes.ty_apply_spatial ty ty in
+      let tyl = ty_tuple (List.map model ty) in
+      let ls = lsymbol ~field:false v.vd_name [] tyl in
+      let muc = add_ls ~export:true muc ls.ls_name.id_str ls in
+      add_kid muc ls.ls_name sig_
   | Sig_val (({ vd_spec = Some { sp_pure = true; _ }; _ } as v), _) ->
       let tyl = List.map ty_of_lb_arg v.vd_args in
       let ty = ty_tuple (List.map ty_of_lb_arg v.vd_ret) in
@@ -611,8 +617,7 @@ and print_ns nm fmt { ns_ts; ns_sp; ns_ls; ns_fd; ns_xs; ns_ns; ns_tns } =
      %a@]@\n\
      @[<hv2>Type Namespaces@\n\
      %a@]@]@]"
-    nm (print_mstr_vals print_ts) ns_ts
-    (print_mstr_vals print_ts) ns_sp
+    nm (print_mstr_vals print_ts) ns_ts (print_mstr_vals print_ts) ns_sp
     (print_mstr_vals print_ls_decl)
     ns_ls
     (print_mstr_vals print_ls_decl)

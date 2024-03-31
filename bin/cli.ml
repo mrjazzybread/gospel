@@ -40,7 +40,7 @@ let ocaml_file = ocaml_test test_file
 let verbose =
   let doc = "Print all intermediate forms." in
   Arg.(value & flag & info [ "v"; "verbose" ] ~doc)
-       
+
 let load_path =
   let doc = "Include directory in load path." in
   Arg.(value & opt_all dir [] & info [ "L"; "load-path" ] ~doc ~docv:"DIR")

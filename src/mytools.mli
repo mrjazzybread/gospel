@@ -1,15 +1,10 @@
-
 (**************************************************************)
 (** Parameters to control the normalization and generation *)
 
 val use_credits : bool ref
-
 val use_left_to_right_order : bool ref
-
 val generate_deep_embedding : bool ref
-
 val generate_encoders : bool ref
-
 
 (**************************************************************)
 (**************************************************************)
@@ -26,7 +21,6 @@ val list_of_option : 'a option -> 'a list
 val option_app : 'a -> ('b -> 'a) -> 'b option -> 'a
 val unsome_safe : 'a -> 'a option -> 'a
 val bool_of_option : bool option -> bool
-
 
 (**************************************************************)
 (** List manipulation functions *)
@@ -50,7 +44,6 @@ val list_ksort : ('a -> 'a -> int) -> ('a * 'b) list -> ('a * 'b) list
 val list_index : 'a -> 'a list -> int
 val list_is_included : 'a list -> 'a list -> bool
 
-
 (**************************************************************)
 (** String manipulation functions *)
 
@@ -65,30 +58,30 @@ val str_capitalize_1 : string -> string
 
 val str_capitalize_2 : string -> string
 
-
 (**************************************************************)
 (** File manipulation functions *)
 
 val file_put_contents : string -> string -> unit
 
-
 (**************************************************************)
 (** Try-with manipulation functions *)
 
-(** Tests whether a function throws [Not_found],
-    and returns the result in the form of a boolean value. *)
+(** Tests whether a function throws [Not_found], and returns the result in the
+    form of a boolean value. *)
 
 val gives_not_found : (unit -> 'a) -> bool
-
 
 (**************************************************************)
 (** Pretty-printing functions *)
 
-val lin0 : string  (** The empty string *)
+val lin0 : string
+(** The empty string *)
 
-val lin1 : string  (** The line-return string *)
+val lin1 : string
+(** The line-return string *)
 
-val lin2 : string  (** The double line-return string *)
+val lin2 : string
+(** The double line-return string *)
 
 (** Display a list of values with a separator *)
 
@@ -114,7 +107,6 @@ val show_par : bool -> string -> string
 
 val show_str : 'a -> 'a
 
-
 (**************************************************************)
 (** Error messages *)
 
@@ -126,13 +118,12 @@ val output : string -> unit
 
 val unsupported_noloc : string -> 'a
 
-(** Display a message explaining that a feature is not supported,
-    and report the location *)
+(** Display a message explaining that a feature is not supported, and report the
+    location *)
 
 val unsupported : Location.t -> string -> 'a
 
-(** Display message associated with a warning,
-    and report the location *)
+(** Display message associated with a warning, and report the location *)
 
 val warning : Location.t -> string -> unit
 

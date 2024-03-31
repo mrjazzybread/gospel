@@ -4,7 +4,7 @@ type t
 (*@ mutable model : integer sequence *)
 
 val create : unit -> t
-(*@ arr = create () 
+(*@ arr = create ()
     ensures arr = empty *)
 
 val make : int -> int -> t
@@ -17,11 +17,11 @@ val get : t -> int -> int
 
 val set : t -> int -> int -> unit
 (*@ set arr i x
-   modifies arr @ t 
+   modifies arr @ t
    ensures arr = set (old arr) i x *)
 
 val length : t -> int
-(*@ l = length arr 
+(*@ l = length arr
     ensures l = Sequence.length arr *)
 
 val is_empty : t -> bool
@@ -29,7 +29,7 @@ val is_empty : t -> bool
     ensures b <-> arr = empty *)
 
 val find_last : t -> int option
-(*@ x = find_last arr 
+(*@ x = find_last arr
     ensures match x with
     |None -> arr = empty
     |Some x -> arr[length arr - 1] = x *)

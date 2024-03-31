@@ -23,17 +23,15 @@ let path2module p =
 
 let type_check load_path name sigs =
   let md = init_muc name in
-  let mod_name = path2module name in 
-  let penv =
-    Utils.Sstr.singleton mod_name |> Typing.penv load_path
-  in
+  let mod_name = path2module name in
+  let penv = Utils.Sstr.singleton mod_name |> Typing.penv load_path in
   let md = List.fold_left (Typing.type_sig_item penv) md sigs in
   wrap_up_muc md
 
 let run_file config file =
   try
     let ocaml = parse_ocaml file in
-    let verbose = config.verbose in 
+    let verbose = config.verbose in
     if verbose then (
       pp fmt "@[@\n*******************************@]@.";
       pp fmt "@[********** Parsed file ********@]@.";
@@ -54,14 +52,13 @@ let run_file config file =
       pp fmt "@[********* Typed GOSPEL ********@]@.";
       pp fmt "@[*******************************@]@.";
       pp fmt "@[%a@]@." print_file file);
-    
+
     let file = Tast2sep.process_sigs file in
     if true then (
-        pp fmt "@[@\n*******************************@]@.";
-        pp fmt "@[******* Seperation Logic ******@]@.";
-        pp fmt "@[*******************************@]@.";
-        pp fmt "@[%a@]@."
-          Sep_prettyprinter.file file); 
+      pp fmt "@[@\n*******************************@]@.";
+      pp fmt "@[******* Seperation Logic ******@]@.";
+      pp fmt "@[*******************************@]@.";
+      pp fmt "@[%a@]@." Sep_prettyprinter.file file);
     true
   with W.Error e ->
     let bt = Printexc.get_backtrace () in

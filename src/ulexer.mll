@@ -19,6 +19,7 @@
     List.iter
       (fun (x,y) -> Hashtbl.add keywords x y)
       [
+	"as", AS;
 	"axiom", AXIOM;
         "coercion", COERCION;
         "else", ELSE;
@@ -215,7 +216,7 @@ rule token = parse
   | "|"
       { BAR }
   | "@"
-      { AS }
+      { SPATIAL }
   | "="
       { EQUAL }
   | "<>"

@@ -4,19 +4,14 @@ open Symbols
 open Tterm_helper
 module W = Warnings
 
-let spec_arg arg_vs arg_type read_only = {
-    arg_vs;
-    consumes = None;
-    produces = None;
-    arg_type;
-    read_only;
-  }
+let spec_arg arg_vs arg_type read_only =
+  { arg_vs; consumes = None; produces = None; arg_type; read_only }
 
-let ty_of_lb_arg arg = match arg.arg_vs with
-  |None -> ty_unit
-  |Some v -> v.vs_ty
+let ty_of_lb_arg arg =
+  match arg.arg_vs with None -> ty_unit | Some v -> v.vs_ty
 
-let val_spec sp_args sp_ret sp_pre sp_checks sp_post sp_xpost sp_diverge sp_pure sp_equiv sp_text sp_loc =
+let val_spec sp_args sp_ret sp_pre sp_checks sp_post sp_xpost sp_diverge sp_pure
+    sp_equiv sp_text sp_loc =
   {
     sp_args;
     sp_ret;
@@ -39,7 +34,8 @@ let val_spec sp_args sp_ret sp_pre sp_checks sp_post sp_xpost sp_diverge sp_pure
    1 - check what to do with writes
    2 - sp_xpost sp_reads sp_alias *)
 let mk_val_spec args ret pre checks post xpost dv pure equiv txt loc =
-  let add args arg = match arg.arg_vs with 
+  let add args arg =
+    match arg.arg_vs with
     | None -> args
     | Some vs ->
         if Svs.mem vs args then
@@ -57,8 +53,8 @@ let mk_val_description vd_name vd_type vd_prim vd_attrs vd_args vd_ret vd_spec
     vd_loc =
   { vd_name; vd_type; vd_prim; vd_attrs; vd_args; vd_ret; vd_spec; vd_loc }
 
-let type_spec ty_ephemeral ty_fields ty_invariants ty_text ty_loc =
-  { ty_ephemeral; ty_fields; ty_invariants; ty_text; ty_loc }
+let type_spec ty_ephemeral ty_model ty_invariants ty_text ty_loc =
+  { ty_ephemeral; ty_model; ty_invariants; ty_text; ty_loc }
 
 let label_declaration ld_field ld_mut ld_loc ld_attrs =
   { ld_field; ld_mut; ld_loc; ld_attrs }

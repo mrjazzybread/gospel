@@ -24,7 +24,7 @@ val add : t -> int -> int -> unit
 val find_opt : t -> int -> int option
 (*@ r = find_opt tbl k
     preserves tbl
-    ensures match r with 
+    ensures match r with
     |None -> tbl k = empty
     |Some x -> hd (tbl k) = x *)
 
@@ -32,7 +32,7 @@ val find_all : t -> int -> int list
 (*@ l = find_all tbl k
     ensures l = tbl k *)
 
-val mem :  t -> int -> bool
+val mem : t -> int -> bool
 (*@ b = mem tbl k
     ensures b <-> tbl k <> empty *)
 
@@ -44,10 +44,10 @@ val remove : t -> int -> unit
 
 val replace : t -> int -> int -> unit
 (*@ replace tbl k v
-    modifies tbl 
+    modifies tbl
     ensures tbl k = empty -> tbl = tbl[k -> singleton v]
-    ensures tbl k <> empty -> 
-       let tail = old (tl (tbl k)) in 
+    ensures tbl k <> empty ->
+       let tail = old (tl (tbl k)) in
        tbl = old (tbl[k -> cons v tail]) *)
 
 val length : t -> int

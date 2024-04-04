@@ -101,7 +101,7 @@ let mk_ty = Option.value ~default:ty_bool
 
 let ls_app_inst ls tl ty _loc =
   let s = ls_arg_inst ls tl in
-  let vty = mk_ty ls.ls_value in 
+  let vty = mk_ty ls.ls_value in
   let ty = mk_ty ty in
   let vty =
     let ntl = List.length tl in
@@ -112,8 +112,8 @@ let ls_app_inst ls tl ty _loc =
         (fun t1 t2 -> { ty_node = Tyapp (ts_arrow, [ t1; t2 ]) })
         (drop ntl ls.ls_args) vty
   in
-  let _ = ty_match s vty ty in ()
-
+  let _ = ty_match s vty ty in
+  ()
 
 (** Pattern constructors *)
 
@@ -145,7 +145,7 @@ let t_var vs = mk_term (Tvar vs) (Some vs.vs_ty)
 let t_const c ty = mk_term (Tconst c) (Some ty)
 
 let t_app ls tl ty loc =
-  let () = ls_app_inst ls tl ty loc in 
+  let () = ls_app_inst ls tl ty loc in
   mk_term (Tapp (ls, tl)) ty loc
 
 let t_field t ls ty loc =

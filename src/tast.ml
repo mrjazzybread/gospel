@@ -14,17 +14,20 @@ open Tterm
 open Symbols
 module Ident = Identifier.Ident
 
-type arg_label = Lnone | Loptional | Lnamed | Lghost
-[@@deriving show]
+type arg_label = Lnone | Loptional | Lnamed | Lghost [@@deriving show]
 
 type lb_arg = {
-    arg_vs : vsymbol option; (** the name and OCaml type of the argument. Is None if the arg_type field is Lunit *)
-    consumes : (ty * ty) option; (**spatial and logical type of the argument when the function is called *)
-    produces : (ty * ty) option; (**spatial and logical type of the argument when the function is exited *)
-    arg_type : arg_label; (** the label of the argument. *)
-    read_only : bool; (** read only flag *)
-  } [@@deriving show]
-
+  arg_vs : vsymbol option;
+      (** the name and OCaml type of the argument. Is None if the arg_type field
+          is Lunit *)
+  consumes : (ty * ty) option;
+      (**spatial and logical type of the argument when the function is called *)
+  produces : (ty * ty) option;
+      (**spatial and logical type of the argument when the function is exited *)
+  arg_type : arg_label;  (** the label of the argument. *)
+  read_only : bool;  (** read only flag *)
+}
+[@@deriving show]
 
 type val_spec = {
   sp_args : lb_arg list;  (** Arguments *)
@@ -56,13 +59,15 @@ type val_description = {
 }
 [@@deriving show]
 
+type model = Self | Default of bool * ty | Fields of (bool * lsymbol) list
+[@@deriving show]
+
 type type_spec = {
   ty_ephemeral : bool;  (** Ephemeral *)
-  ty_fields : (ty * bool) option;  (** Models (field symbol * mutable) *)
+  ty_model : model;  (** Models (field symbol * mutable) *)
   ty_invariants : vsymbol option * term list;  (** Invariants *)
   ty_text : string;
   ty_loc : Location.t; [@printer Utils.Fmt.pp_loc]  (** Specification location *)
-
 }
 [@@deriving show]
 

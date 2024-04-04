@@ -4,82 +4,72 @@ open Ident
 module Mstr = Tmodule.Mstr
 
 type sep_namespace = {
-    sns_pred : lsymbol Mstr.t;
-    sns_id : vsymbol Mstr.t;
-    sns_ns : sep_namespace Mstr.t;
-  }
+  sns_pred : lsymbol Mstr.t;
+  sns_id : vsymbol Mstr.t;
+  sns_ns : sep_namespace Mstr.t;
+}
 
-let empty_ns = {
-    sns_pred = Mstr.empty;
-    sns_id   = Mstr.empty;
-    sns_ns   = Mstr.empty;
-  }
+let empty_ns =
+  { sns_pred = Mstr.empty; sns_id = Mstr.empty; sns_ns = Mstr.empty }
 
-let ts_prop = mk_ts
-                (Ident.create ~loc:Location.none "Prop")
-                []
-
+let ts_prop = mk_ts (Ident.create ~loc:Location.none "Prop") []
 let ty_prop = ty_app ts_prop []
-
 let get_rep_pred = String.capitalize_ascii
-
-let mk_update s =  "_" ^ s ^ "'"
+let mk_update s = "_" ^ s ^ "'"
 let mk_prog s = "_prog_" ^ s
 
-
 let change_id id map =
-  Ident.create
-    ~attrs:id.id_attrs
-    ~loc:id.id_loc
-    (map id.id_str)
+  Ident.create ~attrs:id.id_attrs ~loc:id.id_loc (map id.id_str)
 
 let is_present ns id =
-  let str = id.id_str in 
+  let str = id.id_str in
   Mstr.mem str ns.sns_id
 
 let map_id ns is_old vs ty =
   let id =
-    if not is_old && is_present ns vs.vs_name then
-       change_id vs.vs_name mk_update 
-    else
-      vs.vs_name in
-  let val_vs = {vs_name = id; vs_ty = ty} in
+    if (not is_old) && is_present ns vs.vs_name then
+      change_id vs.vs_name mk_update
+    else vs.vs_name
+  in
+  let val_vs = { vs_name = id; vs_ty = ty } in
   let new_map = Mstr.add id.id_str val_vs ns.sns_id in
-  val_vs, {ns with sns_id = new_map}
+  (val_vs, { ns with sns_id = new_map })
 
 let get_id ns is_old id =
   let name = if is_old then id else mk_update id in
-  try Mstr.find name ns.sns_id with
-  |Not_found -> Mstr.find id ns.sns_id
-    
+  try Mstr.find name ns.sns_id with Not_found -> Mstr.find id ns.sns_id
+
 let create_rep_pred sym =
   let id = sym.ts_ident in
-  let self_type = {ty_node=Tyapp (sym, List.map (fun x -> {ty_node=Tyvar x}) sym.ts_args)} in 
-  let model_type = match sym.ts_rep with
-    |Self -> self_type
-    |Model (m, _) -> m in 
+  let self_type =
+    {
+      ty_node =
+        Tyapp (sym, List.map (fun x -> { ty_node = Tyvar x }) sym.ts_args);
+    }
+  in
+  let model_type =
+    match sym.ts_rep with Self -> self_type | Model (_, m) -> m
+  in
   let new_id = change_id id get_rep_pred in
   {
     ls_name = new_id;
-    ls_args = [self_type; model_type];
+    ls_args = [ self_type; model_type ];
     ls_value = None;
     ls_constr = false;
     ls_field = false;
-  } 
-  
+  }
 
 let get_pred ns ty =
   match ty.ty_node with
-  |Tyapp (ts, _) ->
-    begin try Mstr.find ts.ts_ident.id_str ns.sns_pred with
-    |Not_found -> create_rep_pred ts end
-  |_ -> assert false
+  | Tyapp (ts, _) -> (
+      try Mstr.find ts.ts_ident.id_str ns.sns_pred
+      with Not_found -> create_rep_pred ts)
+  | _ -> assert false
 
-let id_of_term t = match t.Tterm.t_node with
-  |Tterm.Tvar v -> v
-  |_ -> assert false
+let id_of_term t =
+  match t.Tterm.t_node with Tterm.Tvar v -> v | _ -> assert false
 
-let get_ty_name ty = match ty.ty_node with
-  |Tyapp (t, _) -> t.ts_ident.id_str
-  |Tyvar v -> v.tv_name.id_str
-
+let get_ty_name ty =
+  match ty.ty_node with
+  | Tyapp (t, _) -> t.ts_ident.id_str
+  | Tyvar v -> v.tv_name.id_str

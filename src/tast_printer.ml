@@ -46,20 +46,30 @@ let print_type_kind fmt = function
 
 let print_term = print_term ~print_type:true
 
-let print_type_spec fmt { ty_ephemeral; ty_fields; ty_invariants; _ } =
-  if (not ty_ephemeral) && ty_fields = None && snd ty_invariants = [] then ()
+let print_type_spec fmt { ty_ephemeral; ty_model; ty_invariants; _ } =
+  if (not ty_ephemeral) && ty_model = Self && snd ty_invariants = [] then ()
   else
     let print_ephemeral f e = if e then pp f "@[ephemeral@]" in
     let print_term f t = pp f "@[%a@]" print_term t in
-    let print_field f (ty, mut) = 
-      pp f "@[%s %a@]"
+    let print_default f (mut, ty) =
+      pp f "@[%s : %a@]"
         (if mut then "mutable model " else "model ")
         print_ty ty
     in
+    let print_field f (mut, vs) =
+      pp f "@[%s %a@]"
+        (if mut then "mutable model " else "model ")
+        print_ls_decl vs
+    in
+    let print_model f model =
+      match model with
+      | Tast.Self -> ()
+      | Default (m, ty) -> print_default f (m, ty)
+      | Fields l -> list ~sep:newline print_field f l
+    in
     let print_invariant_vs ppf = pf ppf "with %a" print_vs in
-    pp fmt "(*@@ @ [%a%a%a%a@] *)"
-      print_ephemeral ty_ephemeral
-      (option print_field) ty_fields
+    pp fmt "(*@@ @ [%a%a%a%a@] *)" print_ephemeral ty_ephemeral print_model
+      ty_model
       (option print_invariant_vs)
       (fst ty_invariants)
       (list
@@ -88,14 +98,15 @@ let print_type_declaration fmt td =
     (list ~sep:(const string " constraint ") print_constraint)
     td.td_cstrs (option print_type_spec) td.td_spec
 
-let print_lb_arg fmt arg = match arg.arg_vs with
+let print_lb_arg fmt arg =
+  match arg.arg_vs with
   | None -> pp fmt "%s" "()"
-  | Some vs -> begin 
-     match arg.arg_type with 
-     | Lnone  -> print_vs fmt vs
-     | Loptional  -> pp fmt "?%a" print_vs vs
-     | Lnamed -> pp fmt "~%a" print_vs vs
-     | Lghost -> pp fmt "[%a: %a]" print_vs vs print_ty vs.vs_ty end 
+  | Some vs -> (
+      match arg.arg_type with
+      | Lnone -> print_vs fmt vs
+      | Loptional -> pp fmt "?%a" print_vs vs
+      | Lnamed -> pp fmt "~%a" print_vs vs
+      | Lghost -> pp fmt "[%a: %a]" print_vs vs print_ty vs.vs_ty)
 
 let print_xposts f xposts =
   if xposts = [] then ()
@@ -114,40 +125,24 @@ let print_xposts f xposts =
     in
     List.iter print_xpost xposts
 
-
 let print_permissions fmt arg =
   let vs = arg.arg_vs in
   let print_option = option print_vs in
-  match arg.consumes, arg.produces with
-  |None, None -> ()
-  |Some (ty_s, _), None ->
-    pp fmt "%s %a %@ %a" 
-      "consumes"
-      print_option vs
-      print_ty ty_s
-  |None, Some (ty_s, _) ->
-    pp fmt "%s %a %@ %a" 
-      "produces"
-      print_option vs
-      print_ty ty_s
-  |Some(ty_s1, _), Some(ty_s2, _) ->
-    if Ttypes.ty_equal ty_s1 ty_s2 then
-      let clause = if arg.read_only then "preserves" else "modifies" in
-      pp fmt "%s %a %@ %a" 
-        clause
-        print_option vs
-        print_ty ty_s1
-    else
-      let () =
-        pp fmt "%s %a %@ %a" 
-          "produces"
-          print_option vs
-          print_ty ty_s1 in
-      pp fmt "%s %a %@ %a" 
-        "consumes"
-        print_option vs
-        print_ty ty_s2
-
+  match (arg.consumes, arg.produces) with
+  | None, None -> ()
+  | Some (ty_s, _), None ->
+      pp fmt "%s %a %@ %a" "consumes" print_option vs print_ty ty_s
+  | None, Some (ty_s, _) ->
+      pp fmt "%s %a %@ %a" "produces" print_option vs print_ty ty_s
+  | Some (ty_s1, _), Some (ty_s2, _) ->
+      if Ttypes.ty_equal ty_s1 ty_s2 then
+        let clause = if arg.read_only then "preserves" else "modifies" in
+        pp fmt "%s %a %@ %a" clause print_option vs print_ty ty_s1
+      else
+        let () =
+          pp fmt "%s %a %@ %a" "produces" print_option vs print_ty ty_s1
+        in
+        pp fmt "%s %a %@ %a" "consumes" print_option vs print_ty ty_s2
 
 let print_vd_spec val_id fmt spec =
   let print_term f t = pp f "@[%a@]" print_term t in
@@ -236,6 +231,7 @@ let exception_declaration ctxt f x =
   pp f "@[<hov2>exception@ %a@]%a"
     (print_extension_constructor ctxt)
     x.exn_constructor (item_attributes ctxt) x.exn_attributes
+
 let print_axiom f x =
   pp f "(*@@ axiom %a: %a *)" Ident.pp x.ax_name print_term x.ax_term
 
@@ -337,8 +333,7 @@ let rec print_signature_item f x =
       item_extension reset_ctxt f e;
       item_attributes reset_ctxt f a
   | Sig_function x -> print_function f x
-  | Sig_axiom x ->
-     print_axiom f x
+  | Sig_axiom x -> print_axiom f x
   | Sig_use s -> pp f "(*@@ use %s *)" s
   | _ -> assert false
 

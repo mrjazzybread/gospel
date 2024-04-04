@@ -98,7 +98,7 @@
 %token WITH
 
 (* symbols *)
-
+%token SPATIAL
 %token AND AMPAMP ARROW BAR BARBAR COLON COLONCOLON COMMA DOT DOTDOT
 %token EOF EQUAL
 %token MUTABLE MODEL
@@ -186,9 +186,9 @@ nonempty_func_spec:
 ;
 
 type_spec:
-| e=ts_ephemeral m=option(type_spec_model) i=ts_invariants EOF
-  { { ty_ephemeral = e || Option.fold ~none:false ~some:(fun f -> f.f_mutable) m;
-      ty_field = m;
+| e=ts_ephemeral m=type_spec_model i=ts_invariants EOF
+  { { ty_ephemeral = e;
+      ty_model = m;
       ty_invariant = i;
       ty_text = "";
       ty_loc = Location.none;
@@ -209,10 +209,21 @@ ts_invariant:
 ;
 
 type_spec_model:
-| f_mutable=boption(MUTABLE) MODEL COLON f_pty=typ
-  { { f_mutable; f_pty;
-      f_loc = mk_loc $loc } }
+  | (* epsilon *)
+    { Self }
+  | model = type_spec_model_default
+    { let f_mutable, f_pty = model in Default (f_mutable, f_pty) }
+  |  mod_fields=nonempty_list(type_spec_model_field)
+    { Fields mod_fields }
 ;
+
+type_spec_model_default:
+|f_mutable=boption(MUTABLE) MODEL COLON f_pty=typ
+  { f_mutable, f_pty }
+
+type_spec_model_field:
+| f_mutable=boption(MUTABLE) MODEL f_pid=lident COLON f_pty=typ
+  { {f_mutable; f_pid; f_pty} }
 
 val_spec_header:
 | ret=ret_name nm=lident_rich args=fun_arg*
@@ -226,7 +237,7 @@ val_spec_header:
 
 spatial_term:
 | t=term { {s_term = t; s_type = None} }
-| t=term AS ty=typ { {s_term = t; s_type = Some ty } }
+| t=term SPATIAL ty=typ { {s_term = t; s_type = Some ty } }
 ;
   
 val_spec_body:

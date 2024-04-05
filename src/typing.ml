@@ -1052,9 +1052,9 @@ let process_function path kid crcm ns f =
         Mstr.update nm (add_var nm vs) env)
       Mstr.empty params
   in
-  let result, env =
+  let env =
     let result = create_vsymbol (Preid.create ~loc:f.fun_loc "result") f_ty in
-    (result, Mstr.add "result" result env)
+    Mstr.add "result" result env
   in
 
   let def =
@@ -1076,26 +1076,6 @@ let process_function path kid crcm ns f =
         mk_fun_spec req ens variant spec.fun_coer spec.fun_text spec.fun_loc)
       f.fun_spec
   in
-  let args = Svs.of_list params in
-  let t_free_vs_in_set svs t =
-    let diff = Svs.diff (Tterm_helper.t_free_vars t) svs in
-    if not (Svs.is_empty diff) then
-      W.error ~loc:t.t_loc
-        (W.Free_variables
-           (Svs.elements diff |> List.map (fun vs -> vs.vs_name.id_str)))
-  in
-
-  Option.iter (t_free_vs_in_set args) def;
-  Option.iter (fun spec -> List.iter (t_free_vs_in_set args) spec.fun_req) spec;
-  let args_r =
-    let vs = result in
-    let ty = ls.ls_value in
-    ty_equal_check vs.vs_ty ty;
-    Svs.add vs args
-  in
-  Option.iter
-    (fun spec -> List.iter (t_free_vs_in_set args_r) spec.fun_ens)
-    spec;
 
   let f = mk_function ls f.fun_rec params def spec f.fun_loc f.fun_text in
   mk_sig_item (Sig_function f) f.fun_loc

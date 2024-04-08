@@ -10,7 +10,7 @@ val ty_of_lb_arg : lb_arg -> ty
 val type_spec :
   bool ->
   model ->
-  vsymbol option * term list ->
+  (vsymbol * term list) option ->
   string ->
   Location.t ->
   type_spec
@@ -42,7 +42,6 @@ val mk_fun_spec :
   fun_spec
 
 val mk_function :
-  ?result:vsymbol ->
   lsymbol ->
   bool ->
   vsymbol list ->

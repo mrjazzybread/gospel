@@ -63,7 +63,3 @@ end) : sig
         ensures  forall y. y <> minimum h -> Bag.multiplicity y h'.bag = Bag.multiplicity y h.bag
         ensures  Bag.cardinal h'.bag = Bag.cardinal h.bag - 1 *)
 end
-
-(* {gospel_expected|
-   [0] OK
-   |gospel_expected} *)

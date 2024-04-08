@@ -52,6 +52,9 @@ module Ident : sig
   val hash : t -> int
 
   val pp : Format.formatter -> t -> unit
+  (** Pretty printer for identifiers with their fully qualified names *)
+
+  val pp_simpl : Format.formatter -> t -> unit
   (** Pretty printer for identifiers. *)
 
   val create :

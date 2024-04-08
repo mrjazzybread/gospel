@@ -201,8 +201,8 @@ ts_ephemeral:
 ;
 
 ts_invariants:
-| l=list(ts_invariant) { None, l }
-| WITH id=lident l=nonempty_list(ts_invariant) { Some id, l }
+| WITH id=lident l=nonempty_list(ts_invariant) { Some (id, l) }
+|                                              { None }
 ;
 ts_invariant:
 | INVARIANT inv=term { inv }

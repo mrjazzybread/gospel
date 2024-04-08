@@ -47,6 +47,7 @@ let string_list_of_qualid q =
 
 exception Ns_not_found of location * string
 
+let im_in = ref false
 let rec q_loc = function Qpreid pid -> pid.pid_loc | Qdot (q, _) -> q_loc q
 
 let ns_find ~loc f ns sl =
@@ -229,7 +230,7 @@ let rec dpattern kid ns { pat_desc; pat_loc = loc } =
       let cs, pjl, fll = parse_record ~loc kid ns qpl in
       let get_pattern pj =
         try dpattern kid ns (Mls.find pj fll)
-        with Not_found -> mk_pwild loc (dty_of_ty (Option.get pj.ls_value))
+        with Not_found -> mk_pwild loc (dty_of_ty pj.ls_value)
       in
       let dpl = List.map get_pattern pjl in
       mk_papp ~loc cs dpl
@@ -259,13 +260,15 @@ let binop = function
   | Uast.Tiff -> Tiff
 
 let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
-  let mk_dterm ~loc dt_node dty = { dt_node; dt_dty = dty; dt_loc = loc } in
+  let mk_dterm ~loc dt_node dty =
+    { dt_node; dt_dty = Some dty; dt_loc = loc }
+  in
   let apply dt1 t2 =
     let dt2 = dterm whereami kid crcm ns denv t2 in
     let dty = dty_fresh () in
     unify dt1 (Some (Tapp (ts_arrow, [ dty_of_dterm dt2; dty ])));
     let dt_app = DTapp (fs_apply, [ dt1; dt2 ]) in
-    mk_dterm ~loc:dt2.dt_loc dt_app (Some dty)
+    mk_dterm ~loc:dt2.dt_loc dt_app dty
   in
   (* CHECK location *)
   let map_apply dt tl = List.fold_left apply dt tl in
@@ -282,13 +285,12 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
     if ntl < nls then
       let dtyl1, dtyl2 = split_at_i ntl dtyl in
       let dtl = List.map2 (dterm_expected crcm) dtl dtyl1 in
-      let dty = Option.value ~default:dty_bool dty in
       let dty =
         List.fold_right
           (fun t1 t2 -> Dterm.Tapp (ts_arrow, [ t1; t2 ]))
           dtyl2 dty
       in
-      mk_dterm ~loc (DTapp (ls, dtl)) (Some dty)
+      mk_dterm ~loc (DTapp (ls, dtl)) dty
     else
       let dtl = List.map2 (dterm_expected crcm) dtl dtyl in
       let dt = mk_dterm ~loc (DTapp (ls, dtl)) dty in
@@ -321,7 +323,7 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
     | Qpreid ({ pid_loc = loc; pid_str = s; _ } as pid) -> (
         match denv_get_opt denv s with
         | Some dty ->
-            let dtv = mk_dterm ~loc (DTvar pid) (Some dty) in
+            let dtv = mk_dterm ~loc (DTvar pid) dty in
             map_apply dtv tl
         | None -> fun_app ~loc (find_q_ls ns q) tl)
     | _ -> fun_app ~loc (find_q_ls ns q) tl
@@ -335,8 +337,8 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
         map_apply dt1 (t2 :: tl)
   in
   match term_desc with
-  | Uast.Ttrue -> mk_dterm ~loc DTtrue (Some dty_bool)
-  | Uast.Tfalse -> mk_dterm ~loc DTfalse (Some dty_bool)
+  | Uast.Ttrue -> mk_dterm ~loc DTtrue dty_bool
+  | Uast.Tfalse -> mk_dterm ~loc DTfalse dty_bool
   | Uast.Tconst c ->
       let dty =
         match c with
@@ -351,10 +353,10 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
         | Pconst_string _ -> dty_string
         | Pconst_float _ -> dty_float
       in
-      mk_dterm ~loc (DTconst c) (Some dty)
+      mk_dterm ~loc (DTconst c) dty
   | Uast.Tpreid (Qpreid pid) when is_in_denv denv pid.pid_str ->
       let dty = denv_find ~loc:pid.pid_loc pid.pid_str denv in
-      mk_dterm ~loc (DTvar pid) (Some dty)
+      mk_dterm ~loc (DTvar pid) dty
   | Uast.Tpreid q ->
       (* in this case it must be a constant *)
       let ls = find_q_ls ns q in
@@ -371,7 +373,7 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
   | Uast.Tnot t ->
       let dt = dterm whereami kid crcm ns denv t in
       dfmla_unify dt;
-      mk_dterm ~loc (DTnot dt) dt.dt_dty
+      mk_dterm ~loc (DTnot dt) (Option.get dt.dt_dty)
   | Uast.Tif (t1, t2, t3) ->
       let dt1 = dterm whereami kid crcm ns denv t1 in
       let dt2 = dterm whereami kid crcm ns denv t2 in
@@ -380,14 +382,14 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
       let dty = max_dty crcm [ dt2; dt3 ] in
       let dt2 = dterm_expected_op crcm dt2 dty in
       let dt3 = dterm_expected_op crcm dt3 dty in
-      mk_dterm ~loc (DTif (dt1, dt2, dt3)) dt2.dt_dty
+      mk_dterm ~loc (DTif (dt1, dt2, dt3)) (Option.get dt2.dt_dty)
   | Uast.Ttuple [] -> fun_app ~loc fs_unit []
   | Uast.Ttuple tl -> fun_app ~loc (fs_tuple (List.length tl)) tl
   | Uast.Tlet (pid, t1, t2) ->
       let dt1 = dterm whereami kid crcm ns denv t1 in
       let denv = denv_add_var denv pid.pid_str (dty_of_dterm dt1) in
       let dt2 = dterm whereami kid crcm ns denv t2 in
-      mk_dterm ~loc (DTlet (pid, dt1, dt2)) dt2.dt_dty
+      mk_dterm ~loc (DTlet (pid, dt1, dt2)) (Option.get dt2.dt_dty)
   | Uast.Tinfix (t1, op1, t23) ->
       let apply de1 op de2 =
         let symbol =
@@ -404,8 +406,8 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
           app_unify_map ~loc ls (dterm_expected crcm) [ de1; de2 ] dtyl
         in
         if op.pid_str = neq.id_str then
-          mk_dterm ~loc (DTnot (mk_dterm ~loc (DTapp (ls, dtl)) dty)) None
-        else mk_dterm ~loc (DTapp (ls, dtl)) dty
+          mk_dterm ~loc (DTnot (mk_dterm ~loc (DTapp (ls, dtl)) dty)) dty_bool
+        else mk_dterm ~loc (DTapp (ls, dtl)) dty_bool
       in
       let rec chain _ de1 op1 t23 =
         match t23 with
@@ -417,7 +419,7 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
             let de23 = chain loc23 de2 op2 t3 in
             dfmla_unify de12;
             dfmla_unify de23;
-            mk_dterm ~loc (DTbinop (Tand, de12, de23)) None
+            mk_dterm ~loc (DTbinop (Tand, de12, de23)) dty_bool
         | _ -> apply de1 op1 (dterm whereami kid crcm ns denv t23)
       in
       chain loc (dterm whereami kid crcm ns denv t1) op1 t23
@@ -426,7 +428,7 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
       let dt2 = dterm whereami kid crcm ns denv t2 in
       dfmla_unify dt1;
       dfmla_unify dt2;
-      mk_dterm ~loc (DTbinop (binop op, dt1, dt2)) None
+      mk_dterm ~loc (DTbinop (binop op, dt1, dt2)) dty_bool
   | Uast.Tquant (q, vl, t) ->
       let get_dty pty =
         match pty with None -> dty_fresh () | Some pty -> dty_of_pty ns pty
@@ -434,16 +436,11 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
       let vl = List.map (fun (pid, pty) -> (pid, get_dty pty)) vl in
       let denv = denv_add_var_quant denv vl in
       let dt = dterm whereami kid crcm ns denv t in
-      let dty, q =
-        match q with
-        | Uast.Tforall ->
-            dfmla_unify dt;
-            (None, Tforall)
-        | Uast.Texists ->
-            dfmla_unify dt;
-            (None, Texists)
+      dfmla_unify dt;
+      let q =
+        match q with Uast.Tforall -> Tforall | Uast.Texists -> Texists
       in
-      mk_dterm ~loc (DTquant (q, vl, dt)) dty
+      mk_dterm ~loc (DTquant (q, vl, dt)) dty_bool
   | Uast.Tlambda (pl, t, pty) ->
       let arg p =
         let dty = dty_fresh () and dp = dpattern kid ns p in
@@ -469,7 +466,7 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
         let apply (_, dty1) dty2 = Dterm.Tapp (ts_arrow, [ dty1; dty2 ]) in
         Some (List.fold_right apply args dt_dty)
       in
-      mk_dterm ~loc (DTlambda (List.map fst args, dt)) dty
+      mk_dterm ~loc (DTlambda (List.map fst args, dt)) (Option.get dty)
   | Uast.Tcase (t, ptl) ->
       let dt = dterm whereami kid crcm ns denv t in
       let dt_dty = dty_of_dterm dt in
@@ -498,7 +495,7 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
               dterm_expected_op crcm dt dty ))
           pdtl
       in
-      mk_dterm ~loc (DTcase (dt, pdtl)) dty
+      mk_dterm ~loc (DTcase (dt, pdtl)) (Option.get dty)
   | Uast.Tcast (t, pty) ->
       let dt = dterm whereami kid crcm ns denv t in
       let dty = dty_of_pty ns pty in
@@ -508,16 +505,16 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
       dterm whereami kid crcm ns denv t
   | Uast.Tattr (at, t) ->
       let dt = dterm whereami kid crcm ns denv t in
-      mk_dterm ~loc (DTattr (dt, [ at ])) dt.dt_dty
+      mk_dterm ~loc (DTattr (dt, [ at ])) (Option.get dt.dt_dty)
   | Uast.Told t -> (
       match whereami with
       | Requires -> W.(error ~loc (Old_in_precond "requires"))
       | Checks -> W.(error ~loc (Old_in_precond "checks"))
       | _ ->
-          let dt =
-            dterm whereami kid crcm ns { denv with env = denv.old_env } t
-          in
-          mk_dterm ~loc (DTold dt) dt.dt_dty)
+          let denv = { denv with env = denv.old_env } in
+          let dt = dterm whereami kid crcm ns denv t in
+
+          mk_dterm ~loc (DTold dt) (Option.get dt.dt_dty))
   | Uast.Trecord qtl ->
       let cs, pjl, fll = parse_record ~loc kid ns qtl in
       let get_term pj =
@@ -546,8 +543,8 @@ let term_with_unify whereami kid crcm ty ns env t =
 
 let fmla whereami kid crcm ns env t =
   let dt = dterm whereami kid crcm ns env t in
-  let tt = fmla env dt in
-  { tt with t_loc = t.term_loc }
+  dterm_unify dt dty_bool;
+  term env dt
 
 let private_flag = function
   | Asttypes.Private -> Private
@@ -579,22 +576,15 @@ let process_type_spec kid crcm ns ty spec =
         (ns, Fields l)
   in
 
-  let self_vs =
-    Option.map (fun x -> create_vsymbol x ty) (fst spec.ty_invariant)
+  let aux = function
+    | vs, xs ->
+        let self_vs = create_vsymbol vs ty in
+        let env = Mstr.singleton self_vs.vs_name.id_str self_vs in
+        let env = { env; old_env = Mstr.empty } in
+        (self_vs, List.map (fmla Invariant kid crcm ns env) xs)
   in
-
-  let env =
-    match self_vs with
-    | Some vs -> Mstr.singleton vs.vs_name.id_str vs
-    | None -> Mstr.empty
-  in
-  let invariants =
-    List.map
-      (fmla Invariant kid crcm ns { env; old_env = env })
-      (snd spec.ty_invariant)
-  in
-  type_spec spec.ty_ephemeral model (self_vs, invariants) spec.ty_text
-    spec.ty_loc
+  let invariants = Option.map aux spec.ty_invariant in
+  type_spec spec.ty_ephemeral model invariants spec.ty_text spec.ty_loc
 
 (* TODO compare manifest with td_kind *)
 let type_type_declaration path kid crcm ns r tdl =
@@ -752,7 +742,7 @@ let type_type_declaration path kid crcm ns r tdl =
     (* invariants are only allowed on abstract/private types *)
     (match ((td.tkind, td.tmanifest), td.tspec) with
     | ( ((Ptype_variant _ | Ptype_record _), _ | _, Some _),
-        Some { ty_invariant = _, _ :: _; _ } )
+        Some { ty_invariant = Some _; _ } )
       when td.tprivate = Public ->
         W.error ~loc:td.tloc (W.Public_type_invariant td_ts.ts_ident.id_str)
     | _, _ -> ());
@@ -891,7 +881,7 @@ let process_val_spec kid crcm ns id args ret vs =
   let type_spatial whereami env t =
     let d_typed = dterm whereami kid crcm ns env t.Uast.s_term in
     let typed = term env d_typed in
-    let ty = match typed.t_ty with Some ty -> ty | _ -> assert false in
+    let ty = typed.t_ty in
     let spatial_ns = { ns with ns_ts = ns.ns_sp } in
     let spatial_type =
       match t.Uast.s_type with None -> ty | Some t -> ty_of_pty spatial_ns t
@@ -930,12 +920,7 @@ let process_val_spec kid crcm ns id args ret vs =
     Option.fold ~some:(fun arg -> aux arg t) ~none:false arg
   in
   let term_of_vs x =
-    {
-      t_node = Tvar x;
-      t_ty = Some x.vs_ty;
-      t_attrs = [];
-      t_loc = Location.none;
-    }
+    { t_node = Tvar x; t_ty = x.vs_ty; t_attrs = []; t_loc = Location.none }
   in
 
   let read_only =
@@ -976,7 +961,7 @@ let process_val_spec kid crcm ns id args ret vs =
     match List.find_opt (equal_arg sa.arg_vs) l with
     | None -> sa
     | Some (t, s_ty) ->
-        let ty = Option.get t.t_ty in
+        let ty = t.t_ty in
         let sp = (s_ty, ty_apply_spatial ty s_ty) in
         if con then { sa with consumes = Some sp }
         else { sa with produces = Some sp }
@@ -1165,7 +1150,7 @@ let process_val path ~loc ?(ghost = Nonghost) kid crcm ns vd =
 (* Currently checking:
    1 - arguments have different names *)
 let process_function path kid crcm ns f =
-  let f_ty = Option.map (ty_of_pty ns) f.fun_type in
+  let f_ty = Option.fold ~some:(ty_of_pty ns) ~none:ty_bool f.fun_type in
 
   let params =
     List.map
@@ -1193,22 +1178,16 @@ let process_function path kid crcm ns f =
         Mstr.update nm (add_var nm vs) env)
       Mstr.empty params
   in
-  let env, result =
-    match f_ty with
-    | None -> (env, None)
-    | Some ty ->
-        let result = create_vsymbol (Preid.create ~loc:f.fun_loc "result") ty in
-        (Mstr.add "result" result env, Some result)
+  let env =
+    let result = create_vsymbol (Preid.create ~loc:f.fun_loc "result") f_ty in
+    Mstr.add "result" result env
   in
   let env = { env; old_env = env } in
 
   let def =
-    match f_ty with
-    | None -> Option.map (fmla Function_or_predicate kid crcm ns env) f.fun_def
-    | Some ty ->
-        Option.map
-          (term_with_unify Function_or_predicate kid crcm ty ns env)
-          f.fun_def
+    Option.map
+      (term_with_unify Function_or_predicate kid crcm f_ty ns env)
+      f.fun_def
   in
 
   let spec =
@@ -1224,9 +1203,8 @@ let process_function path kid crcm ns f =
         mk_fun_spec req ens variant spec.fun_coer spec.fun_text spec.fun_loc)
       f.fun_spec
   in
-  let f =
-    mk_function ?result ls f.fun_rec params def spec f.fun_loc f.fun_text
-  in
+
+  let f = mk_function ls f.fun_rec params def spec f.fun_loc f.fun_text in
   mk_sig_item (Sig_function f) f.fun_loc
 
 let process_axiom path loc kid crcm ns a =
@@ -1361,7 +1339,6 @@ and process_modtype path penv muc umty =
                 Nonrecursive [ tyd ]
             in
             let td = match tdl with [ td ] -> td | _ -> assert false in
-
             let q = Longident.flatten_exn li.txt in
             let ns = get_top_import muc in
             let ts = find_ts ~loc:li.loc ns q in
@@ -1454,7 +1431,7 @@ and process_mod path penv loc m muc =
   let muc, mty = process_modtype (path @ [ nm ]) penv muc m.mdtype in
   let decl =
     {
-      md_name = Ident.create ~loc:m.mdname.loc nm;
+      md_name = Ident.create ~loc:m.mdname.loc ~path nm;
       md_type = mty;
       md_attrs = m.mdattributes;
       md_loc = m.mdloc;
@@ -1471,7 +1448,7 @@ and process_modtype_decl path penv loc decl muc =
   in
   let decl =
     {
-      mtd_name = Ident.create ~loc:decl.mtdname.loc nm;
+      mtd_name = Ident.create ~path ~loc:decl.mtdname.loc nm;
       mtd_type = mty;
       mtd_attrs = decl.mtdattributes;
       mtd_loc = decl.mtdloc;
@@ -1518,6 +1495,8 @@ and process_sig_item path penv muc { sdesc; sloc } =
       let muc = add_sig_contents muc sig_ in
       process_and_import si muc
   in
+  im_in := path = [ "Test" ];
+
   let muc, signature = process_and_import sdesc muc in
   let muc = add_sig_contents muc signature in
   (muc, signature)
@@ -1525,3 +1504,6 @@ and process_sig_item path penv muc { sdesc; sloc } =
 and type_sig_item path penv muc sig_item =
   let muc, _ = process_sig_item path penv muc sig_item in
   muc
+
+let type_sig_item penv muc sig_item =
+  type_sig_item [ muc.muc_nm.id_str ] penv muc sig_item

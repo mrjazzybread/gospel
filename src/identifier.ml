@@ -41,17 +41,26 @@ module Ident = struct
       Hashtbl.replace current s x;
       x
     in
-    let str_of_id id =
+    let str_of_id path id =
       try Hashtbl.find output id.id_tag
       with Not_found ->
         let x = current id.id_str in
         let str =
           if x = 0 then id.id_str else id.id_str ^ "_" ^ string_of_int x
         in
+        let str =
+          if path then
+            List.fold_right (fun e acc -> e ^ "." ^ acc) id.id_path str
+          else str
+        in
         Hashtbl.replace output id.id_tag str;
         str
     in
-    fun ppf t -> Format.fprintf ppf "%s%a" (str_of_id t) pp_attrs t.id_attrs
+    fun path ppf t ->
+      Format.fprintf ppf "%s%a" (str_of_id path t) pp_attrs t.id_attrs
+
+  let pp_simpl = pp false
+  let pp = pp true
 
   let create =
     let tag = ref 0 in

@@ -7,17 +7,17 @@ open Ttypes
 open Upretty_printer
 open Opprintast
 open Fmt
+module Option = Stdlib.Option
 
 let print_variant_field fmt ld =
   pp fmt "%s%a:%a"
     (if ld.ld_mut = Mutable then "mutable " else "")
-    Ident.pp (fst ld.ld_field) print_ty (snd ld.ld_field)
+    Ident.pp_simpl (fst ld.ld_field) print_ty (snd ld.ld_field)
 
 let print_rec_field fmt ld =
   pp fmt "%s%a:%a"
     (if ld.ld_mut = Mutable then "mutable " else "")
-    Ident.pp ld.ld_field.ls_name print_ty
-    (Stdlib.Option.get ld.ld_field.ls_value)
+    Ident.pp_simpl ld.ld_field.ls_name print_ty ld.ld_field.ls_value
 
 let print_label_decl_list print_field fmt fields =
   pp fmt "{%a}" (list ~sep:semi print_field) fields
@@ -30,7 +30,7 @@ let print_type_kind fmt = function
         | ld -> print_label_decl_list print_variant_field fmt ld
       in
       let print_constructor fmt { cd_cs; cd_ld; _ } =
-        pp fmt "@[%a of %a@\n@[<h 2>%a@]@]" Ident.pp cd_cs.ls_name
+        pp fmt "@[%a of %a@\n@[<h 2>%a@]@]" Ident.pp_simpl cd_cs.ls_name
           (print_args cd_cs) cd_ld print_ls_decl cd_cs
       in
       pp fmt "@[ = %a@]"
@@ -47,7 +47,8 @@ let print_type_kind fmt = function
 let print_term = print_term ~print_type:true
 
 let print_type_spec fmt { ty_ephemeral; ty_model; ty_invariants; _ } =
-  if (not ty_ephemeral) && ty_model = Self && snd ty_invariants = [] then ()
+  if (not ty_ephemeral) && ty_model = Self && Option.is_none ty_invariants then
+    ()
   else
     let print_ephemeral f e = if e then pp f "@[ephemeral@]" in
     let print_term f t = pp f "@[%a@]" print_term t in
@@ -55,6 +56,14 @@ let print_type_spec fmt { ty_ephemeral; ty_model; ty_invariants; _ } =
       pp f "@[%s : %a@]"
         (if mut then "mutable model " else "model ")
         print_ty ty
+    in
+    let print_invariants ppf i =
+      pf ppf "with %a@;%a" print_vs (fst i)
+        (list
+           ~first:(newline ++ const string "invariant ")
+           ~sep:(const string "@\ninvariant")
+           print_term)
+        (snd i)
     in
     let print_field f (mut, vs) =
       pp f "@[%s %a@]"
@@ -67,15 +76,13 @@ let print_type_spec fmt { ty_ephemeral; ty_model; ty_invariants; _ } =
       | Default (m, ty) -> print_default f (m, ty)
       | Fields l -> list ~sep:newline print_field f l
     in
-    let print_invariant_vs ppf = pf ppf "with %a" print_vs in
-    pp fmt "(*@@ @ [%a%a%a%a@] *)" print_ephemeral ty_ephemeral print_model
+
+    pp fmt "(*@@ @[%a%a%a@] *)" print_ephemeral ty_ephemeral print_model
       ty_model
-      (option print_invariant_vs)
-      (fst ty_invariants)
-      (list
-         ~first:(newline ++ const string "invariant ")
-         ~sep:(const string "invariant") print_term)
-      (snd ty_invariants)
+      (* (option print_invariant_vs) *)
+      (* ty_invariants *)
+      (option print_invariants)
+      ty_invariants
 
 let print_type_declaration fmt td =
   let print_param fmt (tv, (v, i)) =
@@ -92,7 +99,7 @@ let print_type_declaration fmt td =
   let print_constraint fmt (ty1, ty2, _) =
     pp fmt "%a = %a" print_ty ty1 print_ty ty2
   in
-  pp fmt "@[%a%a%a%a%s%a@]@\n@[%a@]" print_params td.td_params Ident.pp
+  pp fmt "@[%a%a%a%a%s%a@]@\n@[%a@]" print_params td.td_params Ident.pp_simpl
     (ts_ident td.td_ts) print_manifest td.td_manifest print_type_kind td.td_kind
     (if td.td_cstrs = [] then "" else " constraint ")
     (list ~sep:(const string " constraint ") print_constraint)
@@ -154,7 +161,7 @@ let print_vd_spec val_id fmt spec =
         (list ~sep:comma print_lb_arg)
         vs.sp_ret
         (if vs.sp_ret = [] then "" else " =")
-        Ident.pp val_id
+        Ident.pp_simpl val_id
         (list ~sep:sp print_lb_arg)
         vs.sp_args print_diverges vs.sp_diverge
         (list ~first:newline ~sep:newline print_permissions)
@@ -180,11 +187,11 @@ let print_vd_spec val_id fmt spec =
            constant_string)
         vs.sp_equiv
 
-let print_param f p = pp f "(%a:%a)" Ident.pp p.vs_name print_ty p.vs_ty
+let print_param f p = pp f "(%a:%a)" Ident.pp_simpl p.vs_name print_ty p.vs_ty
 
 let print_function f x =
   let func_pred =
-    if x.fun_ls.ls_value = None then "predicate" else "function"
+    if ty_equal x.fun_ls.ls_value ty_bool then "predicate" else "function"
   in
   let print_term f t = pp f "@[%a@]" print_term t in
   let print_term f t = pp f "@[%a@]" print_term t in
@@ -211,8 +218,8 @@ let print_function f x =
   let func f x =
     pp f "@[%s %s%a %a%a%a%a@]" func_pred
       (if x.fun_rec then "rec " else "")
-      Ident.pp x.fun_ls.ls_name (list ~sep:sp print_param) x.fun_params
-      (option (fun f -> pp f ": %a" print_ty))
+      Ident.pp_simpl x.fun_ls.ls_name (list ~sep:sp print_param) x.fun_params
+      (fun f -> pp f ": %a" print_ty)
       x.fun_ls.ls_value
       (option (fun f -> pp f " =@\n@[<hov2>@[%a@]@]" print_term))
       x.fun_def (option func_spec) x.fun_spec
@@ -224,7 +231,7 @@ let print_extension_constructor ctxt f x =
   match x.ext_kind with
   | Pext_decl (_, _, _) -> print_xs f x.ext_xs
   | Pext_rebind li ->
-      pp f "%a%a@;=@;%a" Ident.pp x.ext_xs.xs_ident (attributes ctxt)
+      pp f "%a%a@;=@;%a" Ident.pp_simpl x.ext_xs.xs_ident (attributes ctxt)
         x.ext_attributes longident_loc li
 
 let exception_declaration ctxt f x =
@@ -238,7 +245,7 @@ let print_axiom f x =
 let rec print_signature_item f x =
   let print_val f vd =
     let intro = if vd.vd_prim = [] then "val" else "external" in
-    pp f "@[%s@ %a@ :@ %a%a%a@]@\n@[<h4>%a@]" intro Ident.pp vd.vd_name
+    pp f "@[%s@ %a@ :@ %a%a%a@]@\n@[<h4>%a@]" intro Ident.pp_simpl vd.vd_name
       core_type vd.vd_type
       (fun f x ->
         if x.vd_prim <> [] then pp f "@ =@ %a" (list constant_string) x.vd_prim)
@@ -277,14 +284,14 @@ let rec print_signature_item f x =
   | Sig_module
       ({ md_type = { mt_desc = Mod_alias alias; mt_attrs = []; _ }; _ } as pmd)
     ->
-      pp f "@[<hov>module@ %a@ =@ %a@]%a" Ident.pp pmd.md_name
+      pp f "@[<hov>module@ %a@ =@ %a@]%a" Ident.pp_simpl pmd.md_name
         (list ~sep:full Format.pp_print_string)
         alias
         (item_attributes reset_ctxt)
         pmd.md_attrs
   | Sig_module pmd ->
-      pp f "@[<hov>module@ %a@ :@ %a@]%a" Ident.pp pmd.md_name print_module_type
-        pmd.md_type
+      pp f "@[<hov>module@ %a@ :@ %a@]%a" Ident.pp_simpl pmd.md_name
+        print_module_type pmd.md_type
         (item_attributes reset_ctxt)
         pmd.md_attrs
   | Sig_open (od, ghost) ->
@@ -301,7 +308,7 @@ let rec print_signature_item f x =
         (item_attributes reset_ctxt)
         incl.pincl_attributes
   | Sig_modtype { mtd_name = s; mtd_type = md; mtd_attrs = attrs; _ } ->
-      pp f "@[<hov2>module@ type@ %a%a@]%a" Ident.pp s
+      pp f "@[<hov2>module@ type@ %a%a@]%a" Ident.pp_simpl s
         (fun f md ->
           match md with
           | None -> ()
@@ -318,11 +325,11 @@ let rec print_signature_item f x =
    *       | [] -> () ;
    *       | pmd :: tl ->
    *           if not first then
-   *             pp f "@ @[<hov2>and@ %a:@ %a@]%a" Ident.pp pmd.mdname
+   *             pp f "@ @[<hov2>and@ %a:@ %a@]%a" Ident.pp_simpl pmd.mdname
    *               print_modyle_type1 pmd.mdtype
    *               (item_attributes reset_ctxt) pmd.mdattributes
    *           else
-   *             pp f "@[<hov2>module@ rec@ %a:@ %a@]%a" Ident.pp pmd.mdname
+   *             pp f "@[<hov2>module@ rec@ %a:@ %a@]%a" Ident.pp_simpl pmd.mdname
    *               print_modyle_type1 pmd.mdtype
    *               (item_attributes reset_ctxt) pmd.mdattributes;
    *           string_x_module_type_list f ~first:false tl
@@ -353,7 +360,7 @@ and print_module_type f x =
           pp f "@[<hov2>%a@ ->@ %a@]" print_modyle_type1 mt1 print_module_type
             mt2
         else
-          pp f "@[<hov2>functor@ (%a@ :@ %a)@ ->@ %a@]" Ident.pp s
+          pp f "@[<hov2>functor@ (%a@ :@ %a)@ ->@ %a@]" Ident.pp_simpl s
             print_module_type mt1 print_module_type mt2
     | Mod_with (mt, []) -> print_module_type f mt
     | Mod_with (mt, l) ->
@@ -365,18 +372,19 @@ and print_module_type f x =
               let td = { td with td_ts = ts } in
               pp f "type@ %a"
                 (* (list print_tv ~sep:comma ~first:lparens ~last:rparens) ls
-                 * Ident.pp li *)
+                 * Ident.pp_simpl li *)
                 print_type_declaration td
-          | Wmod (li, li2) -> pp f "module %a =@ %a" Ident.pp li Ident.pp li2
+          | Wmod (li, li2) ->
+              pp f "module %a =@ %a" Ident.pp_simpl li Ident.pp_simpl li2
           | Wtysubs (li, ({ td_params = ls; _ } as td)) ->
               let ls = List.map fst ls in
               let ts = { td.td_ts with ts_ident = li } in
               let td = { td with td_ts = ts } in
               pp f "type@ %a %a :=@ %a"
                 (list print_tv ~sep:comma ~first:lparens ~last:rparens)
-                ls Ident.pp li print_type_declaration td
+                ls Ident.pp_simpl li print_type_declaration td
           | Wmodsubs (li, li2) ->
-              pp f "module %a :=@ %a" Ident.pp li Ident.pp li2
+              pp f "module %a :=@ %a" Ident.pp_simpl li Ident.pp_simpl li2
         in
         pp f "@[<hov2>%a@ with@ %a@]" print_modyle_type1 mt
           (list with_constraint ~sep:(any " and@ "))

@@ -63,7 +63,7 @@ val dty_of_dterm : dterm -> dty
 val dty_of_ty : Ttypes.ty -> dty
 val dty_fresh : unit -> dty
 val max_dty : Coercion.t -> dterm list -> dty option
-val specialize_ls : lsymbol -> dty list * dty option
+val specialize_ls : lsymbol -> dty list * dty
 val specialize_cs : loc:Location.t -> lsymbol -> dty list * dty
 val dty_unify : loc:Location.t -> dty -> dty -> unit
 val dterm_unify : dterm -> dty -> unit
@@ -85,6 +85,5 @@ val denv_find : loc:Location.t -> string -> denv -> dty
 val is_in_denv : denv -> string -> bool
 val denv_add_var : denv -> string -> dty -> denv
 val denv_add_var_quant : denv -> (Identifier.Preid.t * dty) list -> denv
-val term : env -> dterm -> term
-val fmla : env -> dterm -> term
+val term : vsymbol full_env -> dterm -> term
 val pattern : dpattern -> Tterm.pattern * vsymbol Mstr.t

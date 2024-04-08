@@ -18,6 +18,11 @@ type arg_label = Lnone | Loptional | Lnamed | Lghost [@@deriving show]
 
 type lb_arg = {
   arg_vs : vsymbol option;
+      [@printer
+        fun fmt x ->
+          Option.map show_vsymbol x
+          |> Option.value ~default:"()"
+          |> fprintf fmt "%s"]
       (** the name and OCaml type of the argument. Is None if the arg_type field
           is Lunit *)
   consumes : (ty * ty) option;
@@ -30,7 +35,7 @@ type lb_arg = {
 [@@deriving show]
 
 type val_spec = {
-  sp_args : lb_arg list;  (** Arguments *)
+  sp_args : lb_arg list;
   sp_ret : lb_arg list;
       (** Return values. This is a list because of tuple destruction. *)
   sp_pre : term list;  (** Preconditions *)
@@ -65,7 +70,7 @@ type model = Self | Default of bool * ty | Fields of (bool * lsymbol) list
 type type_spec = {
   ty_ephemeral : bool;  (** Ephemeral *)
   ty_model : model;  (** Models (field symbol * mutable) *)
-  ty_invariants : vsymbol option * term list;  (** Invariants *)
+  ty_invariants : (vsymbol * term list) option;  (** Invariants *)
   ty_text : string;
   ty_loc : Location.t; [@printer Utils.Fmt.pp_loc]  (** Specification location *)
 }

@@ -85,8 +85,6 @@ let rec t_free_vars t =
   | Tbinop (_, t1, t2) -> Svs.union (t_free_vars t1) (t_free_vars t2)
   | Tnot t -> t_free_vars t
   | Told t -> t_free_vars t
-  | Ttrue -> Svs.empty
-  | Tfalse -> Svs.empty
 
 (** Pattern constructors *)
 
@@ -138,8 +136,6 @@ let t_lambda ps t ty = mk_term (Tlambda (ps, t)) ty
 let t_binop b t1 t2 = mk_term (Tbinop (b, t1, t2)) ty_bool
 let t_not t = mk_term (Tnot t) ty_bool
 let t_old t = mk_term (Told t) t.t_ty
-let t_true = mk_term Ttrue ty_bool
-let t_false = mk_term Tfalse ty_bool
 let t_attr_set attr t = { t with t_attrs = attr }
 let t_bool_true = mk_term (Tapp (fs_bool_true, [])) ty_bool
 let t_bool_false = mk_term (Tapp (fs_bool_false, [])) ty_bool

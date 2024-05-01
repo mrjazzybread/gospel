@@ -4,8 +4,7 @@
     n >= 0  && n < Sys.word_size *)
 
 type t
-(*@ model : integer set
-    with self invariant forall x. mem x self -> valid x *)
+(*@ model : int set *)
 
 val singleton : int -> t
 (*@ s = singleton v

@@ -37,8 +37,6 @@ val t_lambda : pattern list -> term -> ty -> Location.t -> term
 val t_binop : binop -> term -> term -> Location.t -> term
 val t_not : term -> Location.t -> term
 val t_old : term -> Location.t -> term
-val t_true : Location.t -> term
-val t_false : Location.t -> term
 val t_attr_set : string list -> term -> term
 val t_bool_true : Location.t -> term
 val t_bool_false : Location.t -> term

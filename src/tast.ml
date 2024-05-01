@@ -30,7 +30,7 @@ type lb_arg = {
   produces : (ty * ty) option;
       (**spatial and logical type of the argument when the function is exited *)
   arg_type : arg_label;  (** the label of the argument. *)
-  read_only : bool;  (** read only flag *)
+  modified : bool;  (** read only flag *)
 }
 [@@deriving show]
 

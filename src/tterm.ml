@@ -67,6 +67,4 @@ and term_node =
   | Tbinop of binop * term * term
   | Tnot of term
   | Told of term
-  | Ttrue
-  | Tfalse
 [@@deriving show]

@@ -56,13 +56,13 @@ and val_description ns des =
                 | None -> None
                 | Some (s_ty, l_ty) ->
                     let arg_id = change_id arg_vs.vs_name mk_prog in
-                    let ro = arg.read_only in
+                    let ro = not arg.modified in
                     let arg_loc_ty =
                       if is_pure_type arg_vs then s_ty else ty_loc
                     in
                     let arg_prog = { vs_name = arg_id; vs_ty = arg_loc_ty } in
                     let arg_log, ns' =
-                      map_id !ns (is_old || arg.read_only) arg_vs l_ty
+                      map_id !ns (is_old || not arg.modified) arg_vs l_ty
                     in
                     let () = ns := ns' in
                     Some { s_ty; arg_prog; ro; arg_log }))

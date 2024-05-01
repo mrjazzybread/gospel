@@ -52,4 +52,4 @@ val replace : t -> int -> int -> unit
 
 val length : t -> int
 (*@ n = length tbl
-    ensures n = Set.cardinal (domain tbl empty) *)
+    ensures n = Set.cardinal (domain empty tbl) *)

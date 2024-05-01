@@ -1,11 +1,4 @@
 Todo:
-- check fct
-- think of interesting spatial type examples
-- include the OCaml type within tvsymbols
-- refactor translation
-- typecheck spatial types
-- hint
-
 Namespace in gospel:
 
 - Within specifications all variables have logical types

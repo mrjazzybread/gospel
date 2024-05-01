@@ -81,7 +81,8 @@ let rec ty_of_pty ns = function
       { ty_node = Tyvar (tv_of_string ~loc:pid_loc pid_str) }
   | PTtyapp (q, ptyl) ->
       let ts = find_q_ts ns q in
-      ty_app ts (List.map (ty_of_pty ns) ptyl)
+      let loc = q_loc q in
+      ty_app ~loc ts (List.map (ty_of_pty ns) ptyl)
   | PTtuple ptyl ->
       let tyl = List.map (ty_of_pty ns) ptyl in
       let ts = ts_tuple (List.length tyl) in
@@ -560,6 +561,7 @@ let mutable_flag = function
 
 let process_type_spec kid crcm ns ty spec =
   let model = spec.Uast.ty_model in
+
   let field (ns, fields) f =
     let f_ty = ty_of_pty ns f.f_pty in
     let ls = fsymbol ~field:true (Ident.of_preid f.f_pid) [ ty ] f_ty in
@@ -912,9 +914,10 @@ let process_val_spec kid crcm ns id args ret vs =
   in
 
   let equal_arg arg (t, _) =
-    let aux arg t =
+    let rec aux arg t =
       match t.t_node with
       | Tvar v -> v.vs_name.id_str = arg.vs_name.id_str
+      | Tfield (t, _) -> aux arg t
       | _ -> false
     in
     Option.fold ~some:(fun arg -> aux arg t) ~none:false arg
@@ -950,12 +953,12 @@ let process_val_spec kid crcm ns id args ret vs =
   let spec_args =
     List.map
       (fun (l, v) ->
-        let ro = v = None || List.exists (equal_arg v) read_only in
-        spec_arg v l ro)
+        let modified = v <> None && not (List.exists (equal_arg v) read_only) in
+        spec_arg v l modified)
       args
   in
 
-  let spec_ret = List.map (fun (_, v) -> spec_arg v Lnone false) ret in
+  let spec_ret = List.map (fun (_, v) -> spec_arg v Lnone true) ret in
 
   let apply_spatial l con sa =
     match List.find_opt (equal_arg sa.arg_vs) l with
@@ -1135,8 +1138,8 @@ let process_val path ~loc ?(ghost = Nonghost) kid crcm ns vd =
     if Ttypes.(ty_equal ret ty_unit) && args <> [] then
       match so with
       | None -> ()
-      | Some _ ->
-          if spec.sp_writes = [] then
+      | Some s ->
+          if List.for_all (fun x -> not x.modified) s.sp_args then
             W.error ~loc (W.Return_unit_without_modifies id.id_str)
   in
   let vd =

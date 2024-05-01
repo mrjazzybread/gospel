@@ -350,8 +350,6 @@ and term_node ~loc env dty dterm_node =
       (* TODO should I match vs.vs_ty with dty? *)
       t_var vs loc
   | DTconst c -> t_const c (ty_of_dty (Option.get dty)) loc
-  | DTapp (ls, []) when ls_equal ls fs_bool_true -> t_true loc
-  | DTapp (ls, []) when ls_equal ls fs_bool_false -> t_false loc
   | DTapp (ls, [ dt1; dt2 ]) when ls_equal ls ps_equ ->
       if dt1.dt_dty = None || dt2.dt_dty = None then
         f_iff (term env dt1) (term env dt2) loc
@@ -377,8 +375,8 @@ and term_node ~loc env dty dterm_node =
       let t1, t2 = (term env dt1, term env dt2) in
       t_binop b t1 t2 loc
   | DTnot dt -> t_not (term env dt) loc
-  | DTtrue -> t_true loc
-  | DTfalse -> t_false loc
+  | DTtrue -> t_bool_true loc
+  | DTfalse -> t_bool_false loc
   | DTattr (dt, at) ->
       let t = term env dt in
       t_attr_set at t

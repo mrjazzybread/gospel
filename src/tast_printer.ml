@@ -143,7 +143,7 @@ let print_permissions fmt arg =
       pp fmt "%s %a %@ %a" "produces" print_option vs print_ty ty_s
   | Some (ty_s1, _), Some (ty_s2, _) ->
       if Ttypes.ty_equal ty_s1 ty_s2 then
-        let clause = if arg.read_only then "preserves" else "modifies" in
+        let clause = if arg.modified then "preserves" else "modifies" in
         pp fmt "%s %a %@ %a" clause print_option vs print_ty ty_s1
       else
         let () =

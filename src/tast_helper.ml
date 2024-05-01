@@ -3,8 +3,8 @@ open Ttypes
 open Symbols
 module W = Warnings
 
-let spec_arg arg_vs arg_type read_only =
-  { arg_vs; consumes = None; produces = None; arg_type; read_only }
+let spec_arg arg_vs arg_type modified =
+  { arg_vs; consumes = None; produces = None; arg_type; modified }
 
 let ty_of_lb_arg arg =
   match arg.arg_vs with None -> ty_unit | Some v -> v.vs_ty

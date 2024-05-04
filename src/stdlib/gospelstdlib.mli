@@ -114,7 +114,7 @@ module Sequence : sig
   (* axiom subseq_len : TODO *)
 
   (*@ function init (n: integer) (f: integer -> 'a) : 'a t *)
-  (*@ axiom init_length : forall n f. length (init n f) = n *)
+  (*@ axiom init_length : forall n f. length (init n f) = n *) (* TODO : replace init with notation *)
   (*@ axiom init_elems : forall n f.
         forall i. 0 <= i < n -> (init n f)[i] = f i *)
   (** [init n f] is the sequence containing [f 0], [f 1], [...] , [f n]. *)

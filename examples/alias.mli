@@ -8,7 +8,7 @@ val st_eq : t -> t -> bool
     ensures b <-> x = y *)
 
 val ph_eq : t -> t -> bool
-(*@ b = ph_eq x y
+(*@ ph_eq x y
     preserves x @ loc
     preserves y @ loc
-    ensures b <-> x = y *)
+    returns x = y *)

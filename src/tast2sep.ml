@@ -55,7 +55,7 @@ and val_description ns des =
                 match if is_old then arg.consumes else arg.produces with
                 | None -> None
                 | Some (s_ty, l_ty) ->
-                    let arg_id = change_id arg_vs.vs_name mk_prog in
+                    let arg_id = change_id mk_prog arg_vs.vs_name in
                     let ro = not arg.modified in
                     let arg_loc_ty =
                       if is_pure_type arg_vs then s_ty else ty_loc
@@ -108,7 +108,7 @@ and val_description ns des =
           triple_post;
         }
 
-and type_declaration ns t =
+and type_declaration t =
   let id = t.td_ts.ts_ident in
   let self_type =
     {
@@ -133,7 +133,7 @@ and type_declaration ns t =
     | Some s -> model_to_arg s.ty_model
     | None -> ({ vs_name = arg; vs_ty = self_type }, false)
   in
-  let new_id = (get_pred ns self_type).ls_name in
+  let new_id = ty_ident self_type |> change_id get_rep_pred in
   let ty_var_list = List.map fst t.td_params in
   if mut then
     [ Pred (new_id, [ { vs_name = id; vs_ty = ty_loc }; pred_field ]) ]
@@ -144,7 +144,7 @@ and type_declaration ns t =
     ]
 
 let signature_item_desc ns = function
-  | Sig_type (_, l, _) -> List.concat_map (fun t -> type_declaration ns t) l
+  | Sig_type (_, l, _) -> List.concat_map (fun t -> type_declaration t) l
   | Sig_val (des, _) -> [ val_description ns des ]
   | Sig_open _ | Sig_use _ -> []
   | Sig_axiom axiom -> [ Axiom axiom ]

@@ -9,7 +9,7 @@ val create : unit -> 'a t
 
 val is_empty : 'a t -> bool
 (*@ b = is_empty q
-    preserves q @ t
+    preserves q @ 'a t
     ensures b <-> q = empty *)
 
 val push : 'a t -> 'a -> unit

@@ -18,7 +18,7 @@ let get_rep_pred = String.capitalize_ascii
 let mk_update s = "_" ^ s ^ "'"
 let mk_prog s = "_prog_" ^ s
 
-let change_id id map =
+let change_id map id =
   Ident.create ~attrs:id.id_attrs ~loc:id.id_loc (map id.id_str)
 
 let is_present ns id =
@@ -28,7 +28,7 @@ let is_present ns id =
 let map_id ns is_old vs ty =
   let id =
     if (not is_old) && is_present ns vs.vs_name then
-      change_id vs.vs_name mk_update
+      change_id mk_update vs.vs_name
     else vs.vs_name
   in
   let val_vs = { vs_name = id; vs_ty = ty } in
@@ -50,7 +50,7 @@ let create_rep_pred sym =
   let model_type =
     match sym.ts_rep with Self -> self_type | Model (_, m) -> m
   in
-  let new_id = change_id id get_rep_pred in
+  let new_id = change_id get_rep_pred id in
   {
     ls_name = new_id;
     ls_args = [ self_type; model_type ];
@@ -58,6 +58,10 @@ let create_rep_pred sym =
     ls_constr = false;
     ls_field = false;
   }
+
+let ty_ident ty = match ty.ty_node with
+  |Tyapp(ts, _) -> ts.ts_ident
+  |_ -> assert false
 
 let get_pred ns ty =
   match ty.ty_node with

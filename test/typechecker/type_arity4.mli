@@ -20,8 +20,8 @@ type 'a t = { x : int; y : 'a }
    add one argument to type t in line 13 *)
 
 (* {gospel_expected|
-   [125] File "type_arity4.mli", line 11, characters 8-9:
-         11 | type 'a t = { x : int; y : 'a }
-                      ^
+   [125] File "type_arity4.mli", line 13, characters 19-20:
+         13 | (*@ function f (x: t): int =
+                                 ^
          Error: The type t expects 1 argument(s) but was given 0 argument(s) here.
    |gospel_expected} *)

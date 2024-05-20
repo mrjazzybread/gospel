@@ -812,27 +812,36 @@ let process_val_spec kid crcm ns id args ret vs =
   if not cmp_ids then
     W.type_checking_error ~loc "val specification header does not match name";
 
-  let add_arg la vs env lal =
+  (* Adds the argument into the environment and checks if it is duplicated *)
+  let add_arg vs env =
     let vs_str = vs.vs_name.id_str in
     let add = function
       | None -> Some vs
       | Some _ -> W.error ~loc:vs.vs_name.id_loc (W.Duplicated_variable vs_str)
     in
-    (Mstr.update vs_str add env, (la, Some vs) :: lal)
+    Mstr.update vs_str add env
   in
 
-  let process_args where args tyl env lal =
+  (* Creates an environment that matches the names of each function parameter
+      (or return value) to its type. Also returns a list with each parameter paired
+      with its label.
+      @param args  Function parameters (or possibly return values).
+      @param where Parameter if we are processing the function's arguments or
+        Return if we are parsing the return values.
+      @param tyl   The type of the parameters. If the size of this list is not the
+        same as that of {!args}, then the gospel header is incorrect.
+      @param env   The environment that contains this functions' parameters. *)
+  let process_args where args tyl env =
     let wh_msg =
       match where with `Parameter -> "parameter" | `Return -> "returned value"
     in
     let mismatch_msg = wh_msg ^ " does not match with val type" in
-    let global_tyl = tyl in
-    let rec aux args tyl env lal =
-      match (args, tyl) with
+    let rec aux args arg_types env lal =
+      match (args, arg_types) with
       | [], [] -> (env, List.rev lal)
       | [], _ ->
           let msg =
-            match (where, global_tyl) with
+            match (where, tyl) with
             | `Return, _ :: _ :: _ ->
                 "too few returned values: when a function returns a tuple, the \
                  gospel header should name each member of the tuple; so the \
@@ -844,38 +853,41 @@ let process_val_spec kid crcm ns id args ret vs =
       | Uast.Lghost (pid, pty) :: args, _ ->
           let ty = ty_of_pty ns pty in
           let vs = create_vsymbol pid ty in
-          let env, lal = add_arg Lghost vs env lal in
-          aux args tyl env lal
-      | Loptional pid :: args, (ty, Asttypes.Optional s) :: tyl ->
+          let lal = (Lghost, vs) :: lal in
+          let env = add_arg vs env in
+          aux args arg_types env lal
+      | Loptional pid :: args, (ty, Asttypes.Optional s) :: arg_types ->
           if not (String.equal pid.pid_str s) then
             W.type_checking_error ~loc:pid.pid_loc mismatch_msg;
           let ty = ty_app ts_option [ ty ] in
           let vs = create_vsymbol pid ty in
-          let env, lal = add_arg Loptional vs env lal in
-          aux args tyl env lal
-      | Lnamed pid :: args, (ty, Asttypes.Labelled s) :: tyl ->
+          let env = add_arg vs env in
+          let lal = (Loptional, vs) :: lal in
+          aux args arg_types env lal
+      | Lnamed pid :: args, (ty, Asttypes.Labelled s) :: arg_types ->
           if not (String.equal pid.pid_str s) then
             W.type_checking_error ~loc:pid.pid_loc mismatch_msg;
           let vs = create_vsymbol pid ty in
-          let env, lal = add_arg Lnamed vs env lal in
-          aux args tyl env lal
-      | Lnone pid :: args, (ty, Asttypes.Nolabel) :: tyl ->
+          let env = add_arg vs env in
+          let lal = (Lnamed, vs) :: lal in
+          aux args arg_types env lal
+      | Lnone pid :: args, (ty, Asttypes.Nolabel) :: arg_types ->
           let vs = create_vsymbol pid ty in
-          let env, lal = add_arg Lnone vs env lal in
-          aux args tyl env lal
-      | Lunit :: args, _ :: tyl -> aux args tyl env ((Lnone, None) :: lal)
+          let env = add_arg vs env in
+          let lal = (Lnone, vs) :: lal in
+          aux args arg_types env lal
+      | Lunit :: args, _ :: arg_types ->
+          aux args arg_types env ((Lunit, none_vsymbol) :: lal)
       | _, [] ->
           let msg = "too many " ^ wh_msg ^ "s" in
           W.type_checking_error ~loc:header.sp_hd_nm.pid_loc msg
       | la :: _, _ ->
           W.type_checking_error ~loc:(pid_of_label la).pid_loc mismatch_msg
     in
-    aux args tyl env lal
+    aux args tyl env []
   in
 
-  let env, args =
-    process_args `Parameter header.sp_hd_args args Mstr.empty []
-  in
+  let env, args = process_args `Parameter header.sp_hd_args args Mstr.empty in
 
   let env = { env; old_env = Mstr.empty } in
 
@@ -900,13 +912,12 @@ let process_val_spec kid crcm ns id args ret vs =
     | [], _ -> (env.env, [])
     | _, Tyapp (ts, tyl) when is_ts_tuple ts ->
         let tyl = List.map (fun ty -> (ty, Asttypes.Nolabel)) tyl in
-        process_args `Return header.sp_hd_ret tyl env.env []
+        process_args `Return header.sp_hd_ret tyl env.env
     | _, _ ->
         process_args `Return header.sp_hd_ret
           [ (ret, Asttypes.Nolabel) ]
-          env.env []
+          env.env
   in
-
   let prod =
     List.map
       (type_spatial Produces { env = prod_env; old_env = Mstr.empty })
@@ -920,7 +931,7 @@ let process_val_spec kid crcm ns id args ret vs =
       | Tfield (t, _) -> aux arg t
       | _ -> false
     in
-    Option.fold ~some:(fun arg -> aux arg t) ~none:false arg
+    aux arg t
   in
   let term_of_vs x =
     { t_node = Tvar x; t_ty = x.vs_ty; t_attrs = []; t_loc = Location.none }
@@ -932,20 +943,14 @@ let process_val_spec kid crcm ns id args ret vs =
         (fun (_, x) -> not (List.exists (equal_arg x) (wr @ cs @ prod @ pres)))
         args
     in
-    pres
-    @ List.filter_map
-        (fun (_, x) -> Option.map (fun x -> (term_of_vs x, x.vs_ty)) x)
-        pres_args
+    pres @ List.map (fun (_, x) -> (term_of_vs x, x.vs_ty)) pres_args
   in
 
   let prod =
     let prod_ret =
       List.filter (fun (_, x) -> not (List.exists (equal_arg x) prod)) ret
     in
-    prod
-    @ List.filter_map
-        (fun (_, x) -> Option.map (fun x -> (term_of_vs x, x.vs_ty)) x)
-        prod_ret
+    prod @ List.map (fun (_, x) -> (term_of_vs x, x.vs_ty)) prod_ret
   in
 
   let cs, prod = (cs @ read_only @ wr, prod @ read_only @ wr) in
@@ -953,21 +958,32 @@ let process_val_spec kid crcm ns id args ret vs =
   let spec_args =
     List.map
       (fun (l, v) ->
-        let modified = v <> None && not (List.exists (equal_arg v) read_only) in
-        spec_arg v l modified)
+        let modified = not (List.exists (equal_arg v) read_only) in
+        spec_arg l v modified)
       args
   in
 
-  let spec_ret = List.map (fun (_, v) -> spec_arg v Lnone true) ret in
+  let spec_ret = List.map (fun (_, v) -> spec_arg Lnone v true) ret in
 
   let apply_spatial l con sa =
-    match List.find_opt (equal_arg sa.arg_vs) l with
+    match List.find_opt (equal_arg sa.lb_vs) l with
     | None -> sa
     | Some (t, s_ty) ->
-        let ty = t.t_ty in
+        let ty, s_ty =
+          match t.t_node with
+          | Tvar _ -> (t.t_ty, s_ty)
+          | Tfield (t, _) ->
+              let rec get_var = function
+                | Tvar x -> (x.vs_ty, x.vs_ty)
+                | Tfield (t, _) -> get_var t.t_node
+                | _ -> assert false
+              in
+              get_var t.t_node
+          | _ -> assert false
+        in
         let sp = (s_ty, ty_apply_spatial ty s_ty) in
-        if con then { sa with consumes = Some sp }
-        else { sa with produces = Some sp }
+        if con then { sa with lb_consumes = Some sp }
+        else { sa with lb_produces = Some sp }
   in
 
   let spec_args = List.map (apply_spatial cs true) spec_args in
@@ -978,15 +994,15 @@ let process_val_spec kid crcm ns id args ret vs =
     match ty with
     | None -> env
     | Some (_, ty) ->
-        let v = Option.get arg.arg_vs in
+        let v = arg.lb_vs in
         let log_v = { v with vs_ty = ty } in
         Mstr.add v.vs_name.id_str log_v env
   in
 
   let add_env (old_env, env) e =
-    let old_env = update_env old_env e e.consumes in
+    let old_env = update_env old_env e e.lb_consumes in
     let produces =
-      if Option.is_none e.produces then e.consumes else e.produces
+      if Option.is_none e.lb_produces then e.lb_consumes else e.lb_produces
     in
     let env = update_env env e produces in
     (old_env, env)
@@ -1139,8 +1155,10 @@ let process_val path ~loc ?(ghost = Nonghost) kid crcm ns vd =
       match so with
       | None -> ()
       | Some s ->
-          if List.for_all (fun x -> not x.modified) s.sp_args then
-            W.error ~loc (W.Return_unit_without_modifies id.id_str)
+          if
+            List.for_all (fun x -> not x.lb_modified) s.sp_args
+            && (Option.get vd.vspec).sp_writes = []
+          then W.error ~loc (W.Return_unit_without_modifies id.id_str)
   in
   let vd =
     mk_val_description id vd.vtype vd.vprim vd.vattributes tspec.sp_args

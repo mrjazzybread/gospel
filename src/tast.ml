@@ -14,23 +14,23 @@ open Tterm
 open Symbols
 module Ident = Identifier.Ident
 
-type arg_label = Lnone | Loptional | Lnamed | Lghost [@@deriving show]
+type arg_label = Lnone | Loptional | Lnamed | Lghost | Lunit [@@deriving show]
 
 type lb_arg = {
-  arg_vs : vsymbol option;
-      [@printer
-        fun fmt x ->
-          Option.map show_vsymbol x
-          |> Option.value ~default:"()"
-          |> fprintf fmt "%s"]
+  lb_vs : vsymbol;
       (** the name and OCaml type of the argument. Is None if the arg_type field
           is Lunit *)
-  consumes : (ty * ty) option;
+  (* [@printer
+     fun fmt x ->
+     Option.map show_vsymbol x
+     |> Option.value ~default:"()"
+     |> fprintf fmt "%s"] *)
+  lb_label : arg_label;
+  lb_consumes : (ty * ty) option;
       (**spatial and logical type of the argument when the function is called *)
-  produces : (ty * ty) option;
+  lb_produces : (ty * ty) option;
       (**spatial and logical type of the argument when the function is exited *)
-  arg_type : arg_label;  (** the label of the argument. *)
-  modified : bool;  (** read only flag *)
+  lb_modified : bool;  (** read only flag *)
 }
 [@@deriving show]
 

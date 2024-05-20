@@ -106,14 +106,13 @@ let print_type_declaration fmt td =
     td.td_cstrs (option print_type_spec) td.td_spec
 
 let print_lb_arg fmt arg =
-  match arg.arg_vs with
-  | None -> pp fmt "%s" "()"
-  | Some vs -> (
-      match arg.arg_type with
-      | Lnone -> print_vs fmt vs
-      | Loptional -> pp fmt "?%a" print_vs vs
-      | Lnamed -> pp fmt "~%a" print_vs vs
-      | Lghost -> pp fmt "[%a: %a]" print_vs vs print_ty vs.vs_ty)
+  let vs = arg.lb_vs in
+  match arg.lb_label with
+  | Lnone -> print_vs fmt vs
+  | Loptional -> pp fmt "?%a" print_vs vs
+  | Lnamed -> pp fmt "~%a" print_vs vs
+  | Lghost -> pp fmt "[%a: %a]" print_vs vs print_ty vs.vs_ty
+  | Lunit -> pp fmt "%s" "()"
 
 let print_xposts f xposts =
   if xposts = [] then ()
@@ -133,23 +132,21 @@ let print_xposts f xposts =
     List.iter print_xpost xposts
 
 let print_permissions fmt arg =
-  let vs = arg.arg_vs in
-  let print_option = option print_vs in
-  match (arg.consumes, arg.produces) with
+  let vs = arg.lb_vs in
+  match (arg.lb_consumes, arg.lb_produces) with
   | None, None -> ()
   | Some (ty_s, _), None ->
-      pp fmt "%s %a %@ %a" "consumes" print_option vs print_ty ty_s
+      pp fmt "%s %a %@ %a" "consumes" print_vs vs print_ty ty_s
   | None, Some (ty_s, _) ->
-      pp fmt "%s %a %@ %a" "produces" print_option vs print_ty ty_s
+      pp fmt "%s %a %@ %a" "produces" print_vs vs print_ty ty_s
   | Some (ty_s1, _), Some (ty_s2, _) ->
-      if Ttypes.ty_equal ty_s1 ty_s2 then
-        let clause = if arg.modified then "preserves" else "modifies" in
-        pp fmt "%s %a %@ %a" clause print_option vs print_ty ty_s1
+      if arg.lb_label = Lunit then ()
+      else if Ttypes.ty_equal ty_s1 ty_s2 then
+        let clause = if arg.lb_modified then "preserves" else "modifies" in
+        pp fmt "%s %a %@ %a" clause print_vs vs print_ty ty_s1
       else
-        let () =
-          pp fmt "%s %a %@ %a" "produces" print_option vs print_ty ty_s1
-        in
-        pp fmt "%s %a %@ %a" "consumes" print_option vs print_ty ty_s2
+        let () = pp fmt "%s %a %@ %a" "produces" print_vs vs print_ty ty_s1 in
+        pp fmt "%s %a %@ %a" "consumes" print_vs vs print_ty ty_s2
 
 let print_vd_spec val_id fmt spec =
   let print_term f t = pp f "@[%a@]" print_term t in

@@ -2,7 +2,7 @@
 (*@ predicate fo (n : integer) *)
 (*@ predicate test (n : integer) = ho fo n *)
 
-(*@ predicate apply_bool (f : bool -> bool -> bool) (b1 : bool) (b2 : bool) = 
+(*@ predicate apply_bool (f : bool -> bool -> bool) (b1 : bool) (b2 : bool) =
     f b1 b2 *)
 
 (*@ axiom eq1 : apply_bool (=) true true *)
@@ -15,15 +15,15 @@
   |true -> false
   |false -> true *)
 
-(*@ function very_odd (b : bool) : bool = 
+(*@ function very_odd (b : bool) : bool =
     match flip b with
-    |x -> 
+    |x ->
       if x then false else
       if not x then
         match x with
         |true -> true
         |false -> false
-      else true  *)
+      else true *)
 
 type t
 (*@ mutable model : int *)

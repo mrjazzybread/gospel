@@ -9,19 +9,15 @@ type value = {
   s_ty : ty; (* spatial type *)
   arg_prog : vsymbol; (* program variable *)
   arg_log : vsymbol; (* logical value *)
-  ro : bool;
+  ro : bool; (* Read only flag *)
 }
 
 let is_pure_type vs =
   match vs.vs_ty.ty_node with
   | Tyapp (ts, _) -> (
       match ts.ts_rep with Self -> true | Model (mut, _) -> not mut)
-  | _ -> false
+  | _ -> true
 
-(** Replaces usages of the logical model defined in the GOSPEL specification
-    with the lifted model from the representation predicate.
-    @param t the term we want to transform
-    @param is_old should be set to false if this term is from a precondition *)
 let rec map_term ns is_old t =
   let f t = map_term ns is_old t in
   let map_node =
@@ -49,23 +45,19 @@ and val_description ns des =
       let ns = ref ns in
       let lifted_args is_old =
         List.filter_map (fun arg ->
-            match arg.arg_vs with
+            let arg_vs = arg.lb_vs in
+            match if is_old then arg.lb_consumes else arg.lb_produces with
             | None -> None
-            | Some arg_vs -> (
-                match if is_old then arg.consumes else arg.produces with
-                | None -> None
-                | Some (s_ty, l_ty) ->
-                    let arg_id = change_id mk_prog arg_vs.vs_name in
-                    let ro = not arg.modified in
-                    let arg_loc_ty =
-                      if is_pure_type arg_vs then s_ty else ty_loc
-                    in
-                    let arg_prog = { vs_name = arg_id; vs_ty = arg_loc_ty } in
-                    let arg_log, ns' =
-                      map_id !ns (is_old || not arg.modified) arg_vs l_ty
-                    in
-                    let () = ns := ns' in
-                    Some { s_ty; arg_prog; ro; arg_log }))
+            | Some (s_ty, l_ty) ->
+                let arg_id = change_id mk_prog arg_vs.vs_name in
+                let ro = not arg.lb_modified in
+                let arg_loc_ty = if is_pure_type arg_vs then s_ty else ty_loc in
+                let arg_prog = { vs_name = arg_id; vs_ty = arg_loc_ty } in
+                let arg_log, ns' =
+                  map_id !ns (is_old || not arg.lb_modified) arg_vs l_ty
+                in
+                let () = ns := ns' in
+                Some { s_ty; arg_prog; ro; arg_log })
       in
       let mk_lift = function
         | { s_ty; arg_prog; arg_log; _ } ->

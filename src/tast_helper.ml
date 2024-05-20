@@ -1,13 +1,17 @@
 open Tast
-open Ttypes
 open Symbols
 module W = Warnings
 
-let spec_arg arg_vs arg_type modified =
-  { arg_vs; consumes = None; produces = None; arg_type; modified }
+let spec_arg label vs modified =
+  {
+    lb_vs = vs;
+    lb_label = label;
+    lb_consumes = None;
+    lb_produces = None;
+    lb_modified = modified;
+  }
 
-let ty_of_lb_arg arg =
-  match arg.arg_vs with None -> ty_unit | Some v -> v.vs_ty
+let ty_of_lb_arg arg = arg.lb_vs.vs_ty
 
 let val_spec sp_args sp_ret sp_pre sp_checks sp_post sp_xpost sp_diverge sp_pure
     sp_equiv sp_text sp_loc =

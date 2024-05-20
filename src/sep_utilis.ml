@@ -3,16 +3,16 @@ open Ttypes
 open Ident
 module Mstr = Tmodule.Mstr
 
-type sep_namespace = {
-  sns_pred : lsymbol Mstr.t;
-  sns_id : vsymbol Mstr.t;
-  sns_ns : sep_namespace Mstr.t;
+type module_info = {
+  sns_pred : lsymbol Mstr.t;  (** Representation predicates *)
+  sns_id : vsymbol Mstr.t;  (** Indentifiers *)
+  sns_ns : module_info Mstr.t;  (** Modules in scope *)
 }
 
 let empty_ns =
   { sns_pred = Mstr.empty; sns_id = Mstr.empty; sns_ns = Mstr.empty }
 
-let ts_prop = mk_ts (Ident.create ~loc:Location.none "Prop") []
+let ts_prop = mk_ts (Ident.create ~loc:Location.none "Hprop") []
 let ty_prop = ty_app ts_prop []
 let get_rep_pred = String.capitalize_ascii
 let mk_update s = "_" ^ s ^ "'"
@@ -59,9 +59,8 @@ let create_rep_pred sym =
     ls_field = false;
   }
 
-let ty_ident ty = match ty.ty_node with
-  |Tyapp(ts, _) -> ts.ts_ident
-  |_ -> assert false
+let ty_ident ty =
+  match ty.ty_node with Tyapp (ts, _) -> ts.ts_ident | _ -> assert false
 
 let get_pred ns ty =
   match ty.ty_node with

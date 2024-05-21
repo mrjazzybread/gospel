@@ -23,14 +23,6 @@ let rec print_term fmt term =
                x.Symbols.vs_ty)
            ~sep:comma)
         l print_term t
-  | Lambda (ret, s) ->
-      pp fmt "@[λ %a.@\n %a@]"
-        (list
-           (fun fmt x ->
-             pp fmt "(%a : %a)" Ident.pp x.Symbols.vs_name Ttypes.print_ty
-               x.Symbols.vs_ty)
-           ~sep:comma)
-        ret print_term s
   | _ -> assert false
 
 let print_app fmt args =
@@ -38,10 +30,19 @@ let print_app fmt args =
   | None -> pp fmt "%s" "()"
   | Some vs -> pp fmt "%s" vs.Symbols.vs_name.id_str
 
+let print_rets fmt r =
+  if r = [] then () else
+    pp fmt "@[λ %a.@]"
+      (list field ~sep:sp) r
+
 let print_triple fmt t =
-  pp fmt "@[∀ %a. @\n@[{ %a }@]@\n@[%s %a @]@\n{ %a }@]" (list field ~sep:comma)
-    t.triple_vars print_term t.triple_pre t.triple_name.id_str
-    (list print_app ~sep:sp) t.triple_args print_term t.triple_post
+  pp fmt "@[∀ %a. @\n@[{ %a }@]@\n@[%s %a @]@\n{%a %a }@]"
+    (list field ~sep:comma) t.triple_vars
+    print_term t.triple_pre
+    t.triple_name.id_str
+    (list print_app ~sep:sp) t.triple_args
+    print_rets t.triple_rets
+    print_term t.triple_post
 
 let sep_node fmt s =
   match s.d_node with

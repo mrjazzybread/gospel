@@ -793,6 +793,76 @@ let rec val_parse_core_type ns cty =
       ((ty_of_core ns ct1, lbl) :: args, res)
   | _ -> ([], ty_of_core ns cty)
 
+(** Creates a list of each each function argument paired with their respective
+    label and type
+    @param args Function parameters (or possibly return values).
+    @param where
+      Parameter if we are processing the function's arguments or Return if we
+      are parsing the return values.
+    @param tyl
+      The type of the parameters. If the size of this list is not the same as
+      that of {!args}, then the gospel header is incorrect.
+    @param env The environment that contains this functions' parameters.*)
+let process_args loc ns where args tyl =
+  let wh_msg =
+    match where with `Parameter -> "parameter" | `Return -> "returned value"
+  in
+  let mismatch_msg = wh_msg ^ " does not match with val type" in
+  let rec loop args arg_types =
+    match (args, arg_types) with
+    | Uast.Lghost (pid, pty) :: args, _ ->
+        let ty = ty_of_pty ns pty in
+        let vs = create_vsymbol pid ty in
+        (Lghost, vs) :: loop args arg_types
+    | Loptional pid :: args, (ty, Asttypes.Optional s) :: arg_types ->
+        if not (String.equal pid.pid_str s) then
+          W.type_checking_error ~loc:pid.pid_loc mismatch_msg;
+        let ty = ty_app ts_option [ ty ] in
+        let vs = create_vsymbol pid ty in
+        (Loptional, vs) :: loop args arg_types
+    | Lnamed pid :: args, (ty, Asttypes.Labelled s) :: arg_types ->
+        if not (String.equal pid.pid_str s) then
+          W.type_checking_error ~loc:pid.pid_loc mismatch_msg;
+        let vs = create_vsymbol pid ty in
+        (Lnamed, vs) :: loop args arg_types
+    | Lnone pid :: args, (ty, Asttypes.Nolabel) :: arg_types ->
+        let vs = create_vsymbol pid ty in
+        (Lnone, vs) :: loop args arg_types
+    | Lunit :: args, _ :: arg_types ->
+        (Lunit, none_vsymbol) :: loop args arg_types
+    | [], [] -> []
+    | _, [] ->
+        let msg = "too many " ^ wh_msg ^ "s" in
+        W.type_checking_error ~loc msg
+    | [], _ ->
+        let msg =
+          match (where, tyl) with
+          | `Return, _ :: _ :: _ ->
+              "too few returned values: when a function returns a tuple, the \
+               gospel header should name each member of the tuple; so the \
+               header of a function returning a pair might be \"x,y = ...\""
+          | `Return, _ -> "too few returned values"
+          | `Parameter, _ -> "too few parameters"
+        in
+        W.type_checking_error ~loc msg
+    | la :: _, _ ->
+        W.type_checking_error ~loc:(pid_of_label la).pid_loc mismatch_msg
+  in
+  (* Adds the argument into the environment and checks if it is duplicated *)
+  let add_arg env (_, vs) =
+    if Ident.equal vs.vs_name none_id then env
+    else
+      let vs_str = vs.vs_name.id_str in
+      let add = function
+        | None -> Some vs
+        | Some _ ->
+            W.error ~loc:vs.vs_name.id_loc (W.Duplicated_variable vs_str)
+      in
+      Mstr.update vs_str add env
+  in
+  let l = loop args tyl in
+  (l, List.fold_left add_arg Mstr.empty l)
+
 (* Checks the following
    1 - the val id string is equal to the name in val header
    2 - no duplicated names in arguments and arguments in header
@@ -800,6 +870,7 @@ let rec val_parse_core_type ns cty =
 *)
 let process_val_spec kid crcm ns id args ret vs =
   let header = Option.get vs.sp_header in
+  let process_args = process_args header.sp_hd_nm.pid_loc ns in
   let loc = header.sp_hd_nm.pid_loc in
   let id_val = id.Ident.id_str in
   let id_spec = header.sp_hd_nm.pid_str in
@@ -812,84 +883,8 @@ let process_val_spec kid crcm ns id args ret vs =
   if not cmp_ids then
     W.type_checking_error ~loc "val specification header does not match name";
 
-  (* Adds the argument into the environment and checks if it is duplicated *)
-  let add_arg vs env =
-    let vs_str = vs.vs_name.id_str in
-    let add = function
-      | None -> Some vs
-      | Some _ -> W.error ~loc:vs.vs_name.id_loc (W.Duplicated_variable vs_str)
-    in
-    Mstr.update vs_str add env
-  in
-
-  (* Creates an environment that matches the names of each function parameter
-      (or return value) to its type. Also returns a list with each parameter paired
-      with its label.
-      @param args  Function parameters (or possibly return values).
-      @param where Parameter if we are processing the function's arguments or
-        Return if we are parsing the return values.
-      @param tyl   The type of the parameters. If the size of this list is not the
-        same as that of {!args}, then the gospel header is incorrect.
-      @param env   The environment that contains this functions' parameters. *)
-  let process_args where args tyl env =
-    let wh_msg =
-      match where with `Parameter -> "parameter" | `Return -> "returned value"
-    in
-    let mismatch_msg = wh_msg ^ " does not match with val type" in
-    let rec aux args arg_types env lal =
-      match (args, arg_types) with
-      | [], [] -> (env, List.rev lal)
-      | [], _ ->
-          let msg =
-            match (where, tyl) with
-            | `Return, _ :: _ :: _ ->
-                "too few returned values: when a function returns a tuple, the \
-                 gospel header should name each member of the tuple; so the \
-                 header of a function returning a pair might be \"x,y = ...\""
-            | `Return, _ -> "too few returned values"
-            | `Parameter, _ -> "too few parameters"
-          in
-          W.type_checking_error ~loc:header.sp_hd_nm.pid_loc msg
-      | Uast.Lghost (pid, pty) :: args, _ ->
-          let ty = ty_of_pty ns pty in
-          let vs = create_vsymbol pid ty in
-          let lal = (Lghost, vs) :: lal in
-          let env = add_arg vs env in
-          aux args arg_types env lal
-      | Loptional pid :: args, (ty, Asttypes.Optional s) :: arg_types ->
-          if not (String.equal pid.pid_str s) then
-            W.type_checking_error ~loc:pid.pid_loc mismatch_msg;
-          let ty = ty_app ts_option [ ty ] in
-          let vs = create_vsymbol pid ty in
-          let env = add_arg vs env in
-          let lal = (Loptional, vs) :: lal in
-          aux args arg_types env lal
-      | Lnamed pid :: args, (ty, Asttypes.Labelled s) :: arg_types ->
-          if not (String.equal pid.pid_str s) then
-            W.type_checking_error ~loc:pid.pid_loc mismatch_msg;
-          let vs = create_vsymbol pid ty in
-          let env = add_arg vs env in
-          let lal = (Lnamed, vs) :: lal in
-          aux args arg_types env lal
-      | Lnone pid :: args, (ty, Asttypes.Nolabel) :: arg_types ->
-          let vs = create_vsymbol pid ty in
-          let env = add_arg vs env in
-          let lal = (Lnone, vs) :: lal in
-          aux args arg_types env lal
-      | Lunit :: args, _ :: arg_types ->
-          aux args arg_types env ((Lunit, none_vsymbol) :: lal)
-      | _, [] ->
-          let msg = "too many " ^ wh_msg ^ "s" in
-          W.type_checking_error ~loc:header.sp_hd_nm.pid_loc msg
-      | la :: _, _ ->
-          W.type_checking_error ~loc:(pid_of_label la).pid_loc mismatch_msg
-    in
-    aux args tyl env []
-  in
-
-  let env, args = process_args `Parameter header.sp_hd_args args Mstr.empty in
-
-  let env = { env; old_env = Mstr.empty } in
+  let args, arg_env = process_args `Parameter header.sp_hd_args args in
+  let env = { env = arg_env; old_env = Mstr.empty } in
 
   let checks = List.map (fmla Checks kid crcm ns env) vs.sp_checks in
   let type_spatial whereami env t =
@@ -907,17 +902,15 @@ let process_val_spec kid crcm ns id args ret vs =
   let cs = List.map (type_spatial Consumes env) vs.sp_consumes in
   let pres = List.map (type_spatial Preserves env) vs.sp_preserves in
 
-  let prod_env, ret =
+  let ret, ret_env =
     match (header.sp_hd_ret, ret.ty_node) with
-    | [], _ -> (env.env, [])
+    | [], _ -> ([], Mstr.empty)
     | _, Tyapp (ts, tyl) when is_ts_tuple ts ->
         let tyl = List.map (fun ty -> (ty, Asttypes.Nolabel)) tyl in
-        process_args `Return header.sp_hd_ret tyl env.env
-    | _, _ ->
-        process_args `Return header.sp_hd_ret
-          [ (ret, Asttypes.Nolabel) ]
-          env.env
+        process_args `Return header.sp_hd_ret tyl
+    | _, _ -> process_args `Return header.sp_hd_ret [ (ret, Asttypes.Nolabel) ]
   in
+  let prod_env = Mstr.union (fun _ -> assert false) arg_env ret_env in
   let prod =
     List.map
       (type_spatial Produces { env = prod_env; old_env = Mstr.empty })

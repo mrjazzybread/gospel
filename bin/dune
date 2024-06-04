@@ -3,5 +3,6 @@
 
 (executable
  (name cli)
+ (modes byte exe)
  (public_name gospel)
  (libraries cmdliner gospel))

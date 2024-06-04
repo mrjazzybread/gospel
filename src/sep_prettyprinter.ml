@@ -31,20 +31,15 @@ let print_app fmt args =
   | Some vs -> pp fmt "%s" vs.Symbols.vs_name.id_str
 
 let print_rets fmt r =
-  if r = [] then () else
-    pp fmt "@[λ %a.@]"
-      (list field ~sep:sp) r
+  if r = [] then () else pp fmt "@[λ %a.@]" (list field ~sep:sp) r
 
 let print_triple fmt t =
   pp fmt "@[∀ %a. @\n@[{ %a }@]@\n@[%s %a @]@\n{%a %a }@]"
-    (list field ~sep:comma) t.triple_vars
-    print_term t.triple_pre
-    t.triple_name.id_str
-    (list print_app ~sep:sp) t.triple_args
-    print_rets t.triple_rets
-    print_term t.triple_post
+    (list field ~sep:comma) t.triple_vars print_term t.triple_pre
+    t.triple_name.id_str (list print_app ~sep:sp) t.triple_args print_rets
+    t.triple_rets print_term t.triple_post
 
-let sep_node fmt s =
+let rec sep_node fmt s =
   match s.d_node with
   | Type (t, vl) -> pp fmt "@[Type %a %a@]" (list Ttypes.print_tv) vl Ident.pp t
   | Pred (id, args) ->
@@ -52,8 +47,11 @@ let sep_node fmt s =
         (fun fmt args -> List.iter (field fmt) args)
         args
   | Triple t ->
-      pp fmt "@[Triple %a :@\n %a@]" Ident.pp t.triple_name print_triple t
+      pp fmt "@[Triple %a :@\n%a@]" Ident.pp t.triple_name print_triple t
   | Axiom axiom -> Tast_printer.print_axiom fmt axiom
   | Function f -> Tast_printer.print_function fmt f
+  | Module (nm, l) ->
+     pp fmt "@[Module %a :@\n%a@]" Ident.pp nm
+       (list sep_node ~sep:newline) l
 
 let file fmt l = list ~sep:(newline ++ newline) sep_node fmt l

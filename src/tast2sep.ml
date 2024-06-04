@@ -42,63 +42,67 @@ and val_description ns des =
   match des.vd_spec with
   | None -> assert false (* TODO *)
   | Some spec ->
-     let ns = ref ns in
-     let to_cfml_arg lb =
-       let arg_vs = lb.lb_vs in 
-       let arg_id = change_id mk_prog arg_vs.vs_name in                
-       let arg_prog_ty = if is_pure_type arg_vs then arg_vs.vs_ty else ty_loc in
-       { vs_name = arg_id; vs_ty = arg_prog_ty }
-     in
-     let cfml_args = List.map (fun x -> if x.lb_label = Lunit then None else Some (to_cfml_arg x)) spec.sp_args in 
-     let lifted_args is_old =
-       List.filter_map (fun arg ->
-           let arg_vs = arg.lb_vs in
-           if arg.lb_label = Lunit then None else
-             match if is_old then arg.lb_consumes else arg.lb_produces with
-             | None -> None
-             | Some (s_ty, l_ty) ->
-                let ro = not arg.lb_modified in
-                let arg_prog = to_cfml_arg arg in 
-                let arg_log, ns' =
-                  map_id !ns (is_old || ro) arg_vs l_ty
-                in
-                let () = ns := ns' in
-                Some { s_ty; arg_prog; ro; arg_log })
-     in
-     let mk_lift = function
-       | { s_ty; arg_prog; arg_log; _ } ->
-          let pred = get_pred !ns s_ty in
-          Some (App (pred, [ arg_prog; arg_log ]))
-     in
-     let lifts = List.filter_map mk_lift in
-     let args = lifted_args true spec.sp_args in
-     let pre = List.map (fun t -> Pure (map_term !ns true t)) spec.sp_pre in
-     let triple_pre = Star (lifts args @ pre) in
-     let updates = lifted_args false spec.sp_args in
-     let rets = lifted_args false spec.sp_ret in
-     let post = List.map (fun t -> Pure (map_term !ns false t)) spec.sp_post in
-     let post_cond = Star (lifts (updates @ rets) @ post) in
-     let mk_updates = function
-       | { arg_log; ro; _ } -> if ro then None else Some arg_log
-     in
-     let updated_vars = List.filter_map mk_updates (updates @ rets) in
-     let triple_post =
-       if updated_vars = [] then post_cond else Exists (updated_vars, post_cond)
-     in
-     Triple
-       {
-         triple_name = des.vd_name;
-         triple_vars =
-           List.concat_map
-             (function { arg_prog; arg_log; _ } -> [ arg_prog; arg_log ])
-             args;
-         triple_args = cfml_args;
-         triple_rets =
-           List.map (function { arg_prog; _ } -> arg_prog) rets;
-         triple_pre;
-         triple_type = des.vd_type;
-         triple_post;
-       }
+      let ns = ref ns in
+      let to_cfml_arg lb =
+        let arg_vs = lb.lb_vs in
+        let arg_id = change_id mk_prog arg_vs.vs_name in
+        let arg_prog_ty =
+          if is_pure_type arg_vs then arg_vs.vs_ty else ty_loc
+        in
+        { vs_name = arg_id; vs_ty = arg_prog_ty }
+      in
+      let cfml_args =
+        List.map
+          (fun x -> if x.lb_label = Lunit then None else Some (to_cfml_arg x))
+          spec.sp_args
+      in
+      let lifted_args is_old =
+        List.filter_map (fun arg ->
+            let arg_vs = arg.lb_vs in
+            if arg.lb_label = Lunit then None
+            else
+              match if is_old then arg.lb_consumes else arg.lb_produces with
+              | None -> None
+              | Some (s_ty, l_ty) ->
+                  let ro = not arg.lb_modified in
+                  let arg_prog = to_cfml_arg arg in
+                  let arg_log, ns' = map_id !ns (is_old || ro) arg_vs l_ty in
+                  let () = ns := ns' in
+                  Some { s_ty; arg_prog; ro; arg_log })
+      in
+      let mk_lift = function
+        | { s_ty; arg_prog; arg_log; _ } ->
+            let pred = get_pred !ns s_ty in
+            Some (App (pred, [ arg_prog; arg_log ]))
+      in
+      let lifts = List.filter_map mk_lift in
+      let args = lifted_args true spec.sp_args in
+      let pre = List.map (fun t -> Pure (map_term !ns true t)) spec.sp_pre in
+      let triple_pre = Star (lifts args @ pre) in
+      let updates = lifted_args false spec.sp_args in
+      let rets = lifted_args false spec.sp_ret in
+      let post = List.map (fun t -> Pure (map_term !ns false t)) spec.sp_post in
+      let post_cond = Star (lifts (updates @ rets) @ post) in
+      let mk_updates = function
+        | { arg_log; ro; _ } -> if ro then None else Some arg_log
+      in
+      let updated_vars = List.filter_map mk_updates (updates @ rets) in
+      let triple_post =
+        if updated_vars = [] then post_cond else Exists (updated_vars, post_cond)
+      in
+      Triple
+        {
+          triple_name = des.vd_name;
+          triple_vars =
+            List.concat_map
+              (function { arg_prog; arg_log; _ } -> [ arg_prog; arg_log ])
+              args;
+          triple_args = cfml_args;
+          triple_rets = List.map (function { arg_prog; _ } -> arg_prog) rets;
+          triple_pre;
+          triple_type = des.vd_type;
+          triple_post;
+        }
 
 and type_declaration t =
   let id = t.td_ts.ts_ident in
@@ -135,15 +139,25 @@ and type_declaration t =
       Pred (new_id, [ { vs_name = id; vs_ty = self_type }; pred_field ]);
     ]
 
-let signature_item_desc ns = function
+let rec signature_item_desc ns = function
   | Sig_type (_, l, _) -> List.concat_map (fun t -> type_declaration t) l
   | Sig_val (des, _) -> [ val_description ns des ]
-  | Sig_open _ | Sig_use _ -> []
   | Sig_axiom axiom -> [ Axiom axiom ]
   | Sig_function f -> [ Function f ]
+  | Sig_module m ->
+     begin match m.md_type.mt_desc with
+     |Mod_signature s  ->
+       let nm = m.md_name in
+       let defs = List.concat_map (signature_item ns) s in
+       [Module (nm, defs)]
+     |_ -> assert false end
+  | Sig_open _
+    | Sig_use _
+    | Sig_extension _
+    | Sig_attribute _ -> []
   | _ -> assert false
 
-let signature_item ns s =
+and signature_item ns s =
   List.map
     (fun sep -> { d_node = sep; d_loc = s.sig_loc })
     (signature_item_desc ns s.sig_desc)

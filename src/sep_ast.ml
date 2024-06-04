@@ -35,5 +35,6 @@ type definition_node =
   | Triple of triple (** Separation Logic Triples *)
   | Axiom of Tast.axiom (** Axiom *)
   | Function of Tast.function_ (** Logical Function *)
+  | Module of Ident.t * definition list
 
-type definition = { d_node : definition_node; d_loc : Location.t }
+and definition = { d_node : definition_node; d_loc : Location.t }

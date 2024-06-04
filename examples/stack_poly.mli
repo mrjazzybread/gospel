@@ -9,12 +9,6 @@ val create : unit -> 'a t
     ensures q = empty
 *)
 
-val push : 'a t -> 'a -> unit
-(*@ push q x
-    modifies q @ 'a t
-    ensures q = cons x (old q)
-*)
-
 (* val pop_opt : 'a t -> 'a option *)
 (* (\*@ r = pop_opt q *)
 (*     consumes q @ 'a t *)

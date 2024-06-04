@@ -55,6 +55,7 @@
 (*@ function succ (x: integer) : integer *)
 (*@ function pred (x: integer) : integer *)
 
+
 (*@ function (-_) (x: integer) : integer *)
 (*@ function (+) (x y: integer) : integer *)
 (*@ function (-) (x y: integer) : integer *)
@@ -422,7 +423,6 @@ end
 module Order : sig
   (*@ predicate is_pre_order (f: 'a -> 'a -> int) *)
 end
-
 (*@ type 'a ref *)
 (*@ function (!_) (r : 'a ref) : 'a *)
 (*@ function logand (n1 : integer) (n2: integer) : integer *)

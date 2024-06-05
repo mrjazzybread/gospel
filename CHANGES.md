@@ -1,3 +1,12 @@
+# Unreleased
+
+## Improved
+
+- Display proper error message for a number of unsupported construction
+  [#406] (https://github.com/ocaml-gospel/gospel/pull/406)
+- Display an error message when encoutering a Functor application
+  [#404] (https://github.com/ocaml-gospel/gospel/pull/404)
+
 # 0.3
 
 ## Added
@@ -18,6 +27,8 @@
 
 - Fix premature parsing of specification keywords in the preprocessor.
   [\#394](https://github.com/ocaml-gospel/gospel/pull/394)
+- Fix `ls_name` of `unit` logical symbol to be `()`
+  [\#387](https://github.com/ocaml-gospel/gospel/pull/387)
 - Fix the `is_ts_tuple` function so that it doesn't take `unit` to be a tuple
   [\#386](https://github.com/ocaml-gospel/gospel/pull/386)
 - Use unique identifiers rather than physical equality for `Symbols.ls_equal`

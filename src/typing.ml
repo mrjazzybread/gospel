@@ -32,6 +32,11 @@ type whereami =
   | Requires
   | Variant
 
+let flatten_exn lid =
+  try Longident.flatten_exn lid.txt
+  with Invalid_argument _ ->
+    W.(error ~loc:lid.loc (Functor_application (Longident.name lid.txt)))
+
 let pid_of_label = function
   | Lunit -> invalid_arg "pid_of_label Lunit"
   | Lnone p | Loptional p | Lnamed p | Lghost (p, _) -> p
@@ -98,14 +103,20 @@ let rec ty_of_core ns cty =
       let tyl = List.map (ty_of_core ns) ctl in
       ty_app ~loc (ts_tuple (List.length tyl)) tyl
   | Ptyp_constr (lid, ctl) ->
-      let ts = find_ts ~loc:lid.loc ns (Longident.flatten_exn lid.txt) in
+      let ts = find_ts ~loc:lid.loc ns (flatten_exn lid) in
       let tyl = List.map (ty_of_core ns) ctl in
       ty_app ~loc ts tyl
   | Ptyp_arrow (_, ct1, ct2) ->
       (* TODO check what to do with the arg_label *)
       let ty1, ty2 = ((ty_of_core ns) ct1, (ty_of_core ns) ct2) in
       ty_app ~loc ts_arrow [ ty1; ty2 ]
-  | _ -> assert false
+  | Ptyp_alias _ -> W.(error ~loc (Unsupported "type alias"))
+  | Ptyp_class _ -> W.(error ~loc (Unsupported "class type"))
+  | Ptyp_extension _ -> W.(error ~loc (Unsupported "type extension"))
+  | Ptyp_object _ -> W.(error ~loc (Unsupported "object type"))
+  | Ptyp_package _ -> W.(error ~loc (Unsupported "first class module"))
+  | Ptyp_poly _ -> W.(error ~loc (Unsupported "polymorphic type"))
+  | Ptyp_variant _ -> W.(error ~loc (Unsupported "polymorphic variant"))
 
 (** Typing terms *)
 
@@ -411,7 +422,8 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
         match t23 with
         | { term_desc = Uast.Tinfix (t2, op2, t3); term_loc = loc23 } ->
             let de2 = dterm whereami kid crcm ns denv t2 in
-            (* TODO: improve locations of subterms. See loc_cutoff function in why3 typing.ml *)
+            (* TODO: improve locations of subterms.
+               See loc_cutoff function in why3 typing.ml *)
             (* let loc12 = loc_cutoff loc loc23 t2.term_loc in *)
             let de12 = apply de1 op1 de2 in
             let de23 = chain loc23 de2 op2 t3 in
@@ -594,7 +606,7 @@ let type_type_declaration path kid crcm ns r tdl =
         let tyl = List.map (parse_core alias tvl) ctl in
         ty_app (ts_tuple (List.length tyl)) tyl
     | Ptyp_constr (lid, ctl) ->
-        let idl = Longident.flatten_exn lid.txt in
+        let idl = flatten_exn lid in
         let tyl = List.map (parse_core alias tvl) ctl in
         let ts =
           match idl with
@@ -610,8 +622,13 @@ let type_type_declaration path kid crcm ns r tdl =
           W.error ~loc
             (W.Bad_type_arity (ts.ts_ident.id_str, ts_arity ts, List.length tyl));
         ty_app ts tyl
-    | _ -> assert false
-  (* TODO what to do with other cases? *)
+    | Ptyp_alias _ -> W.(error ~loc (Unsupported "type alias"))
+    | Ptyp_class _ -> W.(error ~loc (Unsupported "class type"))
+    | Ptyp_extension _ -> W.(error ~loc (Unsupported "type extension"))
+    | Ptyp_object _ -> W.(error ~loc (Unsupported "object type"))
+    | Ptyp_package _ -> W.(error ~loc (Unsupported "first class module"))
+    | Ptyp_poly _ -> W.(error ~loc (Unsupported "polymorphic type"))
+    | Ptyp_variant _ -> W.(error ~loc (Unsupported "polymorphic variant"))
   and visit ~alias s td =
     let parse_params (ct, vi) (tvl, params, vs) =
       let loc = ct.ptyp_loc in
@@ -705,7 +722,7 @@ let type_type_declaration path kid crcm ns r tdl =
       | Ptype_record ldl ->
           let record, ns = process_record ty alias ldl in
           (Pty_record record, ns)
-      | Ptype_open -> assert false
+      | Ptype_open -> W.(error ~loc:td.tloc (Unsupported "extensible type"))
     in
 
     (* invariants are only allowed on abstract/private types *)
@@ -1091,7 +1108,7 @@ let process_exception_sig path loc ns te =
   let id = Ident.create ~path ~loc:ec.pext_loc ec.pext_name.txt in
   let xs =
     match ec.pext_kind with
-    | Pext_rebind lid -> find_xs ~loc:lid.loc ns (Longident.flatten_exn lid.txt)
+    | Pext_rebind lid -> find_xs ~loc:lid.loc ns (flatten_exn lid)
     | Pext_decl ([], ca, None) ->
         let args =
           match ca with
@@ -1145,7 +1162,7 @@ and module_as_file ~loc penv muc nm =
   with Not_found -> W.error ~loc (W.Module_not_found nm)
 
 and process_open ~loc ?(ghost = Nonghost) penv muc od =
-  let qd = Longident.flatten_exn od.popen_expr.txt in
+  let qd = flatten_exn od.popen_expr in
   let qd_loc = od.popen_loc in
   let hd = List.hd qd in
   let muc =
@@ -1172,9 +1189,9 @@ and process_modtype path penv muc umty =
         { mt_desc = tsig; mt_loc = umty.mloc; mt_attrs = umty.mattributes }
       in
       (muc, tmty)
-  | Mod_ident li ->
+  | Mod_ident lid ->
       (* module type MTB = *MTA*  module MA : *MTA* *)
-      let nm = Longident.flatten_exn li.txt in
+      let nm = flatten_exn lid in
       let tmty =
         {
           mt_desc = Mod_ident nm;
@@ -1182,11 +1199,11 @@ and process_modtype path penv muc umty =
           mt_attrs = umty.mattributes;
         }
       in
-      let ns = find_tns ~loc:li.loc (get_top_import muc) nm in
+      let ns = find_tns ~loc:lid.loc (get_top_import muc) nm in
       (add_ns_top ~export:true muc ns, tmty)
-  | Mod_alias li ->
+  | Mod_alias lid ->
       (* module MB = *MA* *)
-      let nm = Longident.flatten_exn li.txt in
+      let nm = flatten_exn lid in
       let tmty =
         {
           mt_desc = Mod_alias nm;
@@ -1194,7 +1211,7 @@ and process_modtype path penv muc umty =
           mt_attrs = umty.mattributes;
         }
       in
-      let ns = find_ns ~loc:li.loc (get_top_import muc) nm in
+      let ns = find_ns ~loc:lid.loc (get_top_import muc) nm in
       (add_ns_top ~export:true muc ns, tmty)
   | Mod_with (umty2, cl) ->
       let ns_init = get_top_import muc in
@@ -1202,21 +1219,21 @@ and process_modtype path penv muc umty =
       let muc, tmty2 = process_modtype path penv muc umty2 in
       let process_constraint (muc, cl) c =
         match c with
-        | Wtype (li, tyd) ->
+        | Wtype (lid, tyd) ->
             let tdl =
               type_type_declaration path muc.muc_kid muc.muc_crcm ns_init
                 Nonrecursive [ tyd ]
             in
             let td = match tdl with [ td ] -> td | _ -> assert false in
-            let q = Longident.flatten_exn li.txt in
+            let q = flatten_exn lid in
             let ns = get_top_import muc in
-            let ts = find_ts ~loc:li.loc ns q in
+            let ts = find_ts ~loc:lid.loc ns q in
 
             (* check that type symbols are compatible
                TODO there are other checks that need to be performed, for
                now we assume that the file passes the ocaml compiler type checker *)
             if ts_arity ts <> ts_arity td.td_ts then
-              W.error ~loc:li.loc
+              W.error ~loc:lid.loc
                 (W.Bad_type_arity
                    (ts.ts_ident.id_str, ts_arity ts, ts_arity td.td_ts));
             (match (ts.ts_alias, td.td_ts.ts_alias) with
@@ -1227,7 +1244,7 @@ and process_modtype path penv muc umty =
             let muc = muc_replace_ts muc td.td_ts q in
             let muc = muc_subst_ts muc ts td.td_ts in
             (muc, Wty (ts.ts_ident, td) :: cl)
-        | Wtypesubst (li, tyd) ->
+        | Wtypesubst (lid, tyd) ->
             let tdl =
               type_type_declaration path muc.muc_kid muc.muc_crcm ns_init
                 Nonrecursive [ tyd ]
@@ -1239,16 +1256,16 @@ and process_modtype path penv muc umty =
               | Some ty -> ty
             in
 
-            let q = Longident.flatten_exn li.txt in
+            let q = flatten_exn lid in
             let ns = get_top_import muc in
-            let ts = find_ts ~loc:li.loc ns q in
+            let ts = find_ts ~loc:lid.loc ns q in
             let muc = muc_rm_ts muc q in
 
             (* check that type symbols are compatible
                TODO there are other checks that need to be performed, for
                now we assume that the file passes the ocaml compiler type checker *)
             if ts_arity ts <> ts_arity td.td_ts then
-              W.error ~loc:li.loc
+              W.error ~loc:lid.loc
                 (W.Bad_type_arity
                    (ts.ts_ident.id_str, ts_arity ts, ts_arity td.td_ts));
             (match (ts.ts_alias, td.td_ts.ts_alias) with

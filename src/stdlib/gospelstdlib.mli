@@ -103,7 +103,7 @@ module Sequence : sig
 
   (*@ function length (s : 'a t) : integer = length s *)
   (*@ axiom length_nonneg : forall s. 0 <= length s *)
-  (*@ axiom append_length : forall s s'. length (s++s') = length s'+ length s *)
+  (*@ axiom append_length : forall s s'. length (s++s') = length s + length s' *)
 
   (*@ axiom append_elems_left :  forall s s' i. i <= 0 < length s -> (s ++ s')[i] = s[i] *)
   (*@ axiom append_elems_right :
@@ -115,7 +115,7 @@ module Sequence : sig
   (* axiom subseq_len : TODO *)
 
   (*@ function init (n: integer) (f: integer -> 'a) : 'a t *)
-  (*@ axiom init_length : forall n f. length (init n f) = n *)
+  (*@ axiom init_length : forall n f. n >= 0 -> length (init n f) = n *)
   (* TODO : replace init with notation *)
   (*@ axiom init_elems : forall n f.
         forall i. 0 <= i < n -> (init n f)[i] = f i *)
@@ -156,14 +156,14 @@ module Sequence : sig
   (** [mem s x] holds iff [x] is in [s]. *)
 
   (*@ function map (f: 'a -> 'b) (s: 'a t) : 'b t *)
-  (*@ axiom map_elems : forall i f s. (map f s)[i] = f (s[i]) *)
+  (*@ axiom map_elems : forall i f s. 
+       0 <= i < length s -> (map f s)[i] = f (s[i]) *)
   (** [map f s] is a sequence whose elements are the elements of [s],
       transformed by [f]. *)
 
   (*@ function filter (f: 'a -> bool) (s: 'a t) : 'a t *)
   (*@ axiom filter_elems :
-        forall f s i. 0 <= i < length (filter f s) ->
-          f ((filter f s)[i]) && mem ((filter f s)[i]) s *)
+        forall f s x. mem x s -> f x -> mem x (filter f s) *)
   (** [filter f s] is a sequence whose elements are the elements of [s] that
       satisfy [f]*)
 
@@ -172,7 +172,11 @@ module Sequence : sig
 
   (*@ function set (s: 'a t) (i: integer) (x: 'a): 'a t *)
   (*@ axiom set_elem : forall s i x. 0 <= i < length s -> (set s i x)[i] = x *)
-  (*@ axiom set_elem_other : forall s i1 i2 x. i1 <> i2 -> (set s i1 x)[i2] = s[i2] *)
+  (*@ axiom set_elem_other : 
+    forall s i1 i2 x. i1 <> i2 ->
+    0 <= i1 < length s ->
+    0 <= i2 < length s ->
+    (set s i1 x)[i2] = s[i2] *)
 
   (** [set s i x] is the sequence [s] where the [i]th element is [x]. *)
 
@@ -180,7 +184,8 @@ module Sequence : sig
 
   (*@ function rev (s: 'a t) : 'a t *)
   (*@ axiom rev_length : forall s. length s = length (rev s) *)
-  (*@ axiom rev_elems  : forall i s. 0 <= i < length s -> s[i] = (rev s)[length s - i - 1] *)
+  (*@ axiom rev_elems  : forall i s. 0 <= i < length s -> 
+       (rev s)[i] = s[length s - 1 - i] *)
 
   (** [rev s] is the sequence containing the same elements as [s], in reverse
       order. *)
@@ -188,11 +193,14 @@ module Sequence : sig
   (*@ function fold (f: 'a -> 'b -> 'a) (acc: 'a) (s: 'b sequence) : 'a *)
   (*@ axiom fold_empty : forall f acc. fold f acc empty = acc *)
   (*@ axiom fold_cons : forall f acc x l.
-         f x (fold f acc l) = fold f acc (cons x l) *)
+         fold f acc (cons x l) = fold f (f acc x) l *)
   (** [fold f acc s] is [f (... (f (f acc s[0]) s[1]) ...) s[n-1]], where [n] is
       the length of [s]. *)
   (*@ axiom extensionality : forall s1 s2.
-        length s1 = length s2 -> forall i. 0 <= i < length s1 -> s1[i] = s2[i] *)
+        length s1 = length s2 -> 
+        (forall i. 0 <= i < length s1 -> s1[i] = s2[i]) ->
+        s1 = s2
+   *)
 
   (*@ function of_list (s : 'a list) : 'a sequence *)
   (*@ coercion *)

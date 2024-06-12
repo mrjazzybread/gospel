@@ -32,6 +32,7 @@ let run_file { load_path } file =
     let sigs = parse_gospel ~filename:file ocaml module_nm in
     let file = type_check load_path file sigs in
     Fmt.pf Fmt.stdout "%s\n" (Tast.show_signature file.fl_sigs);
+
     true
   with W.Error e ->
     Fmt.epr "%a@." W.pp e;

@@ -42,12 +42,8 @@ let tv_of_string =
       Hashtbl.add hs s tv;
       tv
 
-(** types *)
-
-(* Represents the representation predicate (spatial type) used to lift a type symbol to a logical type
-   If the type symbol represents an OCaml type, then this will be a function that receives a spatial type and returns a
-   logical type.*)
 type ty = { ty_node : ty_node } [@@deriving show]
+(** types *)
 
 and ty_node = Tyvar of tvsymbol | Tyapp of tysymbol * ty list
 [@@deriving show]

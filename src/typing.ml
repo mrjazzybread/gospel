@@ -78,8 +78,8 @@ let find_q_ns = find_q find_ns
 (* specification types *)
 let rec ty_of_pty ns = function
   | PTtyvar { pid_str; pid_loc; _ } ->
-     let tv = tv_of_string ~loc:pid_loc pid_str in
-     { ty_node = Tyvar tv }
+      let tv = tv_of_string ~loc:pid_loc pid_str in
+      { ty_node = Tyvar tv }
   | PTtyapp (q, ptyl) ->
       let ts = find_q_ts ns q in
       let loc = q_loc q in

@@ -6,14 +6,12 @@ type t
 val create : unit -> t
 (*@ q = create ()
     produces q @ t
-    ensures q = empty
-*)
+    ensures q = empty *)
 
 val push : t -> int -> unit
 (*@ push q x
     modifies q @ t
-    ensures q = cons x (old q)
-*)
+    ensures q = cons x (old q) *)
 
 val pop_opt : t -> int option
 (*@ r = pop_opt q

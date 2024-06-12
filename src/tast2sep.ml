@@ -12,6 +12,65 @@ type value = {
   ro : bool; (* Read only flag *)
 }
 
+(* Inlining functions *)
+
+let is_var v1 t =
+  match t.t_node with
+  | Tvar v2 -> Ident.equal v1.vs_name v2.vs_name
+  | _ -> false
+
+let check_term v t =
+  match t.t_node with
+  | Tapp (f, [ t1; t2 ]) when ls_equal f ps_equ ->
+      print_endline (Tterm.show_term t1);
+      if is_var v t1 then Some t2 else if is_var v t2 then Some t1 else None
+  | _ -> None
+
+let map_sep_terms tbl t =
+  match t with
+  | App (v, l) ->
+      let l =
+        List.map
+          (fun t ->
+            match t.t_node with
+            | Tvar v when Hashtbl.mem tbl v -> Hashtbl.find tbl v
+            | _ -> t)
+          l
+      in
+      App (v, l)
+  | _ -> t
+
+let inline (vl, tl) =
+  let tbl = Hashtbl.create 10 in
+  let rec inner_loop v = function
+    | Pure gt :: xs ->
+        let t = check_term v gt in
+        if Option.is_some t then (t, xs)
+        else
+          let t, l = inner_loop v xs in
+          (t, Pure gt :: l)
+    | x :: xs ->
+        let t, l = inner_loop v xs in
+        (t, x :: l)
+    | [] -> (None, [])
+  in
+  let rec loop = function
+    | x :: xs -> (
+        let t, tl = inner_loop x tl in
+        match t with
+        | Some t ->
+            let () = Hashtbl.add tbl x t in
+            (xs, tl)
+        | None ->
+            let l, tl = loop xs in
+            (x :: l, tl))
+    | [] -> ([], tl)
+  in
+  let vl, tl = loop vl in
+  (vl, List.map (map_sep_terms tbl) tl)
+
+let inline_def t = { t with triple_post = inline t.triple_post }
+
 let is_pure_type vs =
   match vs.vs_ty.ty_node with
   | Tyapp (ts, _) -> (
@@ -73,36 +132,42 @@ and val_description ns des =
       let mk_lift = function
         | { s_ty; arg_prog; arg_log; _ } ->
             let pred = get_pred !ns s_ty in
-            Some (App (pred, [ arg_prog; arg_log ]))
+            Some
+              (App
+                 ( pred,
+                   [
+                     Tterm_helper.t_var arg_prog Location.none;
+                     Tterm_helper.t_var arg_log Location.none;
+                   ] ))
       in
       let lifts = List.filter_map mk_lift in
       let args = lifted_args true spec.sp_args in
       let pre = List.map (fun t -> Pure (map_term !ns true t)) spec.sp_pre in
-      let triple_pre = Star (lifts args @ pre) in
+      let triple_pre = lifts args @ pre in
       let updates = lifted_args false spec.sp_args in
       let rets = lifted_args false spec.sp_ret in
       let post = List.map (fun t -> Pure (map_term !ns false t)) spec.sp_post in
-      let post_cond = Star (lifts (updates @ rets) @ post) in
+      let post_cond = lifts (updates @ rets) @ post in
       let mk_updates = function
         | { arg_log; ro; _ } -> if ro then None else Some arg_log
       in
       let updated_vars = List.filter_map mk_updates (updates @ rets) in
-      let triple_post =
-        if updated_vars = [] then post_cond else Exists (updated_vars, post_cond)
-      in
+      let triple_post = (updated_vars, post_cond) in
       Triple
-        {
-          triple_name = des.vd_name;
-          triple_vars =
-            List.concat_map
-              (function { arg_prog; arg_log; _ } -> [ arg_prog; arg_log ])
-              args;
-          triple_args = cfml_args;
-          triple_rets = List.map (function { arg_prog; _ } -> arg_prog) rets;
-          triple_pre;
-          triple_type = des.vd_type;
-          triple_post;
-        }
+        (inline_def
+           {
+             triple_name = des.vd_name;
+             triple_vars =
+               List.concat_map
+                 (function { arg_prog; arg_log; _ } -> [ arg_prog; arg_log ])
+                 args;
+             triple_args = cfml_args;
+             triple_rets =
+               List.map (function { arg_prog; _ } -> arg_prog) rets;
+             triple_pre;
+             triple_type = des.vd_type;
+             triple_post;
+           })
 
 and type_declaration t =
   let id = t.td_ts.ts_ident in
@@ -144,17 +209,14 @@ let rec signature_item_desc ns = function
   | Sig_val (des, _) -> [ val_description ns des ]
   | Sig_axiom axiom -> [ Axiom axiom ]
   | Sig_function f -> [ Function f ]
-  | Sig_module m ->
-     begin match m.md_type.mt_desc with
-     |Mod_signature s  ->
-       let nm = m.md_name in
-       let defs = List.concat_map (signature_item ns) s in
-       [Module (nm, defs)]
-     |_ -> assert false end
-  | Sig_open _
-    | Sig_use _
-    | Sig_extension _
-    | Sig_attribute _ -> []
+  | Sig_module m -> (
+      match m.md_type.mt_desc with
+      | Mod_signature s ->
+          let nm = m.md_name in
+          let defs = List.concat_map (signature_item ns) s in
+          [ Module (nm, defs) ]
+      | _ -> assert false)
+  | Sig_open _ | Sig_use _ | Sig_extension _ | Sig_attribute _ -> []
   | _ -> assert false
 
 and signature_item ns s =
@@ -174,4 +236,6 @@ let rec convert_ns tns =
 
 let process_sigs file =
   let ns = merge_ns file.Tmodule.fl_export ns_with_primitives in
-  List.concat_map (signature_item (convert_ns ns)) file.Tmodule.fl_sigs
+  List.concat_map
+    (fun s -> signature_item (convert_ns ns) s)
+    file.Tmodule.fl_sigs

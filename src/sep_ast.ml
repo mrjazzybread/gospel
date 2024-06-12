@@ -4,13 +4,11 @@ open Tast
 
 (** Separation Logic terms *)
 type sep_term =
-  | Star of sep_term list (** Separating conjuction *)
   | Pure of term (** Pure term *)
-  | App of Symbols.lsymbol * Symbols.vsymbol list (** Representation predicate application *)
-  | Exists of Symbols.vsymbol list * sep_term (** Existential quantifier *)
+  | App of Symbols.lsymbol * term list (** Representation predicate application *)
   | Top (** T *)
-  | Magic of sep_term * sep_term (** Magic Wand, unused for now *)
-  | RO of sep_term (** Read only permission, unused for now *)
+  (* | Magic of sep_term * sep_term (\** Magic Wand, unused for now *\) *)
+  (* | RO of sep_term (\** Read only permission, unused for now *\) *)
 
 type triple = {
     triple_name : Ident.t;
@@ -21,11 +19,11 @@ type triple = {
     (** Universally quantified variables *)
     triple_rets : Symbols.vsymbol list;
     (** Return values *)
-    triple_pre : sep_term;
+    triple_pre : sep_term list;
     (** Precondition *)
     triple_type : core_type;
     (** Function type *)
-    triple_post : sep_term;
+    triple_post :  Symbols.vsymbol list * sep_term list
     (** Postcondition *)
 }
 (** Top level definitions *)

@@ -14,7 +14,6 @@ let print_term fmt term =
         (Tterm_printer.print_term ~print_type:false)
         fmt l
   | Pure t -> pp fmt "@[[%a]@]" (Tterm_printer.print_term ~print_type:false) t
-  | Top -> pp fmt "True"
 
 let print_app fmt args =
   match args with

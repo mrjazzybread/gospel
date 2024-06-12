@@ -18,6 +18,7 @@ val pop_opt : t -> int option
     consumes q @ t
     produces q @ t
 
+
     ensures match r with
     |None -> old q = empty && q = empty
     |Some r_val -> old q = cons r_val q
@@ -26,7 +27,6 @@ val pop_opt : t -> int option
 val top_opt : t -> int option
 (*@ r = top_opt q
     preserves q @ t
-
     ensures match r with
     |None -> q = empty
     |Some r -> q <> empty && r = hd q

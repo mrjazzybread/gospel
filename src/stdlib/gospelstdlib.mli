@@ -55,7 +55,6 @@
 (*@ function succ (x: integer) : integer *)
 (*@ function pred (x: integer) : integer *)
 
-
 (*@ function (-_) (x: integer) : integer *)
 (*@ function (+) (x y: integer) : integer *)
 (*@ function (-) (x y: integer) : integer *)
@@ -156,7 +155,7 @@ module Sequence : sig
   (** [mem s x] holds iff [x] is in [s]. *)
 
   (*@ function map (f: 'a -> 'b) (s: 'a t) : 'b t *)
-  (*@ axiom map_elems : forall i f s. 
+  (*@ axiom map_elems : forall i f s.
        0 <= i < length s -> (map f s)[i] = f (s[i]) *)
   (** [map f s] is a sequence whose elements are the elements of [s],
       transformed by [f]. *)
@@ -172,7 +171,7 @@ module Sequence : sig
 
   (*@ function set (s: 'a t) (i: integer) (x: 'a): 'a t *)
   (*@ axiom set_elem : forall s i x. 0 <= i < length s -> (set s i x)[i] = x *)
-  (*@ axiom set_elem_other : 
+  (*@ axiom set_elem_other :
     forall s i1 i2 x. i1 <> i2 ->
     0 <= i1 < length s ->
     0 <= i2 < length s ->
@@ -184,7 +183,7 @@ module Sequence : sig
 
   (*@ function rev (s: 'a t) : 'a t *)
   (*@ axiom rev_length : forall s. length s = length (rev s) *)
-  (*@ axiom rev_elems  : forall i s. 0 <= i < length s -> 
+  (*@ axiom rev_elems  : forall i s. 0 <= i < length s ->
        (rev s)[i] = s[length s - 1 - i] *)
 
   (** [rev s] is the sequence containing the same elements as [s], in reverse
@@ -197,10 +196,10 @@ module Sequence : sig
   (** [fold f acc s] is [f (... (f (f acc s[0]) s[1]) ...) s[n-1]], where [n] is
       the length of [s]. *)
   (*@ axiom extensionality : forall s1 s2.
-        length s1 = length s2 -> 
+        length s1 = length s2 ->
         (forall i. 0 <= i < length s1 -> s1[i] = s2[i]) ->
         s1 = s2
-   *)
+  *)
 
   (*@ function of_list (s : 'a list) : 'a sequence *)
   (*@ coercion *)

@@ -104,7 +104,7 @@ module Sequence : sig
   (*@ axiom length_nonneg : forall s. 0 <= length s *)
   (*@ axiom append_length : forall s s'. length (s++s') = length s + length s' *)
 
-  (*@ axiom append_elems_left :  forall s s' i. i <= 0 < length s -> (s ++ s')[i] = s[i] *)
+  (*@ axiom append_elems_left :  forall s s' i. 0 <= i < length s -> (s ++ s')[i] = s[i] *)
   (*@ axiom append_elems_right :
      forall s s' i.
       length s <= i < length s + length s' ->

@@ -108,7 +108,7 @@ module Sequence : sig
   (*@ axiom append_elems_right :
      forall s s' i.
       length s <= i < length s + length s' ->
-      (s ++ s')[i + length s] = s'[i] *)
+      (s ++ s')[i] = s'[i - length s] *)
 
   (*@ axiom subseq : forall s i i1 i2. i1 <= i < i2 -> s[i] = (s[i1 .. i2])[i-i1] *)
   (* axiom subseq_len : TODO *)

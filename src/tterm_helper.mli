@@ -28,8 +28,8 @@ val p_const : Parsetree.constant -> Location.t -> pattern
 val mk_term : term_node -> ty -> Location.t -> term
 val t_var : vsymbol -> Location.t -> term
 val t_const : constant -> ty -> Location.t -> term
-val t_app : lsymbol -> term list -> ty -> Location.t -> term
-val t_field : term -> lsymbol -> ty -> Location.t -> term
+val t_app : string list -> lsymbol -> term list -> ty -> Location.t -> term
+val t_field : term -> string list -> lsymbol -> ty -> Location.t -> term
 val t_if : term -> term -> term -> Location.t -> term
 val t_let : vsymbol -> term -> term -> Location.t -> term
 val t_case : term -> (pattern * term option * term) list -> Location.t -> term

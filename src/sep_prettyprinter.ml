@@ -43,15 +43,17 @@ let print_triple fmt t =
 
 let rec sep_node fmt s =
   match s.d_node with
-  | Type (t, vl) -> pp fmt "@[Type %a %a@]" (list Ttypes.print_tv) vl Ident.pp t
-  | Pred (id, args) ->
-      pp fmt "@[Predicate %a %a@]" Ident.pp id
+  | Type tdef ->
+      pp fmt "@[Type %a %a@]" (list Ttypes.print_tv) tdef.type_args Ident.pp
+        tdef.type_name
+  | Pred pred ->
+      pp fmt "@[Predicate %a %a@]" Ident.pp pred.pred_name
         (fun fmt args -> List.iter (field fmt) args)
-        args
+        pred.pred_args
   | Triple t ->
       pp fmt "@[Triple %a :@\n%a@]" Ident.pp t.triple_name print_triple t
-  | Axiom axiom -> Tast_printer.print_axiom fmt axiom
-  | Function f -> Tast_printer.print_function fmt f
+  | Axiom (_, axiom) -> Tast_printer.print_axiom fmt axiom
+  | Function (_, f) -> Tast_printer.print_function fmt f
   | Module (nm, l) ->
       pp fmt "@[Module %a :@\n%a@]" Ident.pp nm (list sep_node ~sep:newline) l
 

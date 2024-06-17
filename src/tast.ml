@@ -17,9 +17,7 @@ module Ident = Identifier.Ident
 type arg_label = Lnone | Loptional | Lnamed | Lghost | Lunit [@@deriving show]
 
 type lb_arg = {
-  lb_vs : vsymbol;
-      (** the name and OCaml type of the argument. Is None if the arg_type field
-          is Lunit *)
+  lb_vs : vsymbol;  (** the name and OCaml type of the argument. *)
   (* [@printer
      fun fmt x ->
      Option.map show_vsymbol x

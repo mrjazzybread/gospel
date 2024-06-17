@@ -1,9 +1,9 @@
 open Tast
-open Sep_ast
 open Symbols
 open Ttypes
 open Sep_utilis
 open Tterm
+open Sep_ast
 
 type value = {
   s_ty : ty; (* spatial type *)
@@ -24,7 +24,7 @@ end = struct
 
   let check_term v t =
     match t.t_node with
-    | Tapp (f, [ t1; t2 ]) when ls_equal f ps_equ ->
+    | Tapp (_, f, [ t1; t2 ]) when ls_equal f ps_equ ->
         print_endline (Tterm.show_term t1);
         if is_var v t1 then Some t2 else if is_var v t2 then Some t1 else None
     | _ -> None
@@ -82,6 +82,18 @@ let is_pure_type vs =
       match ts.ts_rep with Self -> true | Model (mut, _) -> not mut)
   | _ -> true
 
+let rec get_poly ty =
+  match ty.ty_node with
+  | Tyvar v -> [ v ]
+  | Tyapp (_, l) -> List.concat_map get_poly l
+
+let rm_dup l = List.sort_uniq Ttypes.Tvar.compare l
+let get_poly_list args = List.concat_map (fun t -> get_poly t) args
+let get_vs_poly args = get_poly_list (List.map (fun x -> x.vs_ty) args)
+
+let get_value_poly args =
+  get_poly_list (List.map (fun x -> x.arg_log.vs_ty) args) |> rm_dup
+
 let rec map_term ns is_old t =
   let f t = map_term ns is_old t in
   let map_node =
@@ -92,12 +104,12 @@ let rec map_term ns is_old t =
     | Told t -> (map_term ns true t).t_node
     | Tcase (t, l) ->
         Tcase (f t, List.map (fun (p, c, t) -> (p, Option.map f c, f t)) l)
-    | Tapp (ls, l) -> Tapp (ls, List.map f l)
+    | Tapp (qual, ls, l) -> Tapp (qual, ls, List.map f l)
     | Tif (t1, t2, t3) -> Tif (f t1, f t2, f t3)
     | Tquant (q, l, t) -> Tquant (q, l, f t)
     | Tbinop (b, t1, t2) -> Tbinop (b, f t1, f t2)
     | Tnot t -> Tnot (f t)
-    | Tfield (t, n) -> Tfield (f t, n)
+    | Tfield (t, qual, n) -> Tfield (f t, qual, n)
     | _ -> t.t_node
   in
   { t with t_node = map_node }
@@ -152,6 +164,7 @@ and val_description ns des =
       let updates = lifted_args false spec.sp_args in
       let rets = lifted_args false spec.sp_ret in
       let post = List.map (fun t -> Pure (map_term !ns false t)) spec.sp_post in
+      let triple_poly = get_value_poly (args @ rets) in
       let post_cond = lifts (updates @ rets) @ post in
       let mk_updates = function
         | { arg_log; ro; _ } -> if ro then None else Some arg_log
@@ -170,6 +183,7 @@ and val_description ns des =
              triple_rets =
                List.map (function { arg_prog; _ } -> arg_prog) rets;
              triple_pre;
+             triple_poly;
              triple_type = des.vd_type;
              triple_post;
            })
@@ -201,19 +215,47 @@ and type_declaration t =
   in
   let new_id = ty_ident self_type |> change_id get_rep_pred in
   let ty_var_list = List.map fst t.td_params in
-  if mut then
-    [ Pred (new_id, [ { vs_name = id; vs_ty = ty_loc }; pred_field ]) ]
-  else
-    [
-      Type (id, ty_var_list);
-      Pred (new_id, [ { vs_name = id; vs_ty = self_type }; pred_field ]);
-    ]
+  let arg_ty = if mut then ty_loc else self_type in
+  let ty = { type_name = id; type_args = ty_var_list; type_mut = mut } in
+  let pred =
+    {
+      pred_name = new_id;
+      pred_args = [ { vs_name = id; vs_ty = arg_ty }; pred_field ];
+      pred_poly = ty_var_list;
+    }
+  in
+  [ Type ty; Pred pred ]
+
+let gather_poly t =
+  let rec gather_poly t =
+    let poly = get_poly t.t_ty in
+    poly
+    @
+    match t.t_node with
+    | Tapp (_, _, l) -> List.concat_map gather_poly l
+    | Tif (g, t1, t2) -> gather_poly g @ gather_poly t1 @ gather_poly t2
+    | Tlet (_, t1, t2) -> gather_poly t1 @ gather_poly t2
+    | Tcase (t1, l) ->
+        gather_poly t1 @ List.concat_map (fun (_, _, t) -> gather_poly t) l
+    | Tquant (_, l, t) -> get_vs_poly l @ gather_poly t
+    | Tlambda (_, t) -> gather_poly t
+    | Tbinop (_, t1, t2) -> gather_poly t1 @ gather_poly t2
+    | Tfield (t, _, _) | Tnot t | Told t -> gather_poly t
+    | _ -> []
+  in
+  gather_poly t
 
 let rec signature_item_desc ns = function
   | Sig_type (_, l, _) -> List.concat_map (fun t -> type_declaration t) l
   | Sig_val (des, _) -> [ val_description ns des ]
-  | Sig_axiom axiom -> [ Axiom axiom ]
-  | Sig_function f -> [ Function f ]
+  | Sig_axiom axiom -> [ Axiom (rm_dup (gather_poly axiom.ax_term), axiom) ]
+  | Sig_function f ->
+      let poly =
+        Option.fold f.fun_def ~some:gather_poly ~none:[]
+        @ get_vs_poly f.fun_params
+        @ get_poly f.fun_ls.ls_value
+      in
+      [ Function (rm_dup poly, f) ]
   | Sig_module m -> (
       match m.md_type.mt_desc with
       | Mod_signature s ->

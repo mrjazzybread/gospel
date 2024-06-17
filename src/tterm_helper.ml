@@ -62,9 +62,9 @@ let rec t_free_vars t =
   match t.t_node with
   | Tvar vs -> Svs.singleton vs
   | Tconst _ -> Svs.empty
-  | Tapp (_, tl) ->
+  | Tapp (_, _, tl) ->
       List.fold_left (fun fvs t -> Svs.union (t_free_vars t) fvs) Svs.empty tl
-  | Tfield (t, _) -> t_free_vars t
+  | Tfield (t, _, _) -> t_free_vars t
   | Tif (t1, t2, t3) ->
       Svs.union (t_free_vars t1) (Svs.union (t_free_vars t2) (t_free_vars t3))
   | Tlet (vs, t1, t2) ->
@@ -115,13 +115,13 @@ let mk_term t_node t_ty t_loc = { t_node; t_ty; t_attrs = []; t_loc }
 let t_var vs = mk_term (Tvar vs) vs.vs_ty
 let t_const c ty = mk_term (Tconst c) ty
 
-let t_app ls tl ty loc =
+let t_app qual ls tl ty loc =
   ignore (ls_app_inst ls tl ty : ty Mtv.t);
-  mk_term (Tapp (ls, tl)) ty loc
+  mk_term (Tapp (qual, ls, tl)) ty loc
 
-let t_field t ls ty loc =
+let t_field t qual ls ty loc =
   ignore (ls_app_inst ls [ t ] ty : ty Mtv.t);
-  mk_term (Tfield (t, ls)) ty loc
+  mk_term (Tfield (t, qual, ls)) ty loc
 
 let t_if t1 t2 t3 = mk_term (Tif (t1, t2, t3)) t2.t_ty
 let t_let vs t1 t2 = mk_term (Tlet (vs, t1, t2)) t2.t_ty
@@ -137,9 +137,9 @@ let t_binop b t1 t2 = mk_term (Tbinop (b, t1, t2)) ty_bool
 let t_not t = mk_term (Tnot t) ty_bool
 let t_old t = mk_term (Told t) t.t_ty
 let t_attr_set attr t = { t with t_attrs = attr }
-let t_bool_true = mk_term (Tapp (fs_bool_true, [])) ty_bool
-let t_bool_false = mk_term (Tapp (fs_bool_false, [])) ty_bool
-let t_equ t1 t2 = t_app ps_equ [ t1; t2 ] ty_bool
+let t_bool_true = mk_term (Tapp ([], fs_bool_true, [])) ty_bool
+let t_bool_false = mk_term (Tapp ([], fs_bool_false, [])) ty_bool
+let t_equ t1 t2 = t_app [] ps_equ [ t1; t2 ] ty_bool
 let t_neq t1 t2 loc = t_not (t_equ t1 t2 loc)
 let f_binop op f1 f2 = t_binop op f1 f2
 let f_not f = t_not f

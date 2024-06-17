@@ -112,6 +112,7 @@ module Sequence : sig
 
   (*@ axiom subseq : forall s i i1 i2. i1 <= i < i2 -> s[i] = (s[i1 .. i2])[i-i1] *)
   (* axiom subseq_len : TODO *)
+  (* axiom subseq_left_to_right : TODO *)
 
   (*@ function init (n: integer) (f: integer -> 'a) : 'a t *)
   (*@ axiom init_length : forall n f. n >= 0 -> length (init n f) = n *)
@@ -179,8 +180,6 @@ module Sequence : sig
 
   (** [set s i x] is the sequence [s] where the [i]th element is [x]. *)
 
-  (*@ function of_list (l : 'a list) : 'a t *)
-
   (*@ function rev (s: 'a t) : 'a t *)
   (*@ axiom rev_length : forall s. length s = length (rev s) *)
   (*@ axiom rev_elems  : forall i s. 0 <= i < length s ->
@@ -237,8 +236,8 @@ module Bag : sig
   (** [mem x b] holds iff [b] contains [x] at least once. *)
 
   (*@ function remove (x: 'a) (b: 'a t) : 'a t *)
-  (*@ axiom add_mult_x : forall b x. multiplicity x (remove x b) = multiplicity x b - 1 *)
-  (*@ axiom add_mult_neg_x : forall x y b. x <> y -> multiplicity y (remove x b) = 0 *)
+  (*@ axiom remove_mult_x : forall b x. multiplicity x (remove x b) = multiplicity x b - 1 *)
+  (*@ axiom remove_mult_neg_x : forall x y b. x <> y -> multiplicity y (remove x b) = 0 *)
   (** [remove x b] is [b] where an occurence of [x] was removed. *)
 
   (*@ function union (b b': 'a t) : 'a t *)
@@ -263,7 +262,7 @@ module Bag : sig
       min (multiplicity x b) (multiplicity x b')]. *)
 
   (*@ function diff (b b': 'a t) : 'a t *)
-  (*@ axiom inter_all : forall b b' x.
+  (*@ axiom diff_all : forall b b' x.
         max 0 (multiplicity x b - multiplicity x b') = multiplicity x (diff b b') *)
 
   (** [diff b b'] is a bag [br] where for all element [x],
@@ -304,7 +303,7 @@ module Bag : sig
        forall b1 b2. finite b1 -> finite b2 -> cardinal (union b1 b2) = cardinal b1 + cardinal b2 *)
 
   (*@ axiom card_add :
-      forall x b. finite b -> cardinal (add b x) = cardinal b + 1 *)
+      forall x b. finite b -> cardinal (add x b) = cardinal b + 1 *)
 
   (*@ axiom card_map :
       forall f b. finite b -> cardinal (filter f b) <= cardinal b *)

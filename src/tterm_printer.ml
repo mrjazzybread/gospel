@@ -73,18 +73,19 @@ let rec print_term ?(print_type = true) fmt { t_node; t_ty; t_attrs; _ } =
     | Tconst c -> pp fmt "%a%a" Opprintast.constant c print_ty t_ty
     | Tvar vs ->
         pp fmt "%a" print_vs vs (* assert (vs.vs_ty = t_ty)  TODO remove this *)
-    | Tapp (ls, [ x1; x2 ]) when Identifier.is_infix ls.ls_name.id_str ->
+    | Tapp (_, ls, [ x1; x2 ]) when Identifier.is_infix ls.ls_name.id_str ->
         let op_nm =
           match String.split_on_char ' ' ls.ls_name.id_str with
           | [ x ] | [ _; x ] -> x
           | _ -> assert false
         in
         pp fmt "(%a %s %a)%a" print_term x1 op_nm print_term x2 print_ty t_ty
-    | Tapp (ls, tl) ->
+    | Tapp (_, ls, tl) ->
         pp fmt "(%a %a)%a" Ident.pp_simpl ls.ls_name
           (list ~first:sp ~sep:sp print_term)
           tl print_ty t_ty
-    | Tfield (t, ls) -> pp fmt "(%a).%a" print_term t Ident.pp_simpl ls.ls_name
+    | Tfield (t, _, ls) ->
+        pp fmt "(%a).%a" print_term t Ident.pp_simpl ls.ls_name
     | Tnot t -> pp fmt "not %a" print_term t
     | Tif (t1, t2, t3) ->
         pp fmt "if %a then %a else %a" print_term t1 print_term t2 print_term t3

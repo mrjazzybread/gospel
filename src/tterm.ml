@@ -57,8 +57,8 @@ type term = {
 and term_node =
   | Tvar of vsymbol
   | Tconst of constant [@printer fun fmt _ -> fprintf fmt "<constant>"]
-  | Tapp of lsymbol * term list
-  | Tfield of term * lsymbol
+  | Tapp of string list * lsymbol * term list
+  | Tfield of term * string list * lsymbol
   | Tif of term * term * term
   | Tlet of vsymbol * term * term
   | Tcase of term * (pattern * term option * term) list

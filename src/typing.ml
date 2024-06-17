@@ -261,6 +261,14 @@ let binop = function
   | Uast.Timplies -> Timplies
   | Uast.Tiff -> Tiff
 
+let get_prefix q =
+  let rec drop_last = function
+    | [] -> assert false
+    | [ _ ] -> []
+    | x :: t -> x :: drop_last t
+  in
+  drop_last (string_list_of_qualid q)
+
 let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
   let mk_dterm ~loc dt_node dty =
     { dt_node; dt_dty = Some dty; dt_loc = loc }
@@ -269,7 +277,7 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
     let dt2 = dterm whereami kid crcm ns denv t2 in
     let dty = dty_fresh () in
     unify dt1 (Some (Tapp (ts_arrow, [ dty_of_dterm dt2; dty ])));
-    let dt_app = DTapp (fs_apply, [ dt1; dt2 ]) in
+    let dt_app = DTapp ([], fs_apply, [ dt1; dt2 ]) in
     mk_dterm ~loc:dt2.dt_loc dt_app dty
   in
   (* CHECK location *)
@@ -277,9 +285,9 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
   let mk_app ~loc ls dtl =
     let dtyl, dty = specialize_ls ls in
     let dtl = app_unify_map ~loc ls (dterm_expected crcm) dtl dtyl in
-    mk_dterm ~loc (DTapp (ls, dtl)) dty
+    mk_dterm ~loc (DTapp ([], ls, dtl)) dty
   in
-  let gen_app ~loc ls tl =
+  let gen_app ~loc qual ls tl =
     let nls = List.length ls.ls_args and ntl = List.length tl in
     let args, extra = split_at_i nls tl in
     let dtl = List.map (dterm whereami kid crcm ns denv) args in
@@ -292,13 +300,13 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
           (fun t1 t2 -> Dterm.Tapp (ts_arrow, [ t1; t2 ]))
           dtyl2 dty
       in
-      mk_dterm ~loc (DTapp (ls, dtl)) dty
+      mk_dterm ~loc (DTapp (qual, ls, dtl)) dty
     else
       let dtl = List.map2 (dterm_expected crcm) dtl dtyl in
-      let dt = mk_dterm ~loc (DTapp (ls, dtl)) dty in
+      let dt = mk_dterm ~loc (DTapp (qual, ls, dtl)) dty in
       if extra = [] then dt else map_apply dt extra
   in
-  let gen_app ~loc ls tl =
+  let gen_app ~loc qual ls tl =
     (* gen_app in two layers, to check that constructors are fully
        applied (and with the usual syntax) without enforcing this on
        functions *)
@@ -306,19 +314,19 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
       let n = List.length ls.ls_args in
       match tl with
       | [ { term_desc = Ttuple tl; _ } ] when List.length tl = n ->
-          gen_app ~loc ls tl
+          gen_app ~loc qual ls tl
       | [ { term_desc = Ttuple tl; _ } ] when n > 1 ->
           W.error ~loc (W.Bad_arity (ls.ls_name.id_str, n, List.length tl))
       | _ when List.length tl < n ->
           W.error ~loc (W.Partial_application ls.ls_name.id_str)
       | _ :: _ :: _ when not (is_fs_tuple ls || ls_equal ls fs_list_cons) ->
           W.error ~loc W.Syntax_error
-      | _ -> gen_app ~loc ls tl
-    else gen_app ~loc ls tl
+      | _ -> gen_app ~loc qual ls tl
+    else gen_app ~loc qual ls tl
   in
-  let fun_app ~loc ls tl =
+  let fun_app ~loc qual ls tl =
     if ls.ls_field then W.error ~loc (W.Field_application ls.ls_name.id_str);
-    gen_app ~loc ls tl
+    gen_app qual ~loc ls tl
   in
   let qualid_app q tl =
     match q with
@@ -327,8 +335,8 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
         | Some dty ->
             let dtv = mk_dterm ~loc (DTvar pid) dty in
             map_apply dtv tl
-        | None -> fun_app ~loc (find_q_ls ns q) tl)
-    | _ -> fun_app ~loc (find_q_ls ns q) tl
+        | None -> fun_app ~loc [] (find_q_ls ns q) tl)
+    | _ -> fun_app ~loc (get_prefix q) (find_q_ls ns q) tl
   in
   let rec unfold_app t1 t2 tl =
     match t1.term_desc with
@@ -364,12 +372,12 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
       let ls = find_q_ls ns q in
       if ls.ls_field then
         W.error ~loc (W.Symbol_not_found (string_list_of_qualid q));
-      gen_app ~loc ls []
+      gen_app ~loc (get_prefix q) ls []
   | Uast.Tfield (t, q) ->
       let ls = find_q_fd ns q in
       if not ls.ls_field then
         W.error ~loc (W.Bad_record_field ls.ls_name.id_str);
-      gen_app ~loc ls [ t ]
+      gen_app ~loc (get_prefix q) ls [ t ]
   | Uast.Tidapp (q, tl) -> qualid_app q tl
   | Uast.Tapply (t1, t2) -> unfold_app t1 t2 []
   | Uast.Tnot t ->
@@ -385,8 +393,8 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
       let dt2 = dterm_expected_op crcm dt2 dty in
       let dt3 = dterm_expected_op crcm dt3 dty in
       mk_dterm ~loc (DTif (dt1, dt2, dt3)) (Option.get dt2.dt_dty)
-  | Uast.Ttuple [] -> fun_app ~loc fs_unit []
-  | Uast.Ttuple tl -> fun_app ~loc (fs_tuple (List.length tl)) tl
+  | Uast.Ttuple [] -> fun_app ~loc [] fs_unit []
+  | Uast.Ttuple tl -> fun_app ~loc [] (fs_tuple (List.length tl)) tl
   | Uast.Tlet (pid, t1, t2) ->
       let dt1 = dterm whereami kid crcm ns denv t1 in
       let denv = denv_add_var denv pid.pid_str (dty_of_dterm dt1) in
@@ -408,8 +416,10 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
           app_unify_map ~loc ls (dterm_expected crcm) [ de1; de2 ] dtyl
         in
         if op.pid_str = neq.id_str then
-          mk_dterm ~loc (DTnot (mk_dterm ~loc (DTapp (ls, dtl)) dty)) dty_bool
-        else mk_dterm ~loc (DTapp (ls, dtl)) dty_bool
+          mk_dterm ~loc
+            (DTnot (mk_dterm ~loc (DTapp ([], ls, dtl)) dty))
+            dty_bool
+        else mk_dterm ~loc (DTapp ([], ls, dtl)) dty_bool
       in
       let rec chain _ de1 op1 t23 =
         match t23 with
@@ -529,7 +539,7 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
       let cs, pjl, fll = parse_record ~loc kid ns qtl in
       let get_term pj =
         try dterm whereami kid crcm ns denv (Mls.find pj fll)
-        with Not_found -> fun_app ~loc:t.term_loc pj [ t ]
+        with Not_found -> fun_app ~loc:t.term_loc [] pj [ t ]
       in
       mk_app ~loc:t.term_loc cs (List.map get_term pjl)
 
@@ -922,7 +932,7 @@ let process_val_spec kid crcm ns id args ret vs =
     let rec aux arg t =
       match t.t_node with
       | Tvar v -> v.vs_name.id_str = arg.vs_name.id_str
-      | Tfield (t, _) -> aux arg t
+      | Tfield (t, _, _) -> aux arg t
       | _ -> false
     in
     aux arg t
@@ -966,10 +976,10 @@ let process_val_spec kid crcm ns id args ret vs =
         let ty, s_ty =
           match t.t_node with
           | Tvar _ -> (t.t_ty, s_ty)
-          | Tfield (t, _) ->
+          | Tfield (t, _, _) ->
               let rec get_var = function
                 | Tvar x -> (x.vs_ty, x.vs_ty)
-                | Tfield (t, _) -> get_var t.t_node
+                | Tfield (t, _, _) -> get_var t.t_node
                 | _ -> assert false
               in
               get_var t.t_node
@@ -1369,7 +1379,6 @@ and process_modtype path penv muc umty =
             | None, Some _ -> ()
             | Some ty1, Some ty2 -> ignore (ty_match Mtv.empty ty1 ty2)
             | _ -> assert false);
-
             let muc = muc_replace_ts muc td.td_ts q in
             let muc = muc_subst_ts muc ts td.td_ts in
             (muc, Wty (ts.ts_ident, td) :: cl)

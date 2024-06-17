@@ -1,15 +1,15 @@
 open Ppxlib
-open Tterm
 open Tast
 
 (** Separation Logic terms *)
 type sep_term =
-  | Pure of term  (** Pure term *)
-  | App of Symbols.lsymbol * term list
+  | Pure of Tterm.term  (** Pure term *)
+  | App of Symbols.lsymbol * Tterm.term list
       (** Representation predicate application, *)
 
 type triple = {
   triple_name : Ident.t;  (** function name *)
+  triple_poly : Ttypes.tvsymbol list;  (** polymorphic variable names *)
   triple_args : Symbols.vsymbol option list;
       (** triple_arguments. None when they are unamed (i.e. ()) *)
   triple_vars : Symbols.vsymbol list;  (** Universally quantified variables *)
@@ -22,13 +22,25 @@ type triple = {
           with the separating conjuction *)
 }
 
+type rep_pred = {
+  pred_name : Ident.t;
+  pred_poly : Ttypes.tvsymbol list;
+  pred_args : Symbols.vsymbol list;
+}
+
+type type_def = {
+  type_name : Ident.t;
+  type_args : Ttypes.tvsymbol list;
+  type_mut : bool;
+}
+
 (** Top level definitions *)
 type definition_node =
-  | Pred of Ident.t * Symbols.vsymbol list  (** Representation Predicate *)
-  | Type of Ident.t * Ttypes.tvsymbol list  (** Type definition *)
+  | Pred of rep_pred  (** Representation Predicate *)
+  | Type of type_def  (** Type definition *)
   | Triple of triple  (** Separation Logic Triples *)
-  | Axiom of Tast.axiom  (** Axiom *)
-  | Function of Tast.function_  (** Logical Function *)
+  | Axiom of Ttypes.tvsymbol list * Tast.axiom  (** Axiom *)
+  | Function of Ttypes.tvsymbol list * Tast.function_  (** Logical Function *)
   | Module of Ident.t * definition list
 
 and definition = { d_node : definition_node; d_loc : Location.t }

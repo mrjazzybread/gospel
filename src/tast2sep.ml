@@ -29,19 +29,34 @@ end = struct
         if is_var v t1 then Some t2 else if is_var v t2 then Some t1 else None
     | _ -> None
 
-  let map_sep_terms tbl t =
-    match t with
+  let rec map_tvars changed tbl t =
+    let f = map_tvars changed tbl in
+    let t_node = match t.t_node with
+      |Tvar v when Hashtbl.mem tbl v ->
+        let () = changed:=true in
+        Hashtbl.find tbl v
+      |Tapp(x, y, l) -> Tapp(x, y, List.map f l)
+      |Tif(t1, t2, t3) -> Tif(f t1, f t2, f t3)
+      |Tlet(x, t1, t2) -> Tlet(x, f t1, f t2)
+      |Tcase(t, l) ->
+        Tcase(f t,
+              List.map (fun (x, t1, t2) -> (x, Option.map f t1, f t2)) l )
+      |Tquant(x, y, t) -> Tquant(x, y, f t)
+      |Tlambda(x, t) -> Tlambda(x, f t)
+      |Tbinop(b, t1, t2) -> Tbinop(b, f t1, f t2)
+      |Tnot t -> Tnot (f t)
+      |Told t -> Told (f t)
+      |_ -> t.t_node in {t with t_node}
+  
+  let rec map_sep_terms tbl t =
+    let changed = ref false in
+    let t_map = match t with
     | App (v, l) ->
-        let l =
-          List.map
-            (fun t ->
-              match t.t_node with
-              | Tvar v when Hashtbl.mem tbl v -> Hashtbl.find tbl v
-              | _ -> t)
-            l
-        in
-        App (v, l)
-    | _ -> t
+       let l = List.map (map_tvars changed tbl) l in
+       App (v, l)
+    | Pure t ->
+       Pure (map_tvars changed tbl t) in
+    if !changed then map_sep_terms tbl t_map else t_map
 
   let inline (vl, tl) =
     let tbl = Hashtbl.create 10 in
@@ -62,7 +77,7 @@ end = struct
           let t, tl = inner_loop x tl in
           match t with
           | Some t ->
-              let () = Hashtbl.add tbl x t in
+              let () = Hashtbl.add tbl x t.t_node in
               let xs, tl = loop tl xs in
               (xs, tl)
           | None ->
@@ -71,6 +86,7 @@ end = struct
       | [] -> ([], tl)
     in
     let vl, tl = loop tl vl in
+    let () = Seq.iter (fun (v, _) -> print_endline v.vs_name.id_str) (Hashtbl.to_seq tbl) in 
     (vl, List.map (map_sep_terms tbl) tl)
 
   let inline_def t = { t with triple_post = inline t.triple_post }

@@ -83,10 +83,6 @@
 (** [s ++ s'] is the sequence [s] followed by the sequence [s']. *)
 
 (*@ function ([_]) (s: 'a sequence) (i: integer): 'a *)
-(*@ function length (s: 'a sequence): integer *)
-(*@ function ([_.._]) (s: 'a sequence) (i1: integer) (i2: integer): 'a sequence *)
-(*@ function ([_..]) (s: 'a sequence) (i: integer): 'a sequence = s[i .. length s] *)
-(*@ function ([.._]) (s: 'a sequence) (i: integer): 'a sequence = s[0 .. i] *)
 
 (** [s[i]] is the [i]th element of the sequence [s]. *)
 
@@ -98,9 +94,14 @@ module Sequence : sig
   (*@ type 'a t = 'a sequence *)
   (** An alias for {!sequence} *)
 
+  (*@ function length (s: 'a sequence): integer *)
+  (*@ function ([_.._]) (s: 'a sequence) (i1: integer) (i2: integer): 'a sequence *)
+  (*@ function ([_..]) (s: 'a sequence) (i: integer): 'a sequence = s[i .. length s] *)
+  (*@ function ([.._]) (s: 'a sequence) (i: integer): 'a sequence = s[0 .. i] *)
+
+  
   (*@ predicate in_range (s : 'a t) (i : integer) = 0 <= i < length s *)
 
-  (*@ function length (s : 'a t) : integer = length s *)
   (*@ axiom length_nonneg : forall s. 0 <= length s *)
   (*@ axiom append_length : forall s s'. length (s++s') = length s + length s' *)
 
@@ -222,11 +223,12 @@ module Bag : sig
   (** [empty] is the empty bag. *)
 
   (*@ function init (f : 'a -> integer) : 'a t *)
-  (*@ axiom init_axiom : forall f x. min 0 (f x) = multiplicity x (init f) *)
+  (*@ axiom init_axiom : forall f x. max 0 (f x) = multiplicity x (init f) *)
 
   (*@ function add (x: 'a) (b: 'a t) : 'a t *)
   (*@ axiom add_mult_x : forall b x. multiplicity x (add x b) = 1 + multiplicity x b *)
-  (*@ axiom add_mult_neg_x : forall x y b. x <> y -> multiplicity y (add x b) = 0 *)
+  (*@ axiom add_mult_neg_x : forall x y b. x <> y ->
+    multiplicity y (add x b) = (multiplicity y b) *)
   (** [add x b] is [b] when an occurence of [x] was added. *)
 
   (*@ function singleton (x: 'a) : 'a t = add x empty *)
@@ -236,8 +238,10 @@ module Bag : sig
   (** [mem x b] holds iff [b] contains [x] at least once. *)
 
   (*@ function remove (x: 'a) (b: 'a t) : 'a t *)
-  (*@ axiom remove_mult_x : forall b x. multiplicity x (remove x b) = multiplicity x b - 1 *)
-  (*@ axiom remove_mult_neg_x : forall x y b. x <> y -> multiplicity y (remove x b) = 0 *)
+  (*@ axiom remove_mult_x : forall b x.
+       multiplicity x (remove x b) = max 0 (multiplicity x b - 1) *)
+  (*@ axiom remove_mult_neg_x : forall x y b. x <> y ->
+      multiplicity y (remove x b) = multiplicity y b *)
   (** [remove x b] is [b] where an occurence of [x] was removed. *)
 
   (*@ function union (b b': 'a t) : 'a t *)

@@ -2,6 +2,11 @@
 
 type t
 (*@ mutable model : int Sequence.t *)
+val pop : t -> int
+(*@ r = pop q
+    modifies q
+    ensures q = tl (old q)
+    ensures r = hd q *)
 
 val create : unit -> t
 (*@ q = create ()
@@ -22,7 +27,7 @@ val pop_opt : t -> int option
     ensures match r with
     |None -> old q = empty && q = empty
     |Some r_val -> old q = cons r_val q
-*)
+ *)
 
 val top_opt : t -> int option
 (*@ r = top_opt q

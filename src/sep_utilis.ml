@@ -15,7 +15,7 @@ let empty_ns =
 let ts_prop = mk_ts (Ident.create ~loc:Location.none "Hprop") []
 let ty_prop = ty_app ts_prop []
 let get_rep_pred = String.capitalize_ascii
-let mk_update s = "_" ^ s ^ "'"
+let mk_update s = "_" ^ s ^ "_"
 let mk_prog s = "_prog_" ^ s
 
 let change_id map id =

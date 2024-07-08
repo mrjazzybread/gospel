@@ -1,0 +1,80 @@
+module GospelstdlibSig
+
+  type sequence 'a
+
+  type bag 'a
+
+  type set 'a
+
+  type map 'a 'b (* = 'a -> 'b *)
+
+  type integer (* = int *)
+
+  scope Sequence
+
+    use int.Int
+
+    type t 'a (* = sequence 'a *)
+
+    function (++) (s s': t 'a) : t 'a
+    function ([]) (s: t 'a) (i: int) : 'a
+    function ([..]) (s: t 'a) (i1 i2: int): t 'a
+
+    function length (s: t 'a) : int (* integer *)
+    axiom length_nonneg : forall s: t 'a.
+      0 <= length s
+    axiom append_length : forall s s': t 'a.
+      length (s ++ s') = length s + length s'
+
+    axiom append_elems_left : forall s s': t 'a, i: int.
+      0 <= i < length s -> (s ++ s')[i] = s[i]
+
+    axiom append_elems_right :
+      forall s s': t 'a, i: int.
+        length s <= i < length s + length s' ->
+        (s ++ s')[i] = s'[i - length s]
+
+    axiom subseq : forall s: t 'a, i i1 i2: int.
+      i1 <= i < i2 -> s[i] = (s[i1 .. i2])[i-i1]
+
+  end
+
+end
+
+module GospelstdlibImpl : GospelstdlibSig
+
+  use import seq.Seq as S
+  use import bag.Bag as B
+  use import set.Fset as FS
+
+  type sequence 'a = S.seq 'a
+
+  type bag 'a = B.bag 'a
+
+  type set 'a = FS.fset 'a
+
+  type map 'a 'b = 'a -> 'b
+
+  type integer = int
+
+  scope Sequence
+
+    use int.Int
+
+    type t 'a = sequence 'a
+
+    function (++) (s s': sequence 'a) : sequence 'a =
+      S.(++) s s'
+
+    function ([]) (s: t 'a) (i: integer) : 'a =
+      S.([]) s i
+
+    function ([..]) (s: t 'a) (i1 i2: integer) : t 'a =
+      S.([..]) s i1 i2
+
+    function length (s: t 'a) : integer =
+      S.length s
+
+  end
+
+end

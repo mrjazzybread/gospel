@@ -341,8 +341,8 @@ module Set : sig
   (** [singleton x] is [{x}]. *)
 
   (*@ function remove (x: 'a) (s: 'a t) : 'a t *)
-  (*@ axiom remove_mem : forall s x. not (mem x (add x s)) *)
-  (*@ axiom remove_mem_neq : forall s x y. x <> y -> (mem x s <-> mem x (add y s)) *)
+  (*@ axiom remove_mem : forall s x. not (mem x (remove x s)) *)
+  (*@ axiom remove_mem_neq : forall s x y. x <> y -> (mem x s <-> mem x (remove y s)) *)
   (** [remove x s] is [s ∖ {x}]. *)
 
   (*@ function union (s s': 'a t) : 'a t *)
@@ -353,7 +353,7 @@ module Set : sig
 
   (*@ function inter (s s': 'a t) : 'a t *)
   (*@ axiom inter_mem : forall s s' x. mem x s -> mem x s' -> mem x (inter s s') *)
-  (*@ axiom inter_mem_neq : forall s s' x. not (mem x s || mem x s') -> not mem x (union s s') *)
+  (*@ axiom inter_mem_neq : forall s s' x. not (mem x s || mem x s') -> not mem x (inter s s') *)
 
   (** [inter s s'] is [s ∩ s']. *)
 
@@ -370,7 +370,7 @@ module Set : sig
 
   (*@ function map (f: 'a -> 'b) (s: 'a t) : 'b t *)
   (*@ axiom set_map : forall f s x.
-        mem x (map f s) <-> (exists y. y = f x && mem y s) *)
+        mem x (map f s) <-> (exists y. f y = x && mem y s) *)
   (** [map f s] is a fresh set which elements are [f x1 ... f xN], where
       [x1 ... xN] are the elements of [s]. *)
 
@@ -381,15 +381,15 @@ module Set : sig
         exists seq. forall x. mem x s -> Sequence.mem x seq *)
 
   (*@ axiom cardinal_nonneg : forall s. cardinal s >= 0 *)
-  (*@ axiom cardinal_empty : forall s. finite s -> cardinal empty = 0 *)
+  (*@ axiom cardinal_empty : cardinal empty = 0 *)
   (*@ axiom cardinal_remove : forall s x. finite s ->
        if mem x s
          then cardinal (remove x s) = cardinal s - 1
          else cardinal (remove x s) = cardinal s*)
   (*@ axiom cardinal_add : forall s x. finite s ->
        if mem x s
-          then cardinal (add x s) = cardinal s + 1
-          else cardinal (add x s) = cardinal s*)
+          then cardinal (add x s) = cardinal s
+          else cardinal (add x s) = cardinal s + 1*)
 
   (*@ function of_seq (s: 'a Sequence.t) : 'a t *)
   (*@ axiom of_seq_set : forall x s.

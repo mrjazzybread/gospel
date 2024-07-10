@@ -5,6 +5,9 @@ open Sep_utilis
 open Tterm
 open Sep_ast
 
+type context = { mutable mod_nm : string }
+let context =  { mod_nm = "" }
+
 type value = {
   s_ty : ty; (* spatial type *)
   arg_prog : vsymbol; (* program variable *)
@@ -25,7 +28,6 @@ end = struct
   let check_term v t =
     match t.t_node with
     | Tapp (_, f, [ t1; t2 ]) when ls_equal f ps_equ ->
-        print_endline (Tterm.show_term t1);
         if is_var v t1 then Some t2 else if is_var v t2 then Some t1 else None
     | _ -> None
 
@@ -86,7 +88,6 @@ end = struct
       | [] -> ([], tl)
     in
     let vl, tl = loop tl vl in
-    let () = Seq.iter (fun (v, _) -> print_endline v.vs_name.id_str) (Hashtbl.to_seq tbl) in 
     (vl, List.map (map_sep_terms tbl) tl)
 
   let inline_def t = { t with triple_post = inline t.triple_post }
@@ -165,13 +166,13 @@ and val_description ns des =
       let mk_lift = function
         | { s_ty; arg_prog; arg_log; _ } ->
             let pred = get_pred !ns s_ty in
-            Some
+            Option.map (fun pred -> 
               (App
                  ( pred,
                    [
                      Tterm_helper.t_var arg_prog Location.none;
                      Tterm_helper.t_var arg_log Location.none;
-                   ] ))
+                   ] ))) pred
       in
       let lifts = List.filter_map mk_lift in
       let args = lifted_args true spec.sp_args in
@@ -229,7 +230,12 @@ and type_declaration t =
     | Some s -> model_to_arg s.ty_model
     | None -> ({ vs_name = arg; vs_ty = self_type }, false)
   in
-  let new_id = ty_ident self_type |> change_id get_rep_pred in
+  
+  let new_id =
+    if id.id_str = "t" then
+      Ident.create ~loc:Location.none context.mod_nm
+    else
+      ty_ident self_type |> change_id get_rep_pred in
   let ty_var_list = List.map fst t.td_params in
   let arg_ty = if mut then ty_loc else self_type in
   let ty = { type_name = id; type_args = ty_var_list; type_mut = mut } in
@@ -273,13 +279,16 @@ let rec signature_item_desc ns = function
       in
       [ Function (rm_dup poly, f) ]
   | Sig_module m -> (
+    let () = context.mod_nm <- m.md_name.id_str in
       match m.md_type.mt_desc with
       | Mod_signature s ->
           let nm = m.md_name in
           let defs = List.concat_map (signature_item ns) s in
           [ Module (nm, defs) ]
       | _ -> assert false)
-  | Sig_open _ | Sig_use _ | Sig_extension _ | Sig_attribute _ -> []
+  | Sig_open (op, _) ->
+     [ Import op.opn_id ]
+  | Sig_use _ | Sig_extension _ | Sig_attribute _ -> []
   | _ -> assert false
 
 and signature_item ns s =
@@ -298,6 +307,7 @@ let rec convert_ns tns =
   }
 
 let process_sigs file =
+  let () = context.mod_nm <- file.fl_nm.id_str in
   let ns = merge_ns file.Tmodule.fl_export ns_with_primitives in
   List.concat_map
     (fun s -> signature_item (convert_ns ns) s)

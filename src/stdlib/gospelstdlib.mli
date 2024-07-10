@@ -297,8 +297,7 @@ module Bag : sig
   (*@ axiom card_nonneg :
        forall b. cardinal b >= 0 *)
 
-  (*@ axiom card_empty :
-        forall b. cardinal empty = 0 *)
+  (*@ axiom card_empty : cardinal empty = 0 *)
 
   (*@ axiom card_singleton :
        forall x. cardinal (singleton x) = 1 *)

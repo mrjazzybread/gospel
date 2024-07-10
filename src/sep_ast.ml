@@ -42,5 +42,6 @@ type definition_node =
   | Axiom of Ttypes.tvsymbol list * Tast.axiom  (** Axiom *)
   | Function of Ttypes.tvsymbol list * Tast.function_  (** Logical Function *)
   | Module of Ident.t * definition list
+  | Import of string list
 
 and definition = { d_node : definition_node; d_loc : Location.t }

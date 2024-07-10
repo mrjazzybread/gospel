@@ -55,6 +55,8 @@ let rec sep_node fmt s =
   | Axiom (_, axiom) -> Tast_printer.print_axiom fmt axiom
   | Function (_, f) -> Tast_printer.print_function fmt f
   | Module (nm, l) ->
-      pp fmt "@[Module %a :@\n%a@]" Ident.pp nm (list sep_node ~sep:newline) l
+     pp fmt "@[Module %a :@\n%a@]" Ident.pp nm (list sep_node ~sep:newline) l
+  | Import l ->
+     pp fmt "@[Open %a@]" (list Format.pp_print_string ~sep:full) l
 
 let file fmt l = list ~sep:(newline ++ newline) sep_node fmt l

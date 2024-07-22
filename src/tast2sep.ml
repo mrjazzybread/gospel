@@ -6,13 +6,18 @@ open Tterm
 open Sep_ast
 
 type context = { mutable mod_nm : string }
-let context =  { mod_nm = "" }
+
+let context = { mod_nm = "" }
+
+type spatial_info = {
+  arg_pred : lsymbol; (* spatial type *)
+  arg_prog : vsymbol; (* program variable *)
+  ro : bool; (* Read only flag *)
+}
 
 type value = {
-  s_ty : ty; (* spatial type *)
-  arg_prog : vsymbol; (* program variable *)
   arg_log : vsymbol; (* logical value *)
-  ro : bool; (* Read only flag *)
+  arg_spatial : spatial_info option;
 }
 
 (** Module defining the function that inlines existentially quantified
@@ -33,31 +38,34 @@ end = struct
 
   let rec map_tvars changed tbl t =
     let f = map_tvars changed tbl in
-    let t_node = match t.t_node with
-      |Tvar v when Hashtbl.mem tbl v ->
-        let () = changed:=true in
-        Hashtbl.find tbl v
-      |Tapp(x, y, l) -> Tapp(x, y, List.map f l)
-      |Tif(t1, t2, t3) -> Tif(f t1, f t2, f t3)
-      |Tlet(x, t1, t2) -> Tlet(x, f t1, f t2)
-      |Tcase(t, l) ->
-        Tcase(f t,
-              List.map (fun (x, t1, t2) -> (x, Option.map f t1, f t2)) l )
-      |Tquant(x, y, t) -> Tquant(x, y, f t)
-      |Tlambda(x, t) -> Tlambda(x, f t)
-      |Tbinop(b, t1, t2) -> Tbinop(b, f t1, f t2)
-      |Tnot t -> Tnot (f t)
-      |Told t -> Told (f t)
-      |_ -> t.t_node in {t with t_node}
-  
+    let t_node =
+      match t.t_node with
+      | Tvar v when Hashtbl.mem tbl v ->
+          let () = changed := true in
+          Hashtbl.find tbl v
+      | Tapp (x, y, l) -> Tapp (x, y, List.map f l)
+      | Tif (t1, t2, t3) -> Tif (f t1, f t2, f t3)
+      | Tlet (x, t1, t2) -> Tlet (x, f t1, f t2)
+      | Tcase (t, l) ->
+          Tcase (f t, List.map (fun (x, t1, t2) -> (x, Option.map f t1, f t2)) l)
+      | Tquant (x, y, t) -> Tquant (x, y, f t)
+      | Tlambda (x, t) -> Tlambda (x, f t)
+      | Tbinop (b, t1, t2) -> Tbinop (b, f t1, f t2)
+      | Tnot t -> Tnot (f t)
+      | Told t -> Told (f t)
+      | _ -> t.t_node
+    in
+    { t with t_node }
+
   let rec map_sep_terms tbl t =
     let changed = ref false in
-    let t_map = match t with
-    | App (v, l) ->
-       let l = List.map (map_tvars changed tbl) l in
-       App (v, l)
-    | Pure t ->
-       Pure (map_tvars changed tbl t) in
+    let t_map =
+      match t with
+      | App (v, l) ->
+          let l = List.map (map_tvars changed tbl) l in
+          App (v, l)
+      | Pure t -> Pure (map_tvars changed tbl t)
+    in
     if !changed then map_sep_terms tbl t_map else t_map
 
   let inline (vl, tl) =
@@ -108,6 +116,9 @@ let rm_dup l = List.sort_uniq Ttypes.Tvar.compare l
 let get_poly_list args = List.concat_map (fun t -> get_poly t) args
 let get_vs_poly args = get_poly_list (List.map (fun x -> x.vs_ty) args)
 
+let unit_vs =
+  { vs_name = Ident.create ~loc:Location.none "()"; vs_ty = ty_unit }
+
 let get_value_poly args =
   get_poly_list (List.map (fun x -> x.arg_log.vs_ty) args) |> rm_dup
 
@@ -144,38 +155,45 @@ and val_description ns des =
         in
         { vs_name = arg_id; vs_ty = arg_prog_ty }
       in
-      let cfml_args =
-        List.map
-          (fun x -> if x.lb_label = Lunit then None else Some (to_cfml_arg x))
-          spec.sp_args
-      in
+
       let lifted_args is_old =
         List.filter_map (fun arg ->
             let arg_vs = arg.lb_vs in
-            if arg.lb_label = Lunit then None
+            if arg.lb_label = Lunit then
+              Some { arg_spatial = None; arg_log = unit_vs }
             else
               match if is_old then arg.lb_consumes else arg.lb_produces with
               | None -> None
               | Some (s_ty, l_ty) ->
                   let ro = not arg.lb_modified in
-                  let arg_prog = to_cfml_arg arg in
                   let arg_log, ns' = map_id !ns (is_old || ro) arg_vs l_ty in
                   let () = ns := ns' in
-                  Some { s_ty; arg_prog; ro; arg_log })
+                  let pred = get_pred !ns s_ty in
+                  let arg_prog = to_cfml_arg arg in
+                  let arg_spatial =
+                    Option.map (fun arg_pred -> { arg_pred; arg_prog; ro }) pred
+                  in
+                  Some { arg_spatial; arg_log })
       in
+
       let mk_lift = function
-        | { s_ty; arg_prog; arg_log; _ } ->
-            let pred = get_pred !ns s_ty in
-            Option.map (fun pred -> 
-              (App
-                 ( pred,
-                   [
-                     Tterm_helper.t_var arg_prog Location.none;
-                     Tterm_helper.t_var arg_log Location.none;
-                   ] ))) pred
+        | { arg_spatial; arg_log } ->
+            Option.map
+              (fun spatial ->
+                App
+                  ( spatial.arg_pred,
+                    [
+                      Tterm_helper.t_var spatial.arg_prog Location.none;
+                      Tterm_helper.t_var arg_log Location.none;
+                    ] ))
+              arg_spatial
       in
       let lifts = List.filter_map mk_lift in
       let args = lifted_args true spec.sp_args in
+      let mk_cfml_arg arg =
+        match arg.arg_spatial with Some s -> s.arg_prog | None -> arg.arg_log
+      in
+      let cfml_args = List.map mk_cfml_arg args in
       let pre = List.map (fun t -> Pure (map_term !ns true t)) spec.sp_pre in
       let triple_pre = lifts args @ pre in
       let updates = lifted_args false spec.sp_args in
@@ -184,8 +202,11 @@ and val_description ns des =
       let triple_poly = get_value_poly (args @ rets) in
       let post_cond = lifts (updates @ rets) @ post in
       let mk_updates = function
-        | { arg_log; ro; _ } -> if ro then None else Some arg_log
+        | { arg_log; arg_spatial } ->
+            Option.bind arg_spatial (fun x ->
+                if x.ro then None else Some arg_log)
       in
+
       let updated_vars = List.filter_map mk_updates (updates @ rets) in
       let triple_post = (updated_vars, post_cond) in
       Triple
@@ -194,11 +215,18 @@ and val_description ns des =
              triple_name = des.vd_name;
              triple_vars =
                List.concat_map
-                 (function { arg_prog; arg_log; _ } -> [ arg_prog; arg_log ])
+                 (function
+                   | { arg_spatial; arg_log } -> (
+                       let l =
+                         if arg_log.vs_name.id_str = "()" then []
+                         else [ arg_log ]
+                       in
+                       match arg_spatial with
+                       | Some s -> s.arg_prog :: l
+                       | None -> l))
                  args;
              triple_args = cfml_args;
-             triple_rets =
-               List.map (function { arg_prog; _ } -> arg_prog) rets;
+             triple_rets = List.map mk_cfml_arg rets;
              triple_pre;
              triple_poly;
              triple_type = des.vd_type;
@@ -230,12 +258,11 @@ and type_declaration t =
     | Some s -> model_to_arg s.ty_model
     | None -> ({ vs_name = arg; vs_ty = self_type }, false)
   in
-  
+
   let new_id =
-    if id.id_str = "t" then
-      Ident.create ~loc:Location.none context.mod_nm
-    else
-      ty_ident self_type |> change_id get_rep_pred in
+    if id.id_str = "t" then Ident.create ~loc:Location.none context.mod_nm
+    else ty_ident self_type |> change_id get_rep_pred
+  in
   let ty_var_list = List.map fst t.td_params in
   let arg_ty = if mut then ty_loc else self_type in
   let ty = { type_name = id; type_args = ty_var_list; type_mut = mut } in
@@ -279,15 +306,14 @@ let rec signature_item_desc ns = function
       in
       [ Function (rm_dup poly, f) ]
   | Sig_module m -> (
-    let () = context.mod_nm <- m.md_name.id_str in
+      let () = context.mod_nm <- m.md_name.id_str in
       match m.md_type.mt_desc with
       | Mod_signature s ->
           let nm = m.md_name in
           let defs = List.concat_map (signature_item ns) s in
           [ Module (nm, defs) ]
       | _ -> assert false)
-  | Sig_open (op, _) ->
-     [ Import op.opn_id ]
+  | Sig_open (op, _) -> [ Import op.opn_id ]
   | Sig_use _ | Sig_extension _ | Sig_attribute _ -> []
   | _ -> assert false
 

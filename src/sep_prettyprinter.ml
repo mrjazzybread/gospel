@@ -15,10 +15,7 @@ let print_term fmt term =
         fmt l
   | Pure t -> pp fmt "@[[%a]@]" (Tterm_printer.print_term ~print_type:false) t
 
-let print_app fmt args =
-  match args with
-  | None -> pp fmt "%s" "()"
-  | Some vs -> pp fmt "%s" vs.Symbols.vs_name.id_str
+let print_app fmt vs = pp fmt "%s" vs.Symbols.vs_name.id_str
 
 let print_rets fmt r =
   if r = [] then () else pp fmt "@[λ %a.@]" (list field ~sep:sp) r
@@ -55,8 +52,7 @@ let rec sep_node fmt s =
   | Axiom (_, axiom) -> Tast_printer.print_axiom fmt axiom
   | Function (_, f) -> Tast_printer.print_function fmt f
   | Module (nm, l) ->
-     pp fmt "@[Module %a :@\n%a@]" Ident.pp nm (list sep_node ~sep:newline) l
-  | Import l ->
-     pp fmt "@[Open %a@]" (list Format.pp_print_string ~sep:full) l
+      pp fmt "@[Module %a :@\n%a@]" Ident.pp nm (list sep_node ~sep:newline) l
+  | Import l -> pp fmt "@[Open %a@]" (list Format.pp_print_string ~sep:full) l
 
 let file fmt l = list ~sep:(newline ++ newline) sep_node fmt l

@@ -10,7 +10,7 @@ type sep_term =
 type triple = {
   triple_name : Ident.t;  (** function name *)
   triple_poly : Ttypes.tvsymbol list;  (** polymorphic variable names *)
-  triple_args : Symbols.vsymbol option list;
+  triple_args : Symbols.vsymbol list;
       (** triple_arguments. None when they are unamed (i.e. ()) *)
   triple_vars : Symbols.vsymbol list;  (** Universally quantified variables *)
   triple_rets : Symbols.vsymbol list;  (** Return values *)

@@ -99,7 +99,6 @@ module Sequence : sig
   (*@ function ([_..]) (s: 'a sequence) (i: integer): 'a sequence = s[i .. length s] *)
   (*@ function ([.._]) (s: 'a sequence) (i: integer): 'a sequence = s[0 .. i] *)
 
-  
   (*@ predicate in_range (s : 'a t) (i : integer) = 0 <= i < length s *)
 
   (*@ axiom length_nonneg : forall s. 0 <= length s *)

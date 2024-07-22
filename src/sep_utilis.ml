@@ -53,8 +53,8 @@ let create_rep_pred sym =
   let new_id =
     if id.id_str = "t" then
       change_id (fun _ -> List.nth id.id_path (List.length id.id_path - 1)) id
-    else
-      change_id get_rep_pred id in
+    else change_id get_rep_pred id
+  in
   {
     ls_name = new_id;
     ls_args = [ self_type; model_type ];
@@ -68,9 +68,9 @@ let ty_ident ty =
 
 let get_pred ns ty =
   match ty.ty_node with
-  | Tyapp (ts, _) -> Some (
-      try Mstr.find ts.ts_ident.id_str ns.sns_pred
-    with Not_found -> create_rep_pred ts)
+  | Tyapp (ts, _) -> (
+      try Some (Mstr.find ts.ts_ident.id_str ns.sns_pred)
+      with Not_found -> None)
   | _ -> None
 
 let id_of_term t =

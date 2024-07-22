@@ -6,4 +6,4 @@ type t
 val pop : t -> int
 (*@ r = pop q
     modifies q
-    ensures q = tl (old q)  *)
+    ensures q = tl (old q) *)

@@ -897,7 +897,6 @@ let process_val_spec kid crcm ns id args ret vs =
   let args, arg_env = process_args `Parameter header.sp_hd_args args in
   let env = { env = arg_env; old_env = Mstr.empty } in
 
-  let checks = List.map (fmla Checks kid crcm ns env) vs.sp_checks in
   let type_spatial whereami env t =
     let d_typed = dterm whereami kid crcm ns env t.Uast.s_term in
     let typed = term env d_typed in
@@ -1015,9 +1014,9 @@ let process_val_spec kid crcm ns id args ret vs =
   let old_env, env =
     List.fold_left add_env (Mstr.empty, Mstr.empty) (spec_args @ spec_ret)
   in
-  let pre =
-    List.map (fmla Requires kid crcm ns { env = old_env; old_env }) vs.sp_pre
-  in
+  let pre_env = { env = old_env; old_env } in
+  let pre = List.map (fmla Requires kid crcm ns pre_env) vs.sp_pre in
+  let checks = List.map (fmla Checks kid crcm ns pre_env) vs.sp_checks in
   let post = List.map (fmla Ensures kid crcm ns { env; old_env }) vs.sp_post in
 
   let process_xpost (loc, exn) =

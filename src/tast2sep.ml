@@ -10,14 +10,16 @@ type context = { mutable mod_nm : string }
 let context = { mod_nm = "" }
 
 type spatial_info = {
-  arg_pred : lsymbol; (* spatial type *)
-  arg_prog : vsymbol; (* program variable *)
+  arg_pred : lsymbol; (* Representation Predicate *)
+  arg_prog : vsymbol; (* Program variable *)
   ro : bool; (* Read only flag *)
 }
 
 type value = {
-  arg_log : vsymbol; (* logical value *)
+  arg_log : vsymbol;
+  (* Logical value *)
   arg_spatial : spatial_info option;
+      (* Info on ownership. None if the value is duplicable *)
 }
 
 (** Module defining the function that inlines existentially quantified
@@ -33,6 +35,8 @@ end = struct
   let check_term v t =
     match t.t_node with
     | Tapp (_, f, [ t1; t2 ]) when ls_equal f ps_equ ->
+        if is_var v t1 then Some t2 else if is_var v t2 then Some t1 else None
+    | Tbinop (Tiff, t1, t2) ->
         if is_var v t1 then Some t2 else if is_var v t2 then Some t1 else None
     | _ -> None
 
@@ -227,6 +231,7 @@ and val_description ns des =
                  args;
              triple_args = cfml_args;
              triple_rets = List.map mk_cfml_arg rets;
+             triple_checks = spec.sp_checks;
              triple_pre;
              triple_poly;
              triple_type = des.vd_type;

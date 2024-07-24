@@ -14,6 +14,7 @@ type triple = {
       (** triple_arguments. None when they are unamed (i.e. ()) *)
   triple_vars : Symbols.vsymbol list;  (** Universally quantified variables *)
   triple_rets : Symbols.vsymbol list;  (** Return values *)
+  triple_checks : Tterm.term list;
   triple_pre : sep_term list;
       (** Precondition terms connected with the separating conjuction*)
   triple_type : core_type;  (** Function type *)

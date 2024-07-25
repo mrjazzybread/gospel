@@ -141,6 +141,7 @@ module Sequence : sig
   (** When [s] contains one or more elements, [tl s] is the sequence of the
       elements of [s], starting at position 2. *)
 
+
   (*@ function append (s1 : 'a t) (s2 : 'a t) : 'a t = s1 ++ s2 *)
   (** [append s s'] is [s ++ s']. *)
 

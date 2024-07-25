@@ -11,4 +11,4 @@ val ph_eq : t -> t -> bool
 (*@ b = ph_eq x y
     preserves x @ loc
     preserves y @ loc
-    returns b <-> x = y *)
+    ensures b <-> x = y *)

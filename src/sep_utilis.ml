@@ -48,7 +48,7 @@ let create_rep_pred sym =
     }
   in
   let model_type =
-    match sym.ts_rep with Self -> self_type | Model (_, m) -> m
+    match sym.ts_rep with Self  -> self_type | Model (_, m) -> m
   in
   let new_id =
     if id.id_str = "t" then
@@ -68,7 +68,8 @@ let ty_ident ty =
 
 let get_pred ns ty =
   match ty.ty_node with
-  | Tyapp (ts, _) -> (
+  | Tyapp (ts, _) ->
+     (
       try Some (Mstr.find ts.ts_ident.id_str ns.sns_pred)
       with Not_found -> None)
   | _ -> None

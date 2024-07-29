@@ -1,7 +1,7 @@
 (*@ open Sequence *)
 
 type t
-(*@ model : int sequence *)
+(*@ mutable model : int sequence *)
 
 val create : unit -> t
 (*@ a = create ()
@@ -57,19 +57,19 @@ val pop_last_opt : t -> int option
     |Some r -> a ++ singleton r = old a *)
 
 val remove_last : t -> unit
-(*@ r = remove_last a
+(*@ remove_last a
     modifies a
     ensures old a = empty -> a = empty
     ensures a <> empty -> a = old (a[.. length a - 1]) *)
 
 val truncate : t -> int -> unit
-
-(*@ r = truncate a n
+(*@ truncate a n
     modifies a
     requires n >= 0
     ensures n >= length a -> a = old a
     ensures n < length a -> a = old (a[.. n]) *)
+
 val clear : t -> unit
-(*@ r = clear a
+(*@ clear a
     modifies a
     ensures a = empty *)

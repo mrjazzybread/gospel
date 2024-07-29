@@ -1,5 +1,5 @@
 type t
-(*@ mutable model : int *)
+(*@ ephemeral *)
 
 val st_eq : t -> t -> bool
 (*@ b = st_eq x y

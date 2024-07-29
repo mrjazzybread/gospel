@@ -62,7 +62,10 @@ type val_description = {
 }
 [@@deriving show]
 
-type model = Self | Default of bool * ty | Fields of (bool * lsymbol) list
+type model =
+  Self
+  | Default of bool * ty
+  | Fields of (bool * lsymbol) list
 [@@deriving show]
 
 type type_spec = {

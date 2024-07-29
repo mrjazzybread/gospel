@@ -37,7 +37,7 @@ end = struct
     | Tapp (_, f, [ t1; t2 ]) when ls_equal f ps_equ ->
         if is_var v t1 then Some t2 else if is_var v t2 then Some t1 else None
     | Tbinop (Tiff, t1, t2) ->
-        if is_var v t1 then Some t2 else if is_var v t2 then Some t1 else None
+       if is_var v t1 then Some t2 else if is_var v t2 then Some t1 else None
     | _ -> None
 
   let rec map_tvars changed tbl t =
@@ -108,7 +108,7 @@ end
 let is_pure_type vs =
   match vs.vs_ty.ty_node with
   | Tyapp (ts, _) -> (
-      match ts.ts_rep with Self -> true | Model (mut, _) -> not mut)
+      match ts.ts_rep with Self -> true | Model (mut, _) -> Printf.printf "%b\n" mut;  not mut)
   | _ -> true
 
 let rec get_poly ty =

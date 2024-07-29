@@ -570,19 +570,23 @@ let mutable_flag = function
   | Asttypes.Mutable -> Mutable
   | Asttypes.Immutable -> Immutable
 
-let process_type_spec kid crcm ns ty spec =
+let process_type_spec kid crcm ns self_ty spec =
   let model = spec.Uast.ty_model in
 
   let field (ns, fields) f =
     let f_ty = ty_of_pty ns f.f_pty in
-    let ls = fsymbol ~field:true (Ident.of_preid f.f_pid) [ ty ] f_ty in
+    let ls = fsymbol ~field:true (Ident.of_preid f.f_pid) [ self_ty ] f_ty in
     ( ns_add_fd ~allow_duplicate:true ns f.f_pid.pid_str ls,
       (f.f_mutable, ls) :: fields )
   in
 
   let ns, model =
     match model with
-    | Uast.Self -> (ns, Self)
+    | Uast.Self ->
+       if spec.Uast.ty_ephemeral then
+         ns, (Default (true, Ttypes.ty_loc_sp))
+       else
+         ns, Self
     | Uast.Default (mut, pty) -> (ns, Default (mut, ty_of_pty ns pty))
     | Uast.Fields l ->
         let ns, l = List.fold_left field (ns, []) l in
@@ -591,10 +595,11 @@ let process_type_spec kid crcm ns ty spec =
 
   let aux = function
     | vs, xs ->
-        let self_vs = create_vsymbol vs ty in
-        let env = Mstr.singleton self_vs.vs_name.id_str self_vs in
-        let env = { env; old_env = Mstr.empty } in
-        (self_vs, List.map (fmla Invariant kid crcm ns env) xs)
+       let ty = match model with |Default (_, ty) -> ty |_ -> self_ty in 
+       let self_vs = create_vsymbol vs ty in
+       let env = Mstr.singleton self_vs.vs_name.id_str self_vs in
+       let env = { env; old_env = Mstr.empty } in
+       (self_vs, List.map (fmla Invariant kid crcm ns env) xs)
   in
   let invariants = Option.map aux spec.ty_invariant in
   type_spec spec.ty_ephemeral model invariants spec.ty_text spec.ty_loc

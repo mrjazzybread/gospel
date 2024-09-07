@@ -671,21 +671,17 @@ let type_type_declaration path kid crcm ns r tdl =
     in
 
     let td_model =
-      Option.bind td.tspec (fun spec ->
-          match spec.ty_model with
-          | Default (m, pty) -> Some (m, ty_of_pty ns pty)
-          | _ -> None)
+      Option.fold ~none:Ttypes.Self ~some:(fun spec ->
+          match spec.Uast.ty_model with
+          | Self -> Ttypes.Self
+          | Default (m, pty) -> Ttypes.Model (m, ty_of_pty ns pty)
+          | Fields l -> Ttypes.Fields (List.exists (fun x -> x.f_mutable) l)) td.tspec
     in
 
-    let spatial =
-      Option.fold
-        ~some:(fun (mut, ty) -> Ttypes.Model (mut, ty))
-        ~none:Ttypes.Self td_model
-    in
     let td_ts =
       mk_ts
         (Ident.create ~loc:td.tname.loc ~path s)
-        params ~alias:manifest ~spatial
+        params ~alias:manifest ~spatial:td_model
     in
     Hashtbl.add hts s td_ts;
 
@@ -777,7 +773,7 @@ let type_type_declaration path kid crcm ns r tdl =
     in
     Hts.add type_declarations td_ts inv_td;
 
-    let model_ty = match td_model with Some (_, ty) -> ty | None -> ty in
+    let model_ty = match td_model with | Model (_, ty) -> ty | _ -> ty in
     let spec = Option.map (process_type_spec kid crcm ns model_ty) td.tspec in
 
     if td.tcstrs != [] then

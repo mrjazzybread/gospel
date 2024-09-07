@@ -24,7 +24,6 @@ val pop_opt : t -> int option
     consumes q @ t
     produces q @ t
 
-
     ensures match r with
     |None -> old q = empty && q = empty
     |Some r_val -> old q = cons r_val q

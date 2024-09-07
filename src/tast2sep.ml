@@ -37,7 +37,7 @@ end = struct
     | Tapp (_, f, [ t1; t2 ]) when ls_equal f ps_equ ->
         if is_var v t1 then Some t2 else if is_var v t2 then Some t1 else None
     | Tbinop (Tiff, t1, t2) ->
-       if is_var v t1 then Some t2 else if is_var v t2 then Some t1 else None
+        if is_var v t1 then Some t2 else if is_var v t2 then Some t1 else None
     | _ -> None
 
   let rec map_tvars changed tbl t =
@@ -108,7 +108,9 @@ end
 let is_pure_type vs =
   match vs.vs_ty.ty_node with
   | Tyapp (ts, _) -> (
-      match ts.ts_rep with Self -> true | Model (mut, _) -> Printf.printf "%b\n" mut;  not mut)
+      match ts.ts_rep with
+      | Self -> true
+      | Model (mut, _) | Fields mut -> not mut)
   | _ -> true
 
 let rec get_poly ty =
@@ -239,46 +241,93 @@ and val_description ns des =
            })
 
 and type_declaration t =
-  let id = t.td_ts.ts_ident in
-  let self_type =
-    {
-      ty_node =
-        Tyapp
-          (t.td_ts, List.map (fun (x, _) -> { ty_node = Tyvar x }) t.td_params);
-    }
+  let ts = t.td_ts in
+  let spec = t.td_spec in
+  let tvar_list = List.map (fun (x, _) -> { ty_node = Tyvar x }) t.td_params in
+  let model_type =
+    match spec with
+    | None -> Tast.Self
+    | Some s -> s.ty_model in
+  let is_record =
+    match model_type with
+    | Tast.Fields _ -> true
+    |_ -> false in
+  let is_mutable =
+    match model_type with
+    | Self -> true
+    | Default (mut, _)  -> mut
+    | Fields l -> List.exists (fun (x, _) ->  x) l in
+  (* If the type has multiple model fields, this is a singleton list
+     with a type with all of the appropriate model fields. Otherwise, it
+     is empty. *)
+  let model_decl = 
+    match model_type with
+    |Tast.Fields l ->
+      let fields = List.map
+        (fun (_, ls) ->
+          let id = ls.ls_name in
+          let ty = ls.ls_value in
+          id, ty
+        ) l in
+      let def = Record fields in
+      Some (Type { type_name = ts.ts_ident;
+        type_args = ts.ts_args;
+        type_mut = false;
+        type_def = def })
+    |_ -> None in
+
+  (* Type declaration *)
+  let type_name =
+    if is_record then
+      change_id ((^) "_") ts.ts_ident
+    else
+      ts.ts_ident in
+
+  let type_decl =
+    Type { type_name = type_name;
+      type_args = ts.ts_args;
+      type_mut = is_mutable;
+      type_def = Abstract
+    } in
+  let prog_ts = {ts with ts_ident = type_name} in
+  let pred_prog_ty =
+    if is_mutable then
+      ty_loc
+    else
+      { ty_node = Tyapp (prog_ts, tvar_list) }
   in
-  let pred_field, mut =
-    let arg = Ident.create ~loc:Location.none "model" in
-    let model_to_arg model =
-      let ty, mut =
-        match model with
-        | Tast.Self -> (self_type, false)
-        | Default (mut, ty) -> (ty, mut)
-        | _ -> assert false
-      in
-      let field = { vs_name = arg; vs_ty = ty } in
-      (field, mut)
-    in
-    match t.td_spec with
-    | Some s -> model_to_arg s.ty_model
-    | None -> ({ vs_name = arg; vs_ty = self_type }, false)
+  
+  let prog_vs =
+    { vs_name = Ident.create "target" ~loc:Location.none;
+      vs_ty   = pred_prog_ty
+    } in
+
+  (* Predicate definition *)
+  let pred_model_ty =
+    match model_type with
+    |Self | Fields _ ->  pred_prog_ty
+    |Default (_, t) -> t in
+  let model_vs =
+    {
+      vs_name = Ident.create "model" ~loc:Location.none;
+      vs_ty = pred_model_ty
+    } in
+  let new_id =
+    if ts.ts_ident.id_str = "t" then Ident.create ~loc:Location.none context.mod_nm
+    else ts.ts_ident |> change_id get_rep_pred
   in
 
-  let new_id =
-    if id.id_str = "t" then Ident.create ~loc:Location.none context.mod_nm
-    else ty_ident self_type |> change_id get_rep_pred
-  in
-  let ty_var_list = List.map fst t.td_params in
-  let arg_ty = if mut then ty_loc else self_type in
-  let ty = { type_name = id; type_args = ty_var_list; type_mut = mut } in
-  let pred =
-    {
-      pred_name = new_id;
-      pred_args = [ { vs_name = id; vs_ty = arg_ty }; pred_field ];
-      pred_poly = ty_var_list;
-    }
-  in
-  [ Type ty; Pred pred ]
+  let pred_def =
+    Pred {
+        pred_name = new_id;
+        pred_args = [prog_vs ;model_vs];
+        pred_poly = ts.ts_args;
+      } in
+  
+  let defs = [type_decl; pred_def] in
+  match model_decl with
+  |None -> defs
+  |Some x -> x :: defs
 
 let gather_poly t =
   let rec gather_poly t =

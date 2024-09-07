@@ -251,6 +251,7 @@ let rec dpattern kid ns { pat_desc; pat_loc = loc } =
         | Pconst_string _ -> dty_string
         | Pconst_float _ -> dty_float
       in
+      
       mk_dpattern ~loc (DPconst c) dty Mstr.empty
 
 let binop = function

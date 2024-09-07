@@ -60,9 +60,11 @@ and tysymbol = {
 
 and spatial =
   | Self
-    (* to be used when the OCaml type is a reflection of the logical type *)
+  (** The OCaml type is a reflection of the logical type *)
+  | Fields of bool
+  (** This type has multiple model fields. The flag indicates if it is mutable *)
   | Model of bool * ty
-    (* the logical model of the type. Can be instantiated with a spatial type *)
+  (** The logical model of the type. Can be instantiated with a spatial type *)
 [@@deriving show]
 
 let ts_equal x y = Ident.equal x.ts_ident y.ts_ident
@@ -119,8 +121,9 @@ let rec ty_apply_spatial ty spatial =
   | Tyvar v1, Tyvar v2 when tv_equal v1 v2 -> ty
   | Tyapp (ts1, l1), Tyapp (ts2, l2) when ts_equal ts1 ts2 -> (
       match ts1.ts_rep with
-      | Self -> { ty_node = Tyapp (ts1, List.map2 ty_apply_spatial l1 l2) }
-      | Model (_, model) -> model)
+      | Self | Fields _ -> { ty_node = Tyapp (ts1, List.map2 ty_apply_spatial l1 l2) }
+      | Model (_, model) -> model
+  )
   | _, Tyapp (t, _) when ts_equal t ts_loc_sp -> ty_loc
   | _ -> assert false (*TODO: replace with W.error *)
 

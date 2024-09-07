@@ -48,7 +48,9 @@ let create_rep_pred sym =
     }
   in
   let model_type =
-    match sym.ts_rep with Self  -> self_type | Model (_, m) -> m
+    match sym.ts_rep with
+    | Self | Fields _  -> self_type
+    | Model (_, m) -> m
   in
   let new_id =
     if id.id_str = "t" then

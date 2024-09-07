@@ -29,16 +29,19 @@ type rep_pred = {
   pred_args : Symbols.vsymbol list;
 }
 
-type type_def = {
+type tdef = Abstract | Record of (Ident.t * Ttypes.ty) list
+
+type type_decl = {
   type_name : Ident.t;
   type_args : Ttypes.tvsymbol list;
   type_mut : bool;
+  type_def : tdef;
 }
 
 (** Top level definitions *)
 type definition_node =
   | Pred of rep_pred  (** Representation Predicate *)
-  | Type of type_def  (** Type definition *)
+  | Type of type_decl  (** Type definition *)
   | Triple of triple  (** Separation Logic Triples *)
   | Axiom of Ttypes.tvsymbol list * Tast.axiom  (** Axiom *)
   | Function of Ttypes.tvsymbol list * Tast.function_  (** Logical Function *)

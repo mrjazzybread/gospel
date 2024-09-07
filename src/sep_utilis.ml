@@ -35,6 +35,18 @@ let map_id ns is_old vs ty =
   let new_map = Mstr.add id.id_str val_vs ns.sns_id in
   (val_vs, { ns with sns_id = new_map })
 
+let to_prog_type ty =
+  match ty.ty_node with
+  |Tyapp(ts, l) ->
+    begin match ts.ts_rep with
+    |Fields _ -> 
+      {ty_node = Tyapp({ts with
+        ts_ident = change_id ((^) "_") ts.ts_ident
+      }, l)}
+    |_ -> ty
+    end
+  |_ -> ty
+
 let get_id ns is_old id =
   let name = if is_old then id else mk_update id in
   try Mstr.find name ns.sns_id with Not_found -> Mstr.find id ns.sns_id

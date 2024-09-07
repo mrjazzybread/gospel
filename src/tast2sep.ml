@@ -153,15 +153,18 @@ and val_description ns des =
   | None -> assert false (* TODO *)
   | Some spec ->
       let ns = ref ns in
+
       let to_cfml_arg lb =
         let arg_vs = lb.lb_vs in
         let arg_id = change_id mk_prog arg_vs.vs_name in
         let arg_prog_ty =
-          if is_pure_type arg_vs then arg_vs.vs_ty else ty_loc
+          if is_pure_type arg_vs then
+            to_prog_type arg_vs.vs_ty
+          else ty_loc
         in
         { vs_name = arg_id; vs_ty = arg_prog_ty }
       in
-
+      
       let lifted_args is_old =
         List.filter_map (fun arg ->
             let arg_vs = arg.lb_vs in
@@ -194,6 +197,7 @@ and val_description ns des =
                     ] ))
               arg_spatial
       in
+      
       let lifts = List.filter_map mk_lift in
       let args = lifted_args true spec.sp_args in
       let mk_cfml_arg arg =
@@ -288,7 +292,9 @@ and type_declaration t =
       type_args = ts.ts_args;
       type_mut = is_mutable;
       type_def = Abstract
-    } in
+      } in
+
+  (* Predicate definition *)
   let prog_ts = {ts with ts_ident = type_name} in
   let pred_prog_ty =
     if is_mutable then
@@ -302,10 +308,10 @@ and type_declaration t =
       vs_ty   = pred_prog_ty
     } in
 
-  (* Predicate definition *)
   let pred_model_ty =
     match model_type with
-    |Self | Fields _ ->  pred_prog_ty
+    |Self ->  pred_prog_ty
+    |Fields _ -> {ty_node = Tyapp (ts, tvar_list)}
     |Default (_, t) -> t in
   let model_vs =
     {

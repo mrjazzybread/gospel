@@ -150,10 +150,8 @@ let rec map_term ns is_old t =
 
 and val_description ns des =
   match des.vd_spec with
-  | None -> assert false (* TODO *)
-  | Some spec ->
+   | spec ->
       let ns = ref ns in
-
       let to_cfml_arg lb =
         let arg_vs = lb.lb_vs in
         let arg_id = change_id mk_prog arg_vs.vs_name in
@@ -245,6 +243,7 @@ and val_description ns des =
            })
 
 and type_declaration t =
+
   let ts = t.td_ts in
   let spec = t.td_spec in
   let tvar_list = List.map (fun (x, _) -> { ty_node = Tyvar x }) t.td_params in
@@ -276,7 +275,6 @@ and type_declaration t =
       let def = Record fields in
       Some (Type { type_name = ts.ts_ident;
         type_args = ts.ts_args;
-        type_mut = false;
         type_def = def })
     |_ -> None in
 
@@ -288,12 +286,11 @@ and type_declaration t =
       ts.ts_ident in
 
   let type_decl =
-    Type { type_name = type_name;
+    if is_mutable then 
+    Some (Type { type_name = type_name;
       type_args = ts.ts_args;
-      type_mut = is_mutable;
       type_def = Abstract
-      } in
-
+      }) else None in
   (* Predicate definition *)
   let prog_ts = {ts with ts_ident = type_name} in
   let pred_prog_ty =
@@ -329,12 +326,9 @@ and type_declaration t =
         pred_args = [prog_vs ;model_vs];
         pred_poly = ts.ts_args;
       } in
+  let cons x l = match x with |None -> l | Some x -> x :: l in
+  cons type_decl (cons model_decl [pred_def])
   
-  let defs = [type_decl; pred_def] in
-  match model_decl with
-  |None -> defs
-  |Some x -> x :: defs
-
 let gather_poly t =
   let rec gather_poly t =
     let poly = get_poly t.t_ty in

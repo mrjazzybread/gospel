@@ -65,3 +65,6 @@ val estack_to_pstack : 'a estack -> 'a pstack
       consumes es
       ensures  rp.pview m' = es.eview m
       ensures  extend m m' *)
+
+
+(* Try to erase memory *)

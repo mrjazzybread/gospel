@@ -152,8 +152,7 @@ let print_vd_spec val_id fmt spec =
   let print_term f t = pp f "@[%a@]" print_term t in
   let print_diverges f d = if not d then () else pp f "@\n@[diverges@]" in
   match spec with
-  | None -> ()
-  | Some vs ->
+  | vs ->
       pp fmt "(*@@ @[%a%s@ %a@ %a@]%a%a%a%a%a%a%a*)"
         (list ~sep:comma print_lb_arg)
         vs.sp_ret

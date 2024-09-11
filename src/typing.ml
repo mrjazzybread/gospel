@@ -47,7 +47,6 @@ let string_list_of_qualid q =
 
 exception Ns_not_found of location * string
 
-let im_in = ref false
 let rec q_loc = function Qpreid pid -> pid.pid_loc | Qdot (q, _) -> q_loc q
 
 let ns_find ~loc f ns sl =
@@ -573,7 +572,6 @@ let mutable_flag = function
 
 let process_type_spec kid crcm ns self_ty spec =
   let model = spec.Uast.ty_model in
-
   let field (ns, fields) f =
     let f_ty = ty_of_pty ns f.f_pty in
     let ls = fsymbol ~field:true (Ident.of_preid f.f_pid) [ self_ty ] f_ty in
@@ -1153,16 +1151,14 @@ let process_val path ~loc ?(ghost = Nonghost) kid crcm ns vd =
     | Some s -> s
   in
   let tspec = process_val_spec kid crcm ns id args ret spec in
-  let so = Option.map (fun _ -> tspec) vd.vspec in
+  (* let so = Option.map (fun _ -> tspec) vd.vspec in *)
+  let so = tspec in
   let () =
     (* check there is a modifies clause if the return type is unit, throw a warning if not *)
     if Ttypes.(ty_equal ret ty_unit) && args <> [] then
-      match so with
-      | None -> ()
-      | Some s ->
           if
-            List.for_all (fun x -> not x.lb_modified) s.sp_args
-            && (Option.get vd.vspec).sp_writes = []
+            List.for_all (fun x -> not x.lb_modified) so.sp_args
+            && Option.fold ~none:false ~some:(fun s -> s.sp_writes = []) vd.vspec
           then W.error ~loc (W.Return_unit_without_modifies id.id_str)
   in
   let vd =
@@ -1520,10 +1516,10 @@ and process_sig_item path penv muc { sdesc; sloc } =
       let muc = add_sig_contents muc sig_ in
       process_and_import si muc
   in
-  im_in := path = [ "Test" ];
 
   let muc, signature = process_and_import sdesc muc in
   let muc = add_sig_contents muc signature in
+  
   (muc, signature)
 
 and type_sig_item path penv muc sig_item =

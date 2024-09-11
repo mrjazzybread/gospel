@@ -34,7 +34,6 @@ type tdef = Abstract | Record of (Ident.t * Ttypes.ty) list
 type type_decl = {
   type_name : Ident.t;
   type_args : Ttypes.tvsymbol list;
-  type_mut : bool;
   type_def : tdef;
 }
 

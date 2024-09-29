@@ -317,6 +317,9 @@ cast:
 | COLON ty_arg  { $2 }
 ;
 
+spatial_cast:
+| ty=cast { Spatial(ty, ty) }
+
 term: t = mk_term(term_) { t }
 ;
 
@@ -394,7 +397,8 @@ guarded_pattern:
 ;
 
 quant_vars:
-| binder_var+ cast? { List.map (fun id -> id, $2) $1 }
+| binder_var+ ty=spatial_cast?
+    { List.map (fun id -> id, match ty with |None -> Infer |Some binder -> binder) $1 }
 ;
 
 attrs(X): X attr* { List.fold_left (fun acc s -> Preid.add_attr acc s) $1 $2 }

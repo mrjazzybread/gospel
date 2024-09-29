@@ -1,11 +1,21 @@
 open Ppxlib
 open Tast
 
+(** Conjunction of Separation Logic terms *)
+type sep_terms = sep_term list 
+
 (** Separation Logic terms *)
-type sep_term =
-  | Pure of Tterm.term  (** Pure term *)
-  | App of Symbols.lsymbol * Tterm.term list
-      (** Representation predicate application, *)
+and sep_term =
+  (** Pure term *)
+  | Pure of Tterm.term
+  (** Representation predicate application *)
+  | Lift of Symbols.lsymbol * Tterm.term list
+  (** Magic wand  *)
+  | Wand of sep_terms * sep_terms
+  (** Quantification of variables *)
+  | Quant of Tterm.quant * Symbols.vsymbol list * sep_terms
+  (** Let bindings *)
+  | Let of Symbols.vsymbol * Tterm.term * sep_terms
 
 type triple = {
   triple_name : Ident.t;  (** function name *)
@@ -15,10 +25,10 @@ type triple = {
   triple_vars : Symbols.vsymbol list;  (** Universally quantified variables *)
   triple_rets : Symbols.vsymbol list;  (** Return values *)
   triple_checks : Tterm.term list;
-  triple_pre : sep_term list;
+  triple_pre : sep_terms;
       (** Precondition terms connected with the separating conjuction*)
   triple_type : core_type;  (** Function type *)
-  triple_post : Symbols.vsymbol list * sep_term list;
+  triple_post : Symbols.vsymbol list * sep_terms;
       (** Postcondition existentially quantified variables and terms connected
           with the separating conjuction *)
 }

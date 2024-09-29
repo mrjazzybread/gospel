@@ -9,6 +9,7 @@
 (**************************************************************************)
 
 (** Zippers for lists *)
+(*@ open Sequence *)
 
 type 'a t
 (*@ model seq: 'a sequence

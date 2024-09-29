@@ -28,13 +28,6 @@ let rec print_term fmt term =
            x.Symbols.vs_ty)
        ~sep:comma) vl
       print_terms tl
-  | Let(vs, t, l) ->
-     pp fmt "let %a = %a in %a"
-       (fun fmt x ->
-         pp fmt "(%a : %a)" Ident.pp x.Symbols.vs_name Ttypes.print_ty
-           x.Symbols.vs_ty) vs
-       (Tterm_printer.print_term ~print_type:false) t
-       print_terms l
 
 and print_terms = (fun fmt l -> list print_term ~sep:star fmt l)
 
@@ -72,7 +65,9 @@ let rec sep_node fmt s =
         pred.pred_args
   | Triple t ->
       pp fmt "@[Triple %a :@\n%a@]" Ident.pp t.triple_name print_triple t
-  | Axiom (_, axiom) -> Tast_printer.print_axiom fmt axiom
+  | Axiom (_, axiom) ->
+     pp fmt "@[Axiom %a :@\n%a@]"
+       Ident.pp axiom.sax_name print_terms axiom.sax_term
   | Function (_, f) -> Tast_printer.print_function fmt f
   | Module (nm, l) ->
       pp fmt "@[Module %a :@\n%a@]" Ident.pp nm (list sep_node ~sep:newline) l

@@ -1,7 +1,7 @@
 Testing the paths of typed identifiers by `gospel dumpast`, 
 
 First, create a test artifact:
-
+X
   $ cat > path_test.mli << EOF
   > val x : int
   > val y : int ->  int
@@ -37,10 +37,14 @@ First, create a test artifact:
   $ gospel dumpast path_test.mli | grep "_name =" | awk '{$1=$1};1'
   { Tast.vd_name = Path_test.x; vd_type = int; vd_prim = [];
   { Symbols.vs_name = x_1;
+  { Symbols.vs_name = x_1;
   { Tast.vd_name = Path_test.y; vd_type = int -> int; vd_prim = [];
   { Symbols.vs_name = __arg0;
   { Symbols.vs_name = result;
+  { Symbols.vs_name = __arg0;
+  { Symbols.vs_name = result;
   { Tast.vd_name = Path_test.w; vd_type = t; vd_prim = [];
+  { Symbols.vs_name = w_1;
   { Symbols.vs_name = w_1;
   { Tast.vd_name = Path_test.z; vd_type = t -> t; vd_prim = [];
   { Symbols.vs_name = arg;
@@ -55,7 +59,10 @@ First, create a test artifact:
   { Tast.md_name = Path_test.M;
   { Tast.vd_name = Path_test.M.x_2; vd_type = int;
   { Symbols.vs_name = x_3;
+  { Symbols.vs_name = x_3;
   { Tast.vd_name = Path_test.M.y_1; vd_type = int -> int;
+  { Symbols.vs_name = __arg0_1;
+  { Symbols.vs_name = result_1;
   { Symbols.vs_name = __arg0_1;
   { Symbols.vs_name = result_1;
   { Symbols.ls_name = Path_test.M.f;
@@ -74,13 +81,19 @@ First, create a test artifact:
   { Tast.md_name = Path_test.M.Nested;
   { Tast.vd_name = Path_test.M.Nested.x_4;
   { Symbols.vs_name = x_5;
+  { Symbols.vs_name = x_5;
   { Tast.vd_name = Path_test.M.Nested.y_2;
+  { Symbols.vs_name = __arg0_2;
+  { Symbols.vs_name = result_2;
   { Symbols.vs_name = __arg0_2;
   { Symbols.vs_name = result_2;
   { Tast.md_name = Path_test.N;
   { Tast.vd_name = Path_test.N.x_6; vd_type = int;
   { Symbols.vs_name = x_7;
+  { Symbols.vs_name = x_7;
   { Tast.vd_name = Path_test.N.y_3; vd_type = int -> int;
+  { Symbols.vs_name = __arg0_3;
+  { Symbols.vs_name = result_3;
   { Symbols.vs_name = __arg0_3;
   { Symbols.vs_name = result_3;
 

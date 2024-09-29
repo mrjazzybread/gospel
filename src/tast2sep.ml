@@ -17,9 +17,9 @@ type spatial_info = {
 
 type value = {
   arg_log : vsymbol;
-  (* Logical value *)
+  (** Logical value *)
   arg_spatial : spatial_info option;
-      (* Info on ownership. None if the value is duplicable *)
+  (** Info on ownership. None if the value is duplicable *)
 }
 
 (** Module defining the function that inlines existentially quantified
@@ -63,14 +63,16 @@ end = struct
 
   let rec map_sep_terms tbl t =
     let changed = ref false in
-    let t_map =
-      match t with
-      | App (v, l) ->
+    let rec t_map = function
+      | Lift (v, l) ->
           let l = List.map (map_tvars changed tbl) l in
-          App (v, l)
+          Lift (v, l)
       | Pure t -> Pure (map_tvars changed tbl t)
+      | Wand (t, l) -> Wand(List.map t_map t, List.map t_map l)
+      | Quant (q, l, s) -> Quant (q, l, List.map t_map s)
+      | Let (vs, t, s) -> Let(vs, t, List.map t_map s)
     in
-    if !changed then map_sep_terms tbl t_map else t_map
+    if !changed then map_sep_terms tbl (t_map t) else t_map t
 
   let inline (vl, tl) =
     let tbl = Hashtbl.create 10 in
@@ -133,11 +135,11 @@ let rec map_term ns is_old t =
   let map_node =
     match t.t_node with
     | Tvar v when is_present ns v.vs_name ->
-        Tvar (get_id ns is_old v.vs_name.id_str)
+       Tvar (get_id ns is_old v.vs_name.id_str)
     | Tlet (v, t1, t2) -> Tlet (v, f t1, f t2)
     | Told t -> (map_term ns true t).t_node
     | Tcase (t, l) ->
-        Tcase (f t, List.map (fun (p, c, t) -> (p, Option.map f c, f t)) l)
+       Tcase (f t, List.map (fun (p, c, t) -> (p, Option.map f c, f t)) l)
     | Tapp (qual, ls, l) -> Tapp (qual, ls, List.map f l)
     | Tif (t1, t2, t3) -> Tif (f t1, f t2, f t3)
     | Tquant (q, l, t) -> Tquant (q, l, f t)
@@ -187,7 +189,7 @@ and val_description ns des =
         | { arg_spatial; arg_log } ->
             Option.map
               (fun spatial ->
-                App
+                Lift
                   ( spatial.arg_pred,
                     [
                       Tterm_helper.t_var spatial.arg_prog Location.none;
@@ -243,92 +245,84 @@ and val_description ns des =
            })
 
 and type_declaration t =
-
   let ts = t.td_ts in
   let spec = t.td_spec in
   let tvar_list = List.map (fun (x, _) -> { ty_node = Tyvar x }) t.td_params in
-  let model_type =
-    match spec with
-    | None -> Tast.Self
-    | Some s -> s.ty_model in
-  let is_record =
-    match model_type with
-    | Tast.Fields _ -> true
-    |_ -> false in
+  let model_type = match spec with None -> Tast.Self | Some s -> s.ty_model in
+  let is_record = match model_type with Tast.Fields _ -> true | _ -> false in
   let is_mutable =
     match model_type with
-    | Self -> true
-    | Default (mut, _)  -> mut
-    | Fields l -> List.exists (fun (x, _) ->  x) l in
+    | Self -> false
+    | Default (mut, _) -> mut
+    | Fields l -> List.exists (fun (x, _) -> x) l
+  in
   (* If the type has multiple model fields, this is a singleton list
      with a type with all of the appropriate model fields. Otherwise, it
      is empty. *)
-  let model_decl = 
+  let model_decl =
     match model_type with
-    |Tast.Fields l ->
-      let fields = List.map
-        (fun (_, ls) ->
-          let id = ls.ls_name in
-          let ty = ls.ls_value in
-          id, ty
-        ) l in
-      let def = Record fields in
-      Some (Type { type_name = ts.ts_ident;
-        type_args = ts.ts_args;
-        type_def = def })
-    |_ -> None in
+    | Tast.Fields l ->
+       let fields =
+         List.map
+           (fun (_, ls) ->
+             let id = ls.ls_name in
+             let ty = ls.ls_value in
+             (id, ty))
+           l
+       in
+       let def = Record fields in
+       Some
+         (Type
+            { type_name = ts.ts_ident; type_args = ts.ts_args; type_def = def })
+    | _ -> None
+  in
 
   (* Type declaration *)
   let type_name =
-    if is_record then
-      change_id ((^) "_") ts.ts_ident
-    else
-      ts.ts_ident in
+    if is_record then change_id (( ^ ) "_") ts.ts_ident else ts.ts_ident
+  in
 
   let type_decl =
-    if is_mutable then 
-    Some (Type { type_name = type_name;
-      type_args = ts.ts_args;
-      type_def = Abstract
-      }) else None in
-  (* Predicate definition *)
-  let prog_ts = {ts with ts_ident = type_name} in
-  let pred_prog_ty =
-    if is_mutable then
-      ty_loc
-    else
-      { ty_node = Tyapp (prog_ts, tvar_list) }
+    if not is_mutable then
+      Some (Type { type_name; type_args = ts.ts_args; type_def = Abstract })
+    else None
   in
-  
+  (* Predicate definition *)
+  let prog_ts = { ts with ts_ident = type_name } in
+  let pred_prog_ty =
+    if is_mutable then ty_loc else { ty_node = Tyapp (prog_ts, tvar_list) }
+  in
+
   let prog_vs =
-    { vs_name = Ident.create "target" ~loc:Location.none;
-      vs_ty   = pred_prog_ty
-    } in
+    { vs_name = Ident.create "target" ~loc:Location.none; vs_ty = pred_prog_ty }
+  in
 
   let pred_model_ty =
     match model_type with
-    |Self ->  pred_prog_ty
-    |Fields _ -> {ty_node = Tyapp (ts, tvar_list)}
-    |Default (_, t) -> t in
+    | Self -> pred_prog_ty
+    | Fields _ -> { ty_node = Tyapp (ts, tvar_list) }
+    | Default (_, t) -> t
+  in
   let model_vs =
-    {
-      vs_name = Ident.create "model" ~loc:Location.none;
-      vs_ty = pred_model_ty
-    } in
+    { vs_name = Ident.create "model" ~loc:Location.none; vs_ty = pred_model_ty }
+  in
   let new_id =
-    if ts.ts_ident.id_str = "t" then Ident.create ~loc:Location.none context.mod_nm
+    if ts.ts_ident.id_str = "t" then
+      Ident.create ~loc:Location.none context.mod_nm
     else ts.ts_ident |> change_id get_rep_pred
   in
 
-  let pred_def =
-    Pred {
-        pred_name = new_id;
-        pred_args = [prog_vs ;model_vs];
-        pred_poly = ts.ts_args;
-      } in
-  let cons x l = match x with |None -> l | Some x -> x :: l in
-  cons type_decl (cons model_decl [pred_def])
-  
+  let pred_def = if not is_mutable && model_type <> Self then None else
+                   Some (Pred
+                           {
+                             pred_name = new_id;
+                             pred_args = [ prog_vs; model_vs ];
+                             pred_poly = ts.ts_args;
+                     })
+  in
+  let cons x l = match x with None -> l | Some x -> x :: l in
+  cons type_decl (cons model_decl (cons pred_def []))
+
 let gather_poly t =
   let rec gather_poly t =
     let poly = get_poly t.t_ty in
@@ -340,7 +334,7 @@ let gather_poly t =
     | Tlet (_, t1, t2) -> gather_poly t1 @ gather_poly t2
     | Tcase (t1, l) ->
         gather_poly t1 @ List.concat_map (fun (_, _, t) -> gather_poly t) l
-    | Tquant (_, l, t) -> get_vs_poly l @ gather_poly t
+    | Tquant (_, l, t) -> get_vs_poly (List.map (fun x-> x.bind_vs) l) @ gather_poly t
     | Tlambda (_, t) -> gather_poly t
     | Tbinop (_, t1, t2) -> gather_poly t1 @ gather_poly t2
     | Tfield (t, _, _) | Tnot t | Told t -> gather_poly t
@@ -379,7 +373,7 @@ and signature_item ns s =
 open Tmodule
 
 let rec convert_ns tns =
-  let preds = Mstr.map create_rep_pred tns.ns_sp in
+  let preds = Mstr.filter_map create_rep_pred tns.ns_sp in
   {
     sns_pred = preds;
     sns_id = Mstr.empty;

@@ -37,21 +37,22 @@ let map_id ns is_old vs ty =
 
 let to_prog_type ty =
   match ty.ty_node with
-  |Tyapp(ts, l) ->
-    begin match ts.ts_rep with
-    |Fields _ -> 
-      {ty_node = Tyapp({ts with
-        ts_ident = change_id ((^) "_") ts.ts_ident
-      }, l)}
-    |_ -> ty
-    end
-  |_ -> ty
+  | Tyapp (ts, l) -> (
+      match ts.ts_rep with
+      | Fields _ ->
+          {
+            ty_node =
+              Tyapp ({ ts with ts_ident = change_id (( ^ ) "_") ts.ts_ident }, l);
+          }
+      | _ -> ty)
+  | _ -> ty
 
 let get_id ns is_old id =
   let name = if is_old then id else mk_update id in
   try Mstr.find name ns.sns_id with Not_found -> Mstr.find id ns.sns_id
 
-let create_rep_pred sym =
+let create_rep_pred _ sym =
+  if sym.ts_rep = Self then None else 
   let id = sym.ts_ident in
   let self_type =
     {
@@ -60,16 +61,15 @@ let create_rep_pred sym =
     }
   in
   let model_type =
-    match sym.ts_rep with
-    | Self | Fields _  -> self_type
-    | Model (_, m) -> m
+    match sym.ts_rep with Self | Fields _ -> self_type | Model (_, m) -> m
   in
   let new_id =
     if id.id_str = "t" then
       change_id (fun _ -> List.nth id.id_path (List.length id.id_path - 1)) id
     else change_id get_rep_pred id
   in
-  {
+  
+  Some {
     ls_name = new_id;
     ls_args = [ self_type; model_type ];
     ls_value = ty_bool;
@@ -82,8 +82,7 @@ let ty_ident ty =
 
 let get_pred ns ty =
   match ty.ty_node with
-  | Tyapp (ts, _) ->
-     (
+  | Tyapp (ts, _) -> (
       try Some (Mstr.find ts.ts_ident.id_str ns.sns_pred)
       with Not_found -> None)
   | _ -> None

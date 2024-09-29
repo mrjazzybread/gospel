@@ -6,14 +6,37 @@ let field fmt t =
   pp fmt "@[(%a : %a)@] " Ident.pp t.Symbols.vs_name Ttypes.print_ty
     t.Symbols.vs_ty
 
-let print_term fmt term =
+let rec print_term fmt term =
   match term with
-  | App (id, l) ->
+  | Lift (id, l) ->
       pp fmt "@[%a@]" Ident.pp id.ls_name;
       list ~first:lparens ~last:rparens ~sep:comma
         (Tterm_printer.print_term ~print_type:false)
         fmt l
   | Pure t -> pp fmt "@[[%a]@]" (Tterm_printer.print_term ~print_type:false) t
+  | Wand (s, l) ->
+     pp fmt "@[%a ==> %a@]"
+       print_terms s
+       print_terms l
+  | Quant(q, vl, tl) ->
+    let s = match q with |Tforall -> "∀" |Texists -> "∃" in
+    pp fmt "@[%s %a. @[%a@]]"
+      s
+      (list
+       (fun fmt x ->
+         pp fmt "(%a : %a)" Ident.pp x.Symbols.vs_name Ttypes.print_ty
+           x.Symbols.vs_ty)
+       ~sep:comma) vl
+      print_terms tl
+  | Let(vs, t, l) ->
+     pp fmt "let %a = %a in %a"
+       (fun fmt x ->
+         pp fmt "(%a : %a)" Ident.pp x.Symbols.vs_name Ttypes.print_ty
+           x.Symbols.vs_ty) vs
+       (Tterm_printer.print_term ~print_type:false) t
+       print_terms l
+
+and print_terms = (fun fmt l -> list print_term ~sep:star fmt l)
 
 let print_app fmt vs = pp fmt "%s" vs.Symbols.vs_name.id_str
 

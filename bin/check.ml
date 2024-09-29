@@ -53,7 +53,6 @@ let run_file config file =
       pp fmt "@[*******************************@]@.";
       pp fmt "@[%a@]@." print_file file);
 
-
     if config.sep then (
       let file = Tast2sep.process_sigs file in
       pp fmt "@[@\n*******************************@]@.";

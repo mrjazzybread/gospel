@@ -250,7 +250,7 @@ let rec dpattern kid ns { pat_desc; pat_loc = loc } =
         | Pconst_string _ -> dty_string
         | Pconst_float _ -> dty_float
       in
-      
+
       mk_dpattern ~loc (DPconst c) dty Mstr.empty
 
 let binop = function
@@ -443,9 +443,17 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
       mk_dterm ~loc (DTbinop (binop op, dt1, dt2)) dty_bool
   | Uast.Tquant (q, vl, t) ->
       let get_dty pty =
-        match pty with None -> dty_fresh () | Some pty -> dty_of_pty ns pty
+        match pty with
+        | Infer -> None, dty_fresh ()
+        | Pty pty ->
+           let t = dty_of_pty ns pty in
+           Some t, t
+        | Spatial (p1, p2) ->
+           Some (dty_of_pty ns p1), dty_of_pty ns p2
       in
-      let vl = List.map (fun (pid, pty) -> (pid, get_dty pty)) vl in
+      let vl = List.map (fun (pid, pty) ->
+                   let spatial, dty = get_dty pty in
+                   (pid, spatial, dty)) vl in
       let denv = denv_add_var_quant denv vl in
       let dt = dterm whereami kid crcm ns denv t in
       dfmla_unify dt;
@@ -582,10 +590,8 @@ let process_type_spec kid crcm ns self_ty spec =
   let ns, model =
     match model with
     | Uast.Self ->
-       if spec.Uast.ty_ephemeral then
-         ns, (Default (true, Ttypes.ty_loc_sp))
-       else
-         ns, Self
+        if spec.Uast.ty_ephemeral then (ns, Default (true, Ttypes.ty_loc_sp))
+        else (ns, Self)
     | Uast.Default (mut, pty) -> (ns, Default (mut, ty_of_pty ns pty))
     | Uast.Fields l ->
         let ns, l = List.fold_left field (ns, []) l in
@@ -594,11 +600,11 @@ let process_type_spec kid crcm ns self_ty spec =
 
   let aux = function
     | vs, xs ->
-       let ty = match model with |Default (_, ty) -> ty |_ -> self_ty in 
-       let self_vs = create_vsymbol vs ty in
-       let env = Mstr.singleton self_vs.vs_name.id_str self_vs in
-       let env = { env; old_env = Mstr.empty } in
-       (self_vs, List.map (fmla Invariant kid crcm ns env) xs)
+        let ty = match model with Default (_, ty) -> ty | _ -> self_ty in
+        let self_vs = create_vsymbol vs ty in
+        let env = Mstr.singleton self_vs.vs_name.id_str self_vs in
+        let env = { env; old_env = Mstr.empty } in
+        (self_vs, List.map (fmla Invariant kid crcm ns env) xs)
   in
   let invariants = Option.map aux spec.ty_invariant in
   type_spec spec.ty_ephemeral model invariants spec.ty_text spec.ty_loc
@@ -669,11 +675,13 @@ let type_type_declaration path kid crcm ns r tdl =
     in
 
     let td_model =
-      Option.fold ~none:Ttypes.Self ~some:(fun spec ->
+      Option.fold ~none:Ttypes.Self
+        ~some:(fun spec ->
           match spec.Uast.ty_model with
           | Self -> Ttypes.Self
           | Default (m, pty) -> Ttypes.Model (m, ty_of_pty ns pty)
-          | Fields l -> Ttypes.Fields (List.exists (fun x -> x.f_mutable) l)) td.tspec
+          | Fields l -> Ttypes.Fields (List.exists (fun x -> x.f_mutable) l))
+        td.tspec
     in
 
     let td_ts =
@@ -771,7 +779,7 @@ let type_type_declaration path kid crcm ns r tdl =
     in
     Hts.add type_declarations td_ts inv_td;
 
-    let model_ty = match td_model with | Model (_, ty) -> ty | _ -> ty in
+    let model_ty = match td_model with Model (_, ty) -> ty | _ -> ty in
     let spec = Option.map (process_type_spec kid crcm ns model_ty) td.tspec in
 
     if td.tcstrs != [] then
@@ -1156,10 +1164,10 @@ let process_val path ~loc ?(ghost = Nonghost) kid crcm ns vd =
   let () =
     (* check there is a modifies clause if the return type is unit, throw a warning if not *)
     if Ttypes.(ty_equal ret ty_unit) && args <> [] then
-          if
-            List.for_all (fun x -> not x.lb_modified) so.sp_args
-            && Option.fold ~none:false ~some:(fun s -> s.sp_writes = []) vd.vspec
-          then W.error ~loc (W.Return_unit_without_modifies id.id_str)
+      if
+        List.for_all (fun x -> not x.lb_modified) so.sp_args
+        && Option.fold ~none:false ~some:(fun s -> s.sp_writes = []) vd.vspec
+      then W.error ~loc (W.Return_unit_without_modifies id.id_str)
   in
   let vd =
     mk_val_description id vd.vtype vd.vprim vd.vattributes tspec.sp_args
@@ -1519,7 +1527,7 @@ and process_sig_item path penv muc { sdesc; sloc } =
 
   let muc, signature = process_and_import sdesc muc in
   let muc = add_sig_contents muc signature in
-  
+
   (muc, signature)
 
 and type_sig_item path penv muc sig_item =

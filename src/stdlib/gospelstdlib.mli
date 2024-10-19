@@ -89,16 +89,16 @@
 (*@ function ([->]) (f: 'a -> 'b) (x:'a) (y: 'b) : 'a -> 'b =
       fun arg -> if arg = x then y else f x *)
 
+(*@ function ([_.._]) (s: 'a sequence) (i1: integer) (i2: integer): 'a sequence *)
+(*@ function ([_..]) (s: 'a sequence) (i: integer): 'a sequence *)
+(*@ function ([.._]) (s: 'a sequence) (i: integer): 'a sequence = s[0 .. i] *)
+
 (** {1 Bags} *)
 module Sequence : sig
   (*@ type 'a t = 'a sequence *)
   (** An alias for {!sequence} *)
 
   (*@ function length (s: 'a sequence): integer *)
-  (*@ function ([_.._]) (s: 'a sequence) (i1: integer) (i2: integer): 'a sequence *)
-  (*@ function ([_..]) (s: 'a sequence) (i: integer): 'a sequence = s[i .. length s] *)
-  (*@ function ([.._]) (s: 'a sequence) (i: integer): 'a sequence = s[0 .. i] *)
-
   (*@ predicate in_range (s : 'a t) (i : integer) = 0 <= i < length s *)
 
   (*@ axiom length_nonneg : forall s. 0 <= length s *)
@@ -109,10 +109,12 @@ module Sequence : sig
      forall s s' i.
       length s <= i < length s + length s' ->
       (s ++ s')[i] = s'[i - length s] *)
-
-  (*@ axiom subseq : forall s i i1 i2. i1 <= i < i2 -> s[i] = (s[i1 .. i2])[i-i1] *)
-  (* axiom subseq_len : TODO *)
-  (* axiom subseq_left_to_right : TODO *)
+  (*@ axiom subseq_l :
+       forall s i. 0 <= i < length s -> s[i ..] = s[i .. length s] *)
+  (*@ axiom subseq : forall s i i1 i2.
+    0 <= i1 <= i < i2 <= length s -> s[i] = (s[i1 .. i2])[i-i1] *)
+  (*@ axiom subseq_len : forall s i1 i2.
+      0 <= i1 <= i2 < length s -> length (s[i1 .. i2]) = i1-i2 *)
 
   (*@ function init (n: integer) (f: integer -> 'a) : 'a t *)
   (*@ axiom init_length : forall n f. n >= 0 -> length (init n f) = n *)

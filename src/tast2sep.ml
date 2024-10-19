@@ -151,40 +151,47 @@ let to_cfml_arg arg_vs =
   in
   { vs_name = arg_id; vs_ty = arg_prog_ty }
 
-
-let rec tterm_to_sep ns t =
-  let quant_lift binder =
-    let pred = get_pred ns binder.bind_spatial in
-    let spatial_info =
-      Option.map
-        (fun pred ->
-          {arg_pred = pred;
-           arg_prog = to_cfml_arg binder.bind_vs;
-           ro = true; }
-        ) pred in
-    { arg_log = binder.bind_vs;
-      arg_spatial=spatial_info } in
-  
-  match t.t_node with
-  |Tquant(q, l, t) ->
-    let vlist = List.map quant_lift l in
-    let lifts = List.filter_map mk_lift vlist in
-    let vsl =
-      List.concat_map
-        (fun x ->
-          (Option.fold
-             ~none:[]
-             ~some:(fun x -> [x.arg_prog]) x.arg_spatial)
-          @[x.arg_log])
-        vlist in
-    let quant = Quant(q, vsl, tterm_to_sep ns t) in
-    begin match lifts with
-    |[] -> [quant]
-    |_ -> [Wand(lifts, quant :: lifts)]
-    end
-  |Tbinop(Tand, t1, t2) ->
-    tterm_to_sep ns t1 @ tterm_to_sep ns t2
-  |_ -> [Pure t] 
+let tterm_to_sep ns t =
+  let is_pure = ref true in
+  let rec loop ns t =
+    let quant_lift binder =
+      let pred = get_pred ns binder.bind_spatial in
+      let spatial_info =
+        Option.map
+          (fun pred ->
+            {arg_pred = pred;
+             arg_prog = to_cfml_arg binder.bind_vs;
+             ro = true; }
+          ) pred in
+      { arg_log = binder.bind_vs;
+        arg_spatial=spatial_info } in
+    
+    match t.t_node with
+    |Tquant(q, l, t) ->
+      let vlist = List.map quant_lift l in
+      let lifts = List.filter_map mk_lift vlist in
+      let vsl =
+        List.concat_map
+          (fun x ->
+            (Option.fold
+               ~none:[]
+               ~some:(fun x -> [x.arg_prog]) x.arg_spatial)
+            @[x.arg_log])
+          vlist in
+      let quant = Quant(q, vsl, loop ns t) in
+      begin match lifts with
+      |[] -> [quant]
+      |_ ->
+        let () = is_pure := false in
+        print_endline "wow";
+        [Wand(lifts, quant :: lifts)]
+      end
+    |Tbinop(Tand, t1, t2) ->
+      loop ns t1 @ loop ns t2
+    |_ -> [Pure t] in
+  let sept = loop ns t in
+  if !is_pure then
+ [Pure t] else sept
 
 let map_term ns is_old t =
   let rec change_vars is_old t =
@@ -346,13 +353,14 @@ let type_declaration t =
     else ts.ts_ident |> change_id get_rep_pred
   in
 
-  let pred_def = if not is_mutable && model_type <> Self then None else
-                   Some (Pred
-                           {
-                             pred_name = new_id;
-                             pred_args = [ prog_vs; model_vs ];
-                             pred_poly = ts.ts_args;
-                     })
+  let pred_def =
+    if not is_mutable && model_type <> Self then None else
+      Some (Pred
+              {
+                pred_name = new_id;
+                pred_args = [ prog_vs; model_vs ];
+                pred_poly = ts.ts_args;
+        })
   in
   let cons x l = match x with None -> l | Some x -> x :: l in
   cons type_decl (cons model_decl (cons pred_def []))

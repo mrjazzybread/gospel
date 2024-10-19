@@ -64,7 +64,7 @@ let rec sep_node fmt s =
         (fun fmt args -> List.iter (field fmt) args)
         pred.pred_args
   | Triple t ->
-      pp fmt "@[Triple %a :@\n%a@]" Ident.pp t.triple_name print_triple t
+     pp fmt "@[Triple %a :@\n%a@]" Ident.pp t.triple_name print_triple t
   | Axiom (_, axiom) ->
      pp fmt "@[Axiom %a :@\n%a@]"
        Ident.pp axiom.sax_name print_terms axiom.sax_term

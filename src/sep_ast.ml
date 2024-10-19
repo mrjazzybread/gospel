@@ -51,6 +51,12 @@ type axiom = {
   sax_term : sep_terms;  (** Definition *)
   }
 
+type pure_axiom = {
+    pax_name : Ident.t;
+    pax_loc : Location.t;
+    pax_term : Tterm.term;
+  }
+
 (** Top level definitions *)
 type definition_node =
   | Pred of rep_pred  (** Representation Predicate *)

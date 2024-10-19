@@ -44,6 +44,12 @@
 (*@ type 'a set *)
 (** The type for sets. *)
 
+(*@ type ('a, 'b) map = 'a -> 'b*)
+(** The type for total maps *)
+
+(*@ function ([->]) (f: 'a -> 'b) (x:'a) (y: 'b) : 'a -> 'b =
+      fun arg -> if arg = x then y else f x *)
+
 (** {1 Arithmetic}
 
     The type [integer] is built-in. This is the type of arbitrary precision
@@ -73,7 +79,7 @@
 (*@ predicate (<) (x y: integer) *)
 (*@ predicate (<=) (x y: integer) *)
 
-(*@ function integer_of_int (x: int) : integer *)
+(*@ function integer_of_int (x : int) : integer *)
 (*@ coercion *)
 
 (*@ function max_int : integer *)
@@ -85,11 +91,12 @@
 (** [s ++ s'] is the sequence [s] followed by the sequence [s']. *)
 
 (*@ function ([_]) (s: 'a sequence) (i: integer): 'a *)
+
 (** [s[i]] is the [i]th element of the sequence [s]. *)
 
 (*@ function ([_.._]) (s: 'a sequence) (i1: integer) (i2: integer): 'a sequence *)
 (*@ function ([_..]) (s: 'a sequence) (i: integer): 'a sequence *)
-(*@ function ([.._]) (s: 'a sequence) (i: integer): 'a sequence *)
+(*@ function ([.._]) (s: 'a sequence) (i: integer): 'a sequence = s[0 .. i] *)
 
 module Sequence : sig
   (*@ type 'a t = 'a sequence *)

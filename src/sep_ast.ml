@@ -1,19 +1,17 @@
 open Ppxlib
 open Tast
 
+type sep_terms = sep_term list
 (** Conjunction of Separation Logic terms *)
-type sep_terms = sep_term list 
 
 (** Separation Logic terms *)
 and sep_term =
-  (** Pure term *)
-  | Pure of Tterm.term
-  (** Representation predicate application *)
+  | Pure of Tterm.term  (** Pure term *)
   | Lift of Symbols.lsymbol * Tterm.term list
-  (** Magic wand  *)
-  | Wand of sep_terms * sep_terms
-  (** Quantification of variables *)
+      (** Representation predicate application *)
+  | Wand of sep_terms * sep_terms  (** Magic wand *)
   | Quant of Tterm.quant * Symbols.vsymbol list * sep_terms
+      (** Quantification of variables *)
 
 type triple = {
   triple_name : Ident.t;  (** function name *)
@@ -49,13 +47,13 @@ type axiom = {
   sax_name : Ident.t;  (** Name *)
   sax_loc : Location.t; [@printer Utils.Fmt.pp_loc]  (** Location *)
   sax_term : sep_terms;  (** Definition *)
-  }
+}
 
 type pure_axiom = {
-    pax_name : Ident.t;
-    pax_loc : Location.t;
-    pax_term : Tterm.term;
-  }
+  pax_name : Ident.t;
+  pax_loc : Location.t;
+  pax_term : Tterm.term;
+}
 
 (** Top level definitions *)
 type definition_node =

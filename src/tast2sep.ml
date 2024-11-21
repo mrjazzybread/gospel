@@ -16,10 +16,9 @@ type spatial_info = {
 }
 
 type value = {
-  arg_log : vsymbol;
-  (** Logical value *)
+  arg_log : vsymbol;  (** Logical value *)
   arg_spatial : spatial_info option;
-  (** Info on ownership. None if the value is duplicable *)
+      (** Info on ownership. None if the value is duplicable *)
 }
 
 (** Module defining the function that inlines existentially quantified
@@ -68,7 +67,7 @@ end = struct
           let l = List.map (map_tvars changed tbl) l in
           Lift (v, l)
       | Pure t -> Pure (map_tvars changed tbl t)
-      | Wand (t, l) -> Wand(List.map t_map t, List.map t_map l)
+      | Wand (t, l) -> Wand (List.map t_map t, List.map t_map l)
       | Quant (q, l, s) -> Quant (q, l, List.map t_map s)
     in
     if !changed then map_sep_terms tbl (t_map t) else t_map t
@@ -129,8 +128,7 @@ let unit_vs =
 let get_value_poly args =
   get_poly_list (List.map (fun x -> x.arg_log.vs_ty) args) |> rm_dup
 
-
-let mk_lift {arg_spatial; arg_log} = 
+let mk_lift { arg_spatial; arg_log } =
   Option.map
     (fun spatial ->
       Lift
@@ -138,16 +136,13 @@ let mk_lift {arg_spatial; arg_log} =
           [
             Tterm_helper.t_var spatial.arg_prog Location.none;
             Tterm_helper.t_var arg_log Location.none;
-    ] ))
+          ] ))
     arg_spatial
-
 
 let to_cfml_arg arg_vs =
   let arg_id = change_id mk_prog arg_vs.vs_name in
   let arg_prog_ty =
-    if is_pure_type arg_vs then
-      to_prog_type arg_vs.vs_ty
-    else ty_loc
+    if is_pure_type arg_vs then to_prog_type arg_vs.vs_ty else ty_loc
   in
   { vs_name = arg_id; vs_ty = arg_prog_ty }
 
@@ -159,39 +154,39 @@ let tterm_to_sep ns t =
       let spatial_info =
         Option.map
           (fun pred ->
-            {arg_pred = pred;
-             arg_prog = to_cfml_arg binder.bind_vs;
-             ro = true; }
-          ) pred in
-      { arg_log = binder.bind_vs;
-        arg_spatial=spatial_info } in
-    
+            {
+              arg_pred = pred;
+              arg_prog = to_cfml_arg binder.bind_vs;
+              ro = true;
+            })
+          pred
+      in
+      { arg_log = binder.bind_vs; arg_spatial = spatial_info }
+    in
+
     match t.t_node with
-    |Tquant(q, l, t) ->
-      let vlist = List.map quant_lift l in
-      let lifts = List.filter_map mk_lift vlist in
-      let vsl =
-        List.concat_map
-          (fun x ->
-            (Option.fold
-               ~none:[]
-               ~some:(fun x -> [x.arg_prog]) x.arg_spatial)
-            @[x.arg_log])
-          vlist in
-      let quant = Quant(q, vsl, loop ns t) in
-      begin match lifts with
-      |[] -> [quant]
-      |_ ->
-        let () = is_pure := false in
-        print_endline "wow";
-        [Wand(lifts, quant :: lifts)]
-      end
-    |Tbinop(Tand, t1, t2) ->
-      loop ns t1 @ loop ns t2
-    |_ -> [Pure t] in
+    | Tquant (q, l, t) -> (
+        let vlist = List.map quant_lift l in
+        let lifts = List.filter_map mk_lift vlist in
+        let vsl =
+          List.concat_map
+            (fun x ->
+              Option.fold ~none:[] ~some:(fun x -> [ x.arg_prog ]) x.arg_spatial
+              @ [ x.arg_log ])
+            vlist
+        in
+        let quant = Quant (q, vsl, loop ns t) in
+        match lifts with
+        | [] -> [ quant ]
+        | _ ->
+            let () = is_pure := false in
+            print_endline "wow";
+            [ Wand (lifts, quant :: lifts) ])
+    | Tbinop (Tand, t1, t2) -> loop ns t1 @ loop ns t2
+    | _ -> [ Pure t ]
+  in
   let sept = loop ns t in
-  if !is_pure then
- [Pure t] else sept
+  if !is_pure then [ Pure t ] else sept
 
 let map_term ns is_old t =
   let rec change_vars is_old t =
@@ -199,11 +194,11 @@ let map_term ns is_old t =
     let map_node =
       match t.t_node with
       | Tvar v when is_present ns v.vs_name ->
-         Tvar (get_id ns is_old v.vs_name.id_str)
+          Tvar (get_id ns is_old v.vs_name.id_str)
       | Tlet (v, t1, t2) -> Tlet (v, f t1, f t2)
       | Told t -> (change_vars true t).t_node
       | Tcase (t, l) ->
-         Tcase (f t, List.map (fun (p, c, t) -> (p, Option.map f c, f t)) l)
+          Tcase (f t, List.map (fun (p, c, t) -> (p, Option.map f c, f t)) l)
       | Tapp (qual, ls, l) -> Tapp (qual, ls, List.map f l)
       | Tif (t1, t2, t3) -> Tif (f t1, f t2, f t3)
       | Tquant (q, l, t) -> Tquant (q, l, f t)
@@ -212,13 +207,14 @@ let map_term ns is_old t =
       | Tfield (t, qual, n) -> Tfield (f t, qual, n)
       | _ -> t.t_node
     in
-    { t with t_node = map_node } in
+    { t with t_node = map_node }
+  in
   change_vars is_old t |> tterm_to_sep ns
 
 let val_description ns des =
   match des.vd_spec with
-   | spec ->
-      let ns = ref ns in      
+  | spec ->
+      let ns = ref ns in
       let lifted_args is_old =
         List.filter_map (fun arg ->
             let arg_vs = arg.lb_vs in
@@ -238,7 +234,7 @@ let val_description ns des =
                   in
                   Some { arg_spatial; arg_log })
       in
-      
+
       let lifts = List.filter_map mk_lift in
       let args = lifted_args true spec.sp_args in
       let mk_cfml_arg arg =
@@ -303,18 +299,18 @@ let type_declaration t =
   let model_decl =
     match model_type with
     | Tast.Fields l ->
-       let fields =
-         List.map
-           (fun (_, ls) ->
-             let id = ls.ls_name in
-             let ty = ls.ls_value in
-             (id, ty))
-           l
-       in
-       let def = Record fields in
-       Some
-         (Type
-            { type_name = ts.ts_ident; type_args = ts.ts_args; type_def = def })
+        let fields =
+          List.map
+            (fun (_, ls) ->
+              let id = ls.ls_name in
+              let ty = ls.ls_value in
+              (id, ty))
+            l
+        in
+        let def = Record fields in
+        Some
+          (Type
+             { type_name = ts.ts_ident; type_args = ts.ts_args; type_def = def })
     | _ -> None
   in
 
@@ -354,13 +350,15 @@ let type_declaration t =
   in
 
   let pred_def =
-    if not is_mutable && model_type <> Self then None else
-      Some (Pred
-              {
-                pred_name = new_id;
-                pred_args = [ prog_vs; model_vs ];
-                pred_poly = ts.ts_args;
-        })
+    if (not is_mutable) && model_type <> Self then None
+    else
+      Some
+        (Pred
+           {
+             pred_name = new_id;
+             pred_args = [ prog_vs; model_vs ];
+             pred_poly = ts.ts_args;
+           })
   in
   let cons x l = match x with None -> l | Some x -> x :: l in
   cons type_decl (cons model_decl (cons pred_def []))
@@ -376,7 +374,8 @@ let gather_poly t =
     | Tlet (_, t1, t2) -> gather_poly t1 @ gather_poly t2
     | Tcase (t1, l) ->
         gather_poly t1 @ List.concat_map (fun (_, _, t) -> gather_poly t) l
-    | Tquant (_, l, t) -> get_vs_poly (List.map (fun x-> x.bind_vs) l) @ gather_poly t
+    | Tquant (_, l, t) ->
+        get_vs_poly (List.map (fun x -> x.bind_vs) l) @ gather_poly t
     | Tlambda (_, t) -> gather_poly t
     | Tbinop (_, t1, t2) -> gather_poly t1 @ gather_poly t2
     | Tfield (t, _, _) | Tnot t | Told t -> gather_poly t
@@ -388,14 +387,15 @@ let rec signature_item_desc ns = function
   | Sig_type (_, l, _) -> List.concat_map (fun t -> type_declaration t) l
   | Sig_val (des, _) -> [ val_description ns des ]
   | Sig_axiom axiom ->
-     let poly = gather_poly axiom.ax_term in
-     let axiom =
-       {sax_name = axiom.ax_name;
-        sax_loc = axiom.ax_loc;
-        sax_term = tterm_to_sep ns axiom.ax_term } in
-     [
-      Axiom (rm_dup poly, axiom)
-    ]
+      let poly = gather_poly axiom.ax_term in
+      let axiom =
+        {
+          sax_name = axiom.ax_name;
+          sax_loc = axiom.ax_loc;
+          sax_term = tterm_to_sep ns axiom.ax_term;
+        }
+      in
+      [ Axiom (rm_dup poly, axiom) ]
   | Sig_function f ->
       let poly =
         Option.fold f.fun_def ~some:gather_poly ~none:[]

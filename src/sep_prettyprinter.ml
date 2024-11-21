@@ -14,22 +14,18 @@ let rec print_term fmt term =
         (Tterm_printer.print_term ~print_type:false)
         fmt l
   | Pure t -> pp fmt "@[[%a]@]" (Tterm_printer.print_term ~print_type:false) t
-  | Wand (s, l) ->
-     pp fmt "@[%a ==> %a@]"
-       print_terms s
-       print_terms l
-  | Quant(q, vl, tl) ->
-    let s = match q with |Tforall -> "∀" |Texists -> "∃" in
-    pp fmt "@[%s %a. @[%a@]]"
-      s
-      (list
-       (fun fmt x ->
-         pp fmt "(%a : %a)" Ident.pp x.Symbols.vs_name Ttypes.print_ty
-           x.Symbols.vs_ty)
-       ~sep:comma) vl
-      print_terms tl
+  | Wand (s, l) -> pp fmt "@[%a ==> %a@]" print_terms s print_terms l
+  | Quant (q, vl, tl) ->
+      let s = match q with Tforall -> "∀" | Texists -> "∃" in
+      pp fmt "@[%s %a. @[%a@]]" s
+        (list
+           (fun fmt x ->
+             pp fmt "(%a : %a)" Ident.pp x.Symbols.vs_name Ttypes.print_ty
+               x.Symbols.vs_ty)
+           ~sep:comma)
+        vl print_terms tl
 
-and print_terms = (fun fmt l -> list print_term ~sep:star fmt l)
+and print_terms fmt l = list print_term ~sep:star fmt l
 
 let print_app fmt vs = pp fmt "%s" vs.Symbols.vs_name.id_str
 
@@ -64,10 +60,10 @@ let rec sep_node fmt s =
         (fun fmt args -> List.iter (field fmt) args)
         pred.pred_args
   | Triple t ->
-     pp fmt "@[Triple %a :@\n%a@]" Ident.pp t.triple_name print_triple t
+      pp fmt "@[Triple %a :@\n%a@]" Ident.pp t.triple_name print_triple t
   | Axiom (_, axiom) ->
-     pp fmt "@[Axiom %a :@\n%a@]"
-       Ident.pp axiom.sax_name print_terms axiom.sax_term
+      pp fmt "@[Axiom %a :@\n%a@]" Ident.pp axiom.sax_name print_terms
+        axiom.sax_term
   | Function (_, f) -> Tast_printer.print_function fmt f
   | Module (nm, l) ->
       pp fmt "@[Module %a :@\n%a@]" Ident.pp nm (list sep_node ~sep:newline) l

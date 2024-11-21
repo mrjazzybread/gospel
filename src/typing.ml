@@ -444,16 +444,19 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
   | Uast.Tquant (q, vl, t) ->
       let get_dty pty =
         match pty with
-        | Infer -> None, dty_fresh ()
+        | Infer -> (None, dty_fresh ())
         | Pty pty ->
-           let t = dty_of_pty ns pty in
-           Some t, t
-        | Spatial (p1, p2) ->
-           Some (dty_of_pty ns p1), dty_of_pty ns p2
+            let t = dty_of_pty ns pty in
+            (Some t, t)
+        | Spatial (p1, p2) -> (Some (dty_of_pty ns p1), dty_of_pty ns p2)
       in
-      let vl = List.map (fun (pid, pty) ->
-                   let spatial, dty = get_dty pty in
-                   (pid, spatial, dty)) vl in
+      let vl =
+        List.map
+          (fun (pid, pty) ->
+            let spatial, dty = get_dty pty in
+            (pid, spatial, dty))
+          vl
+      in
       let denv = denv_add_var_quant denv vl in
       let dt = dterm whereami kid crcm ns denv t in
       dfmla_unify dt;

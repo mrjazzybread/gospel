@@ -224,16 +224,18 @@ let denv_add_var denv s dty =
   { env = Mstr.add s dty denv.env; old_env = Mstr.add s dty denv.env }
 
 let denv_add_var_quant denv vl =
-  let add acc (pid, spatial,  dty) =
+  let add acc (pid, spatial, dty) =
     if Mstr.mem pid.Preid.pid_str acc then
       W.error ~loc:pid.pid_loc (W.Duplicated_variable pid.pid_str)
     else
-      let dty = match spatial with
-        |None -> dty
-        |Some s ->
-          let s_ty = ty_of_dty s in
-          let ty = ty_of_dty dty in
-          dty_of_ty (ty_apply_spatial ty s_ty) in
+      let dty =
+        match spatial with
+        | None -> dty
+        | Some s ->
+            let s_ty = ty_of_dty s in
+            let ty = ty_of_dty dty in
+            dty_of_ty (ty_apply_spatial ty s_ty)
+      in
       Mstr.add pid.pid_str dty acc
   in
   let vl = List.fold_left add Mstr.empty vl in
@@ -389,15 +391,13 @@ and term_node ~loc env dty dterm_node =
       t_attr_set at t
   | DTold dt -> t_old (term env dt) loc
   | DTquant (q, bl, dt) ->
-     let add_var (env, vsl) (pid, sp, dty) =
-       let prog_ty = ty_of_dty dty in 
-       let sp = ty_of_dty (Option.value ~default:dty sp) in
-       let log_ty = Ttypes.ty_apply_spatial sp prog_ty in
-       let vs = create_vsymbol pid log_ty in
-       let binder =  {bind_vs = vs;
-                      bind_spatial = sp;
-                      bind_prog = prog_ty } in
-       (add_env env pid.pid_str vs, binder :: vsl)
+      let add_var (env, vsl) (pid, sp, dty) =
+        let prog_ty = ty_of_dty dty in
+        let sp = ty_of_dty (Option.value ~default:dty sp) in
+        let log_ty = Ttypes.ty_apply_spatial sp prog_ty in
+        let vs = create_vsymbol pid log_ty in
+        let binder = { bind_vs = vs; bind_spatial = sp; bind_prog = prog_ty } in
+        (add_env env pid.pid_str vs, binder :: vsl)
       in
       let env, vsl = List.fold_left add_var (env, []) bl in
       let t = term env dt in

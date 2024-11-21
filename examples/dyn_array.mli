@@ -13,13 +13,14 @@ val make : int -> int -> t
 
 val get : t -> int -> int
 (*@ r = get a i
+    requires 0 <= i < length a
     ensures r = a[i] *)
 
 val set : t -> int -> int -> unit
 (*@ set a i e
     modifies a
-    requires 0 <= i < length a (* <- TODO replace with exceptional postcond *)
-    ensures a = old (set a i e) *)
+    requires 0 <= i < length a
+    ensures a = set (old a) i e *)
 
 val length : t -> int
 (*@ l = length a
@@ -30,11 +31,11 @@ val is_empty : t -> bool
     ensures b <-> (a = empty) *)
 
 val find_last : t -> int option
-
 (*@ r = find_last a
     ensures match r with
-    |None -> a = empty && old a = empty
+    |None -> a = empty
     |Some r -> r = a[length a - 1] *)
+
 val copy : t -> t
 (*@ c = copy a
     ensures c = a *)
@@ -42,7 +43,7 @@ val copy : t -> t
 val add_last : t -> int -> unit
 (*@ add_last a e
     modifies a
-    ensures a = (old a) ++ (singleton e) *)
+    ensures  a = (old a) ++ (singleton e) *)
 
 val append : t -> t -> unit
 (*@ append a1 a2

@@ -68,7 +68,7 @@ X
   { Symbols.ls_name = Path_test.M.f;
   [{ Symbols.vs_name = n;
   { Tast.ax_name = Path_test.M.a_2;
-  [{ Symbols.vs_name = n_1;
+  { Symbols.vs_name = n_1;
   { Symbols.ls_name = #Base_lang.infix =;
   (Ttypes.Tyvar { Ttypes.tv_name = a_1 })
   (Ttypes.Tyvar { Ttypes.tv_name = a_1 })

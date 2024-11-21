@@ -52,30 +52,32 @@ let get_id ns is_old id =
   try Mstr.find name ns.sns_id with Not_found -> Mstr.find id ns.sns_id
 
 let create_rep_pred _ sym =
-  if sym.ts_rep = Self then None else 
-  let id = sym.ts_ident in
-  let self_type =
-    {
-      ty_node =
-        Tyapp (sym, List.map (fun x -> { ty_node = Tyvar x }) sym.ts_args);
-    }
-  in
-  let model_type =
-    match sym.ts_rep with Self | Fields _ -> self_type | Model (_, m) -> m
-  in
-  let new_id =
-    if id.id_str = "t" then
-      change_id (fun _ -> List.nth id.id_path (List.length id.id_path - 1)) id
-    else change_id get_rep_pred id
-  in
-  
-  Some {
-    ls_name = new_id;
-    ls_args = [ self_type; model_type ];
-    ls_value = ty_bool;
-    ls_constr = false;
-    ls_field = false;
-  }
+  if sym.ts_rep = Self then None
+  else
+    let id = sym.ts_ident in
+    let self_type =
+      {
+        ty_node =
+          Tyapp (sym, List.map (fun x -> { ty_node = Tyvar x }) sym.ts_args);
+      }
+    in
+    let model_type =
+      match sym.ts_rep with Self | Fields _ -> self_type | Model (_, m) -> m
+    in
+    let new_id =
+      if id.id_str = "t" then
+        change_id (fun _ -> List.nth id.id_path (List.length id.id_path - 1)) id
+      else change_id get_rep_pred id
+    in
+
+    Some
+      {
+        ls_name = new_id;
+        ls_args = [ self_type; model_type ];
+        ls_value = ty_bool;
+        ls_constr = false;
+        ls_field = false;
+      }
 
 let ty_ident ty =
   match ty.ty_node with Tyapp (ts, _) -> ts.ts_ident | _ -> assert false

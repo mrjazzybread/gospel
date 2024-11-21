@@ -48,11 +48,7 @@ and pat_desc =
 
 (* Logical terms and formulas *)
 
-type binder_pty =
-  | Infer
-  | Pty of pty
-  | Spatial of pty * pty
-
+type binder_pty = Infer | Pty of pty | Spatial of pty * pty
 type binder = Preid.t * binder_pty
 type param = Location.t * Preid.t * pty
 type binop = Tand | Tand_asym | Tor | Tor_asym | Timplies | Tiff

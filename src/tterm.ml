@@ -46,11 +46,8 @@ type binop = Tand | Tand_asym | Tor | Tor_asym | Timplies | Tiff
 
 type quant = Tforall | Texists [@@deriving show]
 
-type tbinder = {
-    bind_vs : vsymbol;
-    bind_spatial : ty;
-    bind_prog : ty;
-  }[@@deriving show]
+type tbinder = { bind_vs : vsymbol; bind_spatial : ty; bind_prog : ty }
+[@@deriving show]
 
 type term = {
   t_node : term_node;

@@ -84,6 +84,9 @@ val denv_get_opt : 'a full_env -> string -> 'a option
 val denv_find : loc:Location.t -> string -> denv -> dty
 val is_in_denv : denv -> string -> bool
 val denv_add_var : denv -> string -> dty -> denv
-val denv_add_var_quant : denv -> (Identifier.Preid.t * dty option * dty) list -> denv
+
+val denv_add_var_quant :
+  denv -> (Identifier.Preid.t * dty option * dty) list -> denv
+
 val term : vsymbol full_env -> dterm -> term
 val pattern : dpattern -> Tterm.pattern * vsymbol Mstr.t

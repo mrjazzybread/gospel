@@ -40,8 +40,10 @@
     sp_checks = [];
     sp_post = [];
     sp_xpost = [];
+    sp_consumes = [];
+    sp_produces = [];
     sp_writes = [];
-    sp_consumes= [];
+    sp_preserves = [];
     sp_diverge = false;
     sp_pure = false;
     sp_equiv = [];
@@ -78,7 +80,8 @@
 
 (* Spec Tokens *)
 
-%token REQUIRES ENSURES CONSUMES VARIANT
+%token REQUIRES ENSURES VARIANT
+%token CONSUMES PRODUCES MODIFIES PRESERVES
 
 (* keywords *)
 
@@ -89,7 +92,7 @@
 %token COERCION
 %token IF IN
 %token OLD NOT RAISES
-%token THEN TRUE MODIFIES EQUIVALENT CHECKS DIVERGES PURE
+%token THEN TRUE EQUIVALENT CHECKS DIVERGES PURE
 
 %token AS
 %token LET MATCH PREDICATE
@@ -249,12 +252,18 @@ val_spec_body:
   { {bd with sp_pure = true} }
 | DIVERGES bd=val_spec_body
   { {bd with sp_diverge = true} }
-| MODIFIES wr=separated_list(COMMA, spatial_term) 
-           bd=val_spec_body
-  { { bd with sp_writes = wr @ bd.sp_writes } }
 | CONSUMES cs=separated_list(COMMA, spatial_term) 
            bd=val_spec_body
   { { bd with sp_consumes = cs @ bd.sp_consumes } }
+| PRODUCES cs=separated_list(COMMA, spatial_term) 
+           bd=val_spec_body
+  { { bd with sp_produces = cs @ bd.sp_produces } }
+| MODIFIES wr=separated_list(COMMA, spatial_term) 
+           bd=val_spec_body
+  { { bd with sp_writes = wr @ bd.sp_writes } }
+| PRESERVES cs=separated_list(COMMA, spatial_term) 
+           bd=val_spec_body
+  { { bd with sp_preserves = cs @ bd.sp_preserves } }
 | REQUIRES t=term bd=val_spec_body
   { { bd with sp_pre = t :: bd.sp_pre } }
 | CHECKS t=term bd=val_spec_body

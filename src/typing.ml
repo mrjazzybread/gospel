@@ -1063,7 +1063,7 @@ let process_val_spec kid crcm ns id args ret vs =
     let d_typed = dterm Spatial kid crcm ns env t.Uast.s_term in
     let typed = term env d_typed in
     let ty = typed.t_ty in
-    let spatial_ns = ns in
+    let spatial_ns = { ns with ns_ts = ns.ns_sp } in
     let spatial_type =
       match t.Uast.s_lens with None -> ty | Some t -> ty_of_pty spatial_ns t
     in

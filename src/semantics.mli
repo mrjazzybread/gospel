@@ -7,7 +7,4 @@
 (*  This software is free software, distributed under the MIT license     *)
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
-
-type config = { verbose : bool; sep : bool; load_path : string list }
-
-val run : config -> string list -> bool
+val process_sigs : Tmodule.file -> Sast.definition list

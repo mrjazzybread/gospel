@@ -532,20 +532,20 @@ let check_ambiguous ~loc cases =
       | _, None, _ -> ())
     cases
 
+let print_pattern = Tterm_printer.print_pattern ~print_type:true
+
 let check_redundancy ~loc tyl pmat =
   for i = 1 to pmat.Pmatrix.rows - 1 do
     let sub_mat, next_row = Pmatrix.sub_mat pmat i in
     if not (usefulness tyl sub_mat next_row) then
-      let s =
-        Fmt.str "@[%a@]" (list ~sep:comma Tterm_printer.print_pattern) next_row
-      in
+      let s = Fmt.str "@[%a@]" (list ~sep:comma print_pattern) next_row in
       W.error ~loc (W.Pattern_redundant s)
   done
 
 let check_exhaustive ~loc tyl pmat q bools =
   if usefulness tyl pmat q then
     let pm = ui tyl pmat in
-    let s = Fmt.str "@[%a@]" Tterm_printer.print_pattern pm in
+    let s = Fmt.str "@[%a@]" print_pattern pm in
     match bools with
     | [] -> W.error ~loc (W.Pattern_not_exhaustive s)
     | _ -> W.error ~loc (W.Pattern_guard_not_exhaustive s)

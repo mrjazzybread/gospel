@@ -22,6 +22,8 @@ let print_rec_field fmt ld =
 let print_label_decl_list print_field fmt fields =
   pp fmt "{%a}" (list ~sep:semi print_field) fields
 
+let print_term = print_term ~print_type:true
+
 let print_type_kind fmt = function
   | Pty_abstract -> ()
   | Pty_variant cpl ->
@@ -67,7 +69,9 @@ let print_type_spec fmt { ty_ephemeral; ty_model; ty_invariants; _ } =
       | Fields l -> list ~sep:newline print_field f l
     in
     let print_invariants ppf i =
-      pf ppf "with %a@;%a" print_vs (fst i)
+      pf ppf "with %a@;%a"
+        (print_vs ~print_type:true)
+        (fst i)
         (list
            ~first:(newline ++ const string "invariant ")
            ~sep:(const string "@\ninvariant")
@@ -103,6 +107,7 @@ let print_type_declaration fmt td =
     td.td_cstrs (option print_type_spec) td.td_spec
 
 let print_lb_arg fmt arg =
+  let print_vs = print_vs ~print_type:true in
   let vs = arg.lb_vs in
   match arg.lb_label with
   | Lnone -> print_vs fmt vs
@@ -115,7 +120,9 @@ let print_xposts f xposts =
   if xposts = [] then ()
   else
     let print xs f (p, t) =
-      pp f "@[@[%a@ %a@] -> @[%a@]@]" print_xs xs print_pattern p print_term t
+      pp f "@[@[%a@ %a@] -> @[%a@]@]" print_xs xs
+        (print_pattern ~print_type:true)
+        p print_term t
     in
     let print_xpost (xs, tl) =
       match tl with

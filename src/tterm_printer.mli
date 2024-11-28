@@ -11,10 +11,10 @@
 open Tterm
 open Symbols
 
-val print_vs : vsymbol Fmt.t
+val print_vs : print_type:bool -> vsymbol Fmt.t
 val print_ls_decl : lsymbol Fmt.t
 val print_ls_nm : lsymbol Fmt.t
-val print_pattern : pattern Fmt.t
+val print_pattern : print_type:bool -> pattern Fmt.t
 val print_binop : binop Fmt.t
 val print_quantifier : quant Fmt.t
-val print_term : term Fmt.t
+val print_term : print_type:bool -> term Fmt.t

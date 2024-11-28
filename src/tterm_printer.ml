@@ -14,9 +14,6 @@ open Ttypes
 open Utils
 open Fmt
 
-let print_vs fmt { vs_name; vs_ty } =
-  pp fmt "@[%a:%a@]" Ident.pp_simpl vs_name print_ty vs_ty
-
 let print_ls_decl fmt ls =
   let ls_name = get_name ls
   and ls_args = get_args ls
@@ -29,10 +26,16 @@ let print_ls_decl fmt ls =
     (list ~sep:sp print_unnamed_arg)
     ls_args print_ty ls_value
 
+let print_vs ~print_type fmt { vs_name; vs_ty } =
+  if print_type then pp fmt "@[%a:%a@]" Ident.pp_simpl vs_name print_ty vs_ty
+  else pp fmt "@[%a@]" Ident.pp_simpl vs_name
+
 let print_ls_nm fmt ls = pp fmt "%a" Ident.pp_simpl (get_name ls)
 let protect_on x s = if x then "(" ^^ s ^^ ")" else s
 
-let rec print_pat_node pri fmt p =
+let rec print_pat_node ~print_type pri fmt p =
+  let print_pat_node = print_pat_node ~print_type in
+  let print_vs = print_vs ~print_type in
   match p.p_node with
   | Pwild -> pp fmt "_"
   | Pvar v -> print_vs fmt v
@@ -51,7 +54,7 @@ let rec print_pat_node pri fmt p =
   | Pconst c -> Opprintast.constant fmt c
   | Pinterval (c1, c2) -> pp fmt "%C..%C" c1 c2
 
-let print_pattern = print_pat_node 0
+let print_pattern ~print_type = print_pat_node ~print_type 0
 
 let print_binop fmt = function
   | Tand -> pp fmt "/\\"
@@ -66,12 +69,16 @@ let print_quantifier fmt = function
   | Texists -> pp fmt "exists"
 
 let print_tbinder fmt b =
+  let print_vs = print_vs ~print_type:true in
   pp fmt "%a : %a %@ %a" print_vs b.bind_vs print_ty b.bind_prog print_ty
     b.bind_lens
 
 (* TODO use pretty printer from why3 *)
-let rec print_term fmt { t_node; t_ty; t_attrs; _ } =
-  let print_ty fmt ty = pp fmt ":%a" print_ty ty in
+let rec print_term ~print_type fmt { t_node; t_ty; t_attrs; _ } =
+  let print_term = print_term ~print_type in
+  let print_vs = print_vs ~print_type in
+  let print_pattern = print_pattern ~print_type in
+  let print_ty fmt ty = if print_type then pp fmt ":%a" print_ty ty else () in
   let print_t_node fmt t_node =
     match t_node with
     | Tconst c -> pp fmt "%a%a" Opprintast.constant c print_ty t_ty

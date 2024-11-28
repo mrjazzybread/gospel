@@ -8,6 +8,4 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 
-type config = { verbose : bool; sep : bool; load_path : string list }
-
-val run : config -> string list -> bool
+let process_sigs _ = assert false

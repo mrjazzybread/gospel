@@ -13,7 +13,7 @@ open Tmodule
 open Parser_frontend
 module W = Gospel.Warnings
 
-type config = { verbose : bool; load_path : string list }
+type config = { verbose : bool; sep : bool; load_path : string list }
 
 let fmt = Format.std_formatter
 let pp = Format.fprintf
@@ -56,6 +56,13 @@ let run_file config file =
       pp fmt "@[*******************************@]@.";
       pp fmt "@[%a@]@." print_file file);
     write_gospel_file md;
+    if config.sep then (
+      let file = Semantics.process_sigs file in
+      if config.verbose then (
+        pp fmt "@[@\n*******************************@]@.";
+        pp fmt "@[******* Seperation Logic ******@]@.";
+        pp fmt "@[*******************************@]@.");
+      pp fmt "@[%a@]@." Sast_printer.file file);
     true
   with W.Error e ->
     let bt = Printexc.get_backtrace () in

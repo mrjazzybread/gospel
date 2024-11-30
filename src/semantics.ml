@@ -121,10 +121,27 @@ let signature_item_desc = function
   | Sig_type (_, l, _) -> List.concat_map (fun t -> type_declaration t) l
   | _ -> []
 
-let signature_item s =
-  List.map
-    (fun sep -> { d_node = sep; d_loc = s.sig_loc })
-    (signature_item_desc s.sig_desc)
+(** [update_ns ns s] when [s] is the declaration of a representation predicate
+    returns an updated namespace that maps the name of the predicate to the
+    corresponding [lsymbol]. In all other cases, returns [ns] unchanged *)
+let update_ns ns s =
+  match s with
+  | Pred r ->
+      let args = List.map (fun x -> x.vs_ty) r.pred_args in
+      map_pred ns r.pred_name args
+  | _ -> ns
+
+let signature_item ns s =
+  let sigs = signature_item_desc s.sig_desc in
+  let ns = List.fold_left update_ns ns sigs in
+  let sigs = List.map (fun sep -> { d_node = sep; d_loc = s.sig_loc }) sigs in
+  (ns, sigs)
 
 let process_sigs file =
-  List.concat_map (fun s -> signature_item s) file.Tmodule.fl_sigs
+  let ns = ref empty_module in
+  let f s =
+    let ns', sigs = signature_item !ns s in
+    let () = ns := ns' in
+    sigs
+  in
+  List.concat_map f file.Tmodule.fl_sigs

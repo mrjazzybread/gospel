@@ -14,6 +14,21 @@
 open Ttypes
 open Symbols
 
+type namespace
+(** Maps strings to their corresponding representation predicates *)
+
+val empty_module : namespace
+(** The empty module *)
+
+val get_pred : namespace -> Ttypes.ty -> Sast.psymbol option
+(** [get_pred m s] returns the representation predicate for the type [s].
+    @raise Not_found
+      If [s] is a type whose logical model is isomorphic to its OCaml
+      representation or [s] is not in scope. *)
+
+val map_pred : namespace -> Ident.t -> ty list -> namespace
+(** [map_pred m s l] returns a module [m] where [get_pred m s = l] *)
+
 val change_id : (string -> string) -> Ident.t -> Ident.t
 (** Returns a fresh identifier where the [id_str] field of [change_id f id] is
     equal to [f id.id_str] *)

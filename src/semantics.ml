@@ -22,7 +22,7 @@ let ty_loc =
     - If the type has a model that is not isomorphic to its OCaml type,
       generates an abstract representation predicate that lifts the OCaml value
       into a logical representation *)
-let type_declaration ~ocaml t =
+let type_declaration ~ocaml ns t =
   (* Creates a type declaration for the model. If the model has no
      named model fields, then this function returns None *)
   let model_decl model_type =
@@ -59,6 +59,8 @@ let type_declaration ~ocaml t =
     in
     let model_vs = mk_ts (Ident.mk_id "model") pred_model_ty in
     let new_id = change_id rep_pred t.tname in
+    let pred_type = [ pred_prog_ty; pred_model_ty ] in
+    let () = Sep_utils.map_pred ns t.tname.id_tag new_id pred_type in
     let pred_kind = if is_mutable then Heap else Pure in
     if model_type = No_model && not is_mutable then None
     else
@@ -106,14 +108,20 @@ let type_declaration ~ocaml t =
 
 (** Transforms a single Gospel top level declaration into potentially several
     Separation Logic definitions *)
-let signature_item_desc = function
-  | Tast.Sig_type l -> List.concat_map (type_declaration ~ocaml:true) l
-  | Sig_ghost_type l -> List.concat_map (type_declaration ~ocaml:false) l
+let rec signature_item_desc ns = function
+  | Tast.Sig_type l -> List.concat_map (type_declaration ns ~ocaml:true) l
+  | Sig_ghost_type l -> List.concat_map (type_declaration ns ~ocaml:false) l
   | _ -> []
 
-let signature_item s =
-  List.map
-    (fun sep -> { d_node = sep; d_loc = s.sloc })
-    (signature_item_desc s.sdesc)
+and signature_item env s =
+  let sigs = signature_item_desc env s.sdesc in
+  let sigs = List.map (fun sep -> { d_node = sep; d_loc = s.sloc }) sigs in
+  sigs
 
-let process_sigs = List.concat_map (fun s -> signature_item s)
+let process_sigs file =
+  let env = empty_env () in
+  let f s =
+    let sigs = signature_item env s in
+    sigs
+  in
+  List.concat_map f file

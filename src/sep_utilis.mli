@@ -40,3 +40,9 @@ val rep_pred : string -> string
 val match_field : lsymbol -> Ident.t * ty list * ty
 (** When the argument is a [Field_symbol], returns the components of the
     constructor. This function is undefined for other values. *)
+
+val function_poly : Tast.function_ -> tvsymbol list
+(** [function_poly f] return a list with the polymorphic type variables of [f].
+    This includes the type variables of its arguments and the type variables of
+    existentially and universally quantified symbols within the definition of
+    [f] *)

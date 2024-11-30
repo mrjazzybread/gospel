@@ -55,16 +55,20 @@ let type_declaration ~ocaml ns t =
 
 (** Transforms a single Gospel top level declaration into potentially several
     Separation Logic definitions *)
-let signature_item_desc ns = function
+let rec signature_item_desc ns = function
   | Tast.Sig_type l -> List.concat_map (type_declaration ns ~ocaml:true) l
   | Sig_ghost_type l -> List.concat_map (type_declaration ns ~ocaml:false) l
   | _ -> []
 
-let signature_item ns s =
-  List.map
-    (fun sep -> { d_node = sep; d_loc = s.sloc })
-    (signature_item_desc ns s.sdesc)
+and signature_item ns s =
+  let sigs = signature_item_desc ns s.sdesc in
+  let sigs = List.map (fun sep -> { d_node = sep; d_loc = s.sloc }) sigs in
+  sigs
 
-let process_sigs =
+let process_sigs file =
   let ns = empty_env () in
-  List.concat_map (fun s -> signature_item ns s)
+  let f s =
+    let sigs = signature_item ns s in
+    sigs
+  in
+  List.concat_map f file

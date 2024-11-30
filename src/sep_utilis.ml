@@ -8,8 +8,26 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 
+open Ttypes
 open Symbols
 open Ident
+open Sast
+module Mstr = Tmodule.Mstr
+module Set = Set.Make (String)
+
+type namespace = psymbol Mstr.t
+
+let empty_module = Mstr.empty
+
+let get_pred ns ty =
+  match ty.ty_node with
+  | Tyapp (ts, _) -> (
+      try Some (Mstr.find ts.ts_ident.id_str ns) with Not_found -> None)
+  | _ -> None
+
+let map_pred ns ps_name ps_args =
+  let ps = { ps_name; ps_args } in
+  Mstr.add ps_name.id_str ps ns
 
 let change_id map id =
   Ident.create ~attrs:id.id_attrs ~loc:id.id_loc (map id.id_str)

@@ -119,6 +119,7 @@ let type_declaration t =
     Separation Logic definitions *)
 let signature_item_desc = function
   | Sig_type (_, l, _) -> List.concat_map (fun t -> type_declaration t) l
+  | Sig_function f -> [ Function (function_poly f, f) ]
   | _ -> []
 
 (** [update_ns ns s] when [s] is the declaration of a representation predicate

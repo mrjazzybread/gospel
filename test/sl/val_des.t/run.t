@@ -34,8 +34,7 @@
   ∀ 'a. (_prog_p_2 : 'a pointer loc), (p_1 : 'a), (x_2 : 'a). 
   { Pointer(_prog_p_2, p_1) }
   set _prog_p x 
-  { ∃ (_p_ : 'a).
-      Pointer(_prog_p_3, _p_) * [(_p_ = x_2)] }
+  {   Pointer(_prog_p_3, x_2) }
   
   Triple ph_eq :
   ∀ 'a. (x_3 : 'a pointer loc), (y_2 : 'a pointer loc). 

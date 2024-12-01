@@ -188,25 +188,28 @@ let val_description ns des =
   let updated_vars = List.filter_map mk_updates (updates @ rets) in
   let triple_post = (updated_vars, post_cond) in
   Triple
-    {
-      triple_name = des.vd_name;
-      triple_vars =
-        List.concat_map
-          (function
-            | { arg_spatial; arg_log } -> (
-                let l =
-                  if arg_log.vs_name.id_str = "()" then [] else [ arg_log ]
-                in
-                match arg_spatial with Some s -> s.arg_prog :: l | None -> l))
-          args;
-      triple_args = prog_args;
-      triple_rets = List.map to_prog_arg rets;
-      triple_checks = spec.sp_checks;
-      triple_pre;
-      triple_poly;
-      triple_type = des.vd_type;
-      triple_post;
-    }
+    (inline_def
+       {
+         triple_name = des.vd_name;
+         triple_vars =
+           List.concat_map
+             (function
+               | { arg_spatial; arg_log } -> (
+                   let l =
+                     if arg_log.vs_name.id_str = "()" then [] else [ arg_log ]
+                   in
+                   match arg_spatial with
+                   | Some s -> s.arg_prog :: l
+                   | None -> l))
+             args;
+         triple_args = prog_args;
+         triple_rets = List.map to_prog_arg rets;
+         triple_checks = spec.sp_checks;
+         triple_pre;
+         triple_poly;
+         triple_type = des.vd_type;
+         triple_post;
+       })
 
 (** Translates a Gospel type declaration into 1-3 Separation Logic definitions.
     These are as follows:

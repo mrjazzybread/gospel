@@ -86,3 +86,11 @@ val function_poly : Tast.function_ -> tvsymbol list
     This includes the type variables of its arguments and the type variables of
     existentially and universally quantified symbols within the definition of
     [f] *)
+
+val inline_def : Sast.triple -> Sast.triple
+(** [inline_def t] inlines, when possible, the existential variables in the
+    postcondition of the triple [t]. This is done when the postcondition is a
+    term with the following shape:
+    [exists
+    m'. P(e1, m') * ... * m' = e2 * ...] which is then simplified
+    into [P(e1, e2)] *)

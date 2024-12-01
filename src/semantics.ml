@@ -317,6 +317,16 @@ let signature_item_desc ns = function
   | Sig_type (_, l, _) -> List.concat_map (fun t -> type_declaration t) l
   | Sig_val (des, _) -> [ val_description ns des ]
   | Sig_function f -> [ Function (function_poly f, f) ]
+  | Sig_axiom axiom ->
+      let poly = get_term_poly axiom.ax_term in
+      let axiom =
+        {
+          sax_name = axiom.ax_name;
+          sax_loc = axiom.ax_loc;
+          sax_term = tterm_to_sep ns axiom.ax_term;
+        }
+      in
+      [ Axiom (poly, axiom) ]
   | _ -> []
 
 (** [update_ns ns s] when [s] is the declaration of a representation predicate

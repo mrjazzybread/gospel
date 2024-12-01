@@ -139,6 +139,8 @@ let ty_poly tl =
   let sl = List.map get_ty_poly tl in
   Tv_set.elements (union_all sl)
 
+let get_term_poly t = Tv_set.elements (get_term_poly t)
+
 (* Functions for inlining existential variables *)
 
 let is_var v1 t =

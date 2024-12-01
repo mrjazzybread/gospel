@@ -87,6 +87,10 @@ val function_poly : Tast.function_ -> tvsymbol list
     existentially and universally quantified symbols within the definition of
     [f] *)
 
+val get_term_poly : Tterm.term -> tvsymbol list
+(** [get_term_poly t] returns all the polymorphic variables used within the term
+    [t] *)
+
 val inline_def : Sast.triple -> Sast.triple
 (** [inline_def t] inlines, when possible, the existential variables in the
     postcondition of the triple [t]. This is done when the postcondition is a

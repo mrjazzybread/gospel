@@ -311,9 +311,19 @@ let type_declaration t =
   let cons x l = match x with None -> l | Some x -> x :: l in
   cons type_decl (cons model_decl (cons pred_def []))
 
+(** [update_ns ns s] when [s] is the declaration of a representation predicate
+    returns an updated namespace that maps the name of the predicate to the
+    corresponding [lsymbol]. In all other cases, returns [ns] unchanged *)
+let update_ns ns s =
+  match s with
+  | Pred r ->
+      let args = List.map (fun x -> x.vs_ty) r.pred_args in
+      map_pred ns r.pred_name args
+  | _ -> ns
+
 (** Transforms a single Gospel top level declaration into potentially several
     Separation Logic definitions *)
-let signature_item_desc ns = function
+let rec signature_item_desc ns = function
   | Sig_type (_, l, _) -> List.concat_map (fun t -> type_declaration t) l
   | Sig_val (des, _) -> [ val_description ns des ]
   | Sig_function f -> [ Function (function_poly f, f) ]
@@ -327,19 +337,17 @@ let signature_item_desc ns = function
         }
       in
       [ Axiom (poly, axiom) ]
+  | Sig_module m -> (
+      match m.md_type.mt_desc with
+      | Mod_signature s ->
+          let nm = m.md_name in
+          let f s = snd (signature_item ns s) in
+          let defs = List.concat_map f s in
+          [ Module (nm, defs) ]
+      | _ -> assert false)
   | _ -> []
 
-(** [update_ns ns s] when [s] is the declaration of a representation predicate
-    returns an updated namespace that maps the name of the predicate to the
-    corresponding [lsymbol]. In all other cases, returns [ns] unchanged *)
-let update_ns ns s =
-  match s with
-  | Pred r ->
-      let args = List.map (fun x -> x.vs_ty) r.pred_args in
-      map_pred ns r.pred_name args
-  | _ -> ns
-
-let signature_item ns s =
+and signature_item ns s =
   let sigs = signature_item_desc ns s.sig_desc in
   let ns = List.fold_left update_ns ns sigs in
   let sigs = List.map (fun sep -> { d_node = sep; d_loc = s.sig_loc }) sigs in

@@ -8,21 +8,16 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 
-exception E of (int * int * int)
+exception E of int * int * int
 
 (*@ function integer_of_int (x:int): integer *)
 (*@ function fst (x: 'a * 'a): 'a *)
 
 val f : 'a -> 'a
-(*@ let x = f y in
-    raises E (x,y) -> integer_of_int x = 1
+(*@ match f y with
+    | exception E (x,y) -> ensures integer_of_int x = 1
 *)
 
 (* {gospel_expected|
-   [125] File "tuple_arity2.mli", line 18, characters 13-18:
-         18 |     raises E (x,y) -> integer_of_int x = 1
-                           ^^^^^
-         Error: This pattern matches values of type 'a662 * 'a663
-                but a pattern was expected which matches values of type
-                int * int * int.
+   [125] Error: Type checking error: Exception pattern has 2 arguments but expected 3.
    |gospel_expected} *)

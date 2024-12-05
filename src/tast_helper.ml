@@ -11,9 +11,16 @@ let spec_arg label vs modified =
     lb_modified = modified;
   }
 
+let mk_xarg vs m =
+  {
+    x_vs = vs;
+    x_produces = (vs.vs_ty, Ttypes.ty_apply_spatial vs.vs_ty vs.vs_ty);
+    x_modified = m;
+  }
+
 let ty_of_lb_arg arg = arg.lb_vs.vs_ty
 
-let val_spec sp_args sp_ret sp_pre sp_checks sp_post sp_xpost sp_diverge sp_pure
+let val_spec sp_args sp_ret sp_pre sp_checks sp_post sp_xspec sp_diverge sp_pure
     sp_equiv sp_text sp_loc =
   {
     sp_args;
@@ -21,7 +28,7 @@ let val_spec sp_args sp_ret sp_pre sp_checks sp_post sp_xpost sp_diverge sp_pure
     sp_pre;
     sp_checks;
     sp_post;
-    sp_xpost;
+    sp_xspec;
     sp_diverge;
     sp_pure;
     sp_equiv;
@@ -38,6 +45,8 @@ let val_spec sp_args sp_ret sp_pre sp_checks sp_post sp_xpost sp_diverge sp_pure
    2 - sp_xpost sp_reads sp_alias *)
 let mk_val_spec args ret pre checks post xpost dv pure equiv txt loc =
   val_spec args ret pre checks post xpost dv pure equiv txt loc
+
+let mk_xspec xid xargs xrets xpost xloc = { xid; xargs; xrets; xpost; xloc }
 
 let mk_val_description vd_name vd_type vd_prim vd_attrs vd_args vd_ret vd_spec
     vd_loc =

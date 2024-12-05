@@ -162,10 +162,11 @@ already contains `t.capacity` elements.
 exception Full
 val add: 'a t -> 'a -> unit
 (*@ modifies t.contents
-	let _ = add t x in
-    ensures t.contents = Set.add x (old t.contents)
-    raises Full -> Set.cardinal (old t.contents) = t.capacity
-                /\ t.contents = old t.contents *)
+	match add t x with
+    | _ -> ensures t.contents = Set.add x (old t.contents)
+    |exception Full -> 
+       ensures Set.cardinal (old t.contents) = t.capacity
+       ensures t.contents = old t.contents *)
 ```
 
 Since we have a `modifies` clause, the contents of `t` may be mutated even when

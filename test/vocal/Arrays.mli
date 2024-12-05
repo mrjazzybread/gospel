@@ -17,9 +17,10 @@ val binary_search : ('a -> 'a -> int) -> 'a array -> int -> int -> 'a -> int
 (*@ requires Order.is_pre_order cmp
     requires 0 <= fromi <= toi <= Sequence.length a
     requires forall i j. fromi <= i <= j < toi -> cmp a[i] a[j] <= 0
-    let r = binary_search cmp a fromi toi v in
-      ensures  fromi <= r < toi && cmp a[r] v = 0
-      raises   Not_found -> forall i. fromi <= i < toi -> cmp a[i] v <> 0 *)
+    match binary_search cmp a fromi toi v with
+    |r -> ensures fromi <= r < toi && cmp a[r] v = 0
+    |exception Not_found -> 
+      ensures forall i. fromi <= i < toi -> cmp a[i] v <> 0 *)
 
 val binary_search_left :
   ('a -> 'a -> int) -> 'a array -> int -> int -> 'a -> int

@@ -365,8 +365,8 @@ manually specify it:
 exception E
 val inplace_map : ('a -> 'a) -> 'a t -> unit
 (*@ modifies a.contents
-	let _ = inplace_map f a in
-    raises E -> a.contents = old (a.contents) *)
+	match inplace_map f a with
+    |exception E -> ensures a.contents = old (a.contents) *)
 ```
 
 :::

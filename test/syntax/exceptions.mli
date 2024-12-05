@@ -28,22 +28,20 @@ exception E11 of char
 (*@ function int_of_integer (x:integer): int *)
 
 val f : 'a -> 'a
-(*@ let x = f y in
-    raises E1 x -> integer_of_int x = 1 | E1 _ -> false
-    raises E2 (_, _)
-    raises E2 (_, _) -> true
-    raises E2 (_, _) -> true
-    raises E2pair _ -> true
-    raises E2pair (x, y) -> true
-    raises E2pair (_, _) -> true
-    raises E2pair z -> true
-    raises E3 l -> (match l with
-                   | [] -> false
-                   | y :: ys -> integer_of_int y = 2)
-         | E4 (i,l) -> match l with
-                   | [] -> true
-                   | y :: ys -> y = i
-    raises E5 f -> integer_of_int (f (int_of_integer 3)) = 4
-    raises E11 'a' -> true
-    raises E11 ('a' | 'b') -> true
-    raises E11 ('c'..'z') -> true *)
+(*@ match f y with
+    | exception E1 z -> ensures integer_of_int z = 1
+    | exception E2pair -> ensures true
+    | exception E3 l -> ensures (match l with
+                         | [] -> false
+                         | z :: zs -> integer_of_int z = 2)
+    | exception E4 (i,l) -> ensures (match l with
+                            | [] -> true
+                            | z :: zs -> z = i)
+    | exception E5 f -> ensures integer_of_int (f (int_of_integer 3)) = 4
+    | exception E11
+    | exception E2 (i, j) ->
+      produces i
+      produces j
+      ensures true
+    
+*)

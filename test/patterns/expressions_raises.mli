@@ -17,9 +17,8 @@ val f : int -> t -> bool
              | D (_, _)
              | D ((_, _))
              | D _ -> true
-    let b = f n t in
-    raises E (_, _) -> true
+    match f n t with
+    | exception E -> ensures true
     (* but not: *)
     (* raises E _ -> false *)
-    raises F _ -> true
-    raises F (_, _) -> true *)
+    | exception F -> ensures true *)

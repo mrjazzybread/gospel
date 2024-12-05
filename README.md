@@ -51,17 +51,20 @@ val clear : 'a t -> unit
 
 val push : 'a -> 'a t -> unit
 (*@ modifies s.contents
-	let _ = push a s in
-    ensures s.contents = Sequence.cons a (old s.contents)
-    raises Full -> Sequence.length (old s.contents) = s.capacity
-                /\ s.contents = old s.contents *)
+	match push a s with
+    | _ -> ensures s.contents = Sequence.cons a (old s.contents)
+    | exception Full -> 
+	   ensures Sequence.length (old s.contents) = s.capacity
+       ensures s.contents = old s.contents *)
 
 val pop : 'a t -> 'a
 (*@ modifies s.contents
-	let a = pop s in
-    ensures a = Sequence.hd (old s.contents)
-    ensures s.contents = Sequence.tl (old s.contents)
-    raises Empty -> old s.contents = Sequence.empty = s.contents *)
+	match pop s with
+    |a -> 
+	  ensures a = Sequence.hd (old s.contents)
+      ensures s.contents = Sequence.tl (old s.contents)
+    |exception Empty -> 
+      ensures old s.contents = Sequence.empty = s.contents *)
 
 val pop_opt : 'a t -> 'a option
 (*@ modifies s.contents
@@ -71,9 +74,9 @@ val pop_opt : 'a t -> 'a option
                 | Some a -> old s.contents = Sequence.cons a s.contents *)
 
 val top : 'a t -> 'a
-(*@ let a = top s in
-    ensures a = Sequence.hd s.contents
-    raises Empty -> s.contents = Sequence.empty *)
+(*@ match top s with
+    |a -> ensures a = Sequence.hd s.contents
+    |exception Empty -> ensures s.contents = Sequence.empty *)
 ```
 
 We designed Gospel to provide a tool-agnostic frontend for bringing formal

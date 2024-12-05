@@ -275,8 +275,10 @@ val pop : 'a t -> 'a
 (** [pop a] removes and returns the rightmost element in vector [a], or raises
     [Empty] if the stack is empty. *)
 (*@ modifies a
-    let x = pop a in
-      raises   Empty -> Sequence.length a.view = Sequence.length (old a).view = 0
+    match pop a with
+    | exception Empty -> 
+       ensures Sequence.length a.view = Sequence.length (old a).view = 0
+    | x ->
       ensures  Sequence.length a.view = Sequence.length (old a).view - 1
       ensures  x = (old a).view[Sequence.length a.view]
       ensures  forall i. 0 <= i < Sequence.length a.view ->

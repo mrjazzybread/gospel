@@ -22,7 +22,8 @@ val mjrty : string array -> string
 (** [mjrty a] returns the element of [a] with absolute majority, if any, or
     raises [Not_found] otherwise *)
 (*@ requires 1 <= Sequence.length a
-    let r = mjrty a in
+    match mjrty a with
+    |r ->
       ensures  2 * num a r 0 (Sequence.length a) > Sequence.length a
-      raises   Not_found ->
-               forall c. 2 * num a c 0 (Sequence.length a) <= Sequence.length a *)
+    |exception Not_found ->
+      ensures forall c. 2 * num a c 0 (Sequence.length a) <= Sequence.length a *)

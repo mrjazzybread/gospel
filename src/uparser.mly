@@ -44,7 +44,7 @@
   let empty_sp_post = {
     sp_post = [];
     sp_ret = Wildcard;
-    sp_xpost = [];
+    sp_xspec = [];
     sp_produces = [];
     sp_equiv = [];
   }
@@ -65,6 +65,14 @@
     fun_text = "";
     fun_loc = Location.none;
   }
+
+  let mk_xspec id args prod post = {
+      xid = id;
+      xrets = args;
+      xproduces = prod;
+      xpost = post;
+      xloc = Location.none
+    }
 
   let loc_of_qualid = function Qpreid pid | Qdot (_, pid) -> pid.pid_loc
 
@@ -98,13 +106,13 @@
 %token INVARIANT
 %token COERCION
 %token IF IN
-%token OLD NOT RAISES
+%token OLD NOT
 %token THEN TRUE EQUIVALENT CHECKS DIVERGES PURE
 %token BEGIN
 %token END
 
 %token AS
-%token LET MATCH PREDICATE
+%token LET MATCH PREDICATE EXCEPTION
 %token WITH
 
 (* symbols *)
@@ -161,6 +169,8 @@ val_spec:
   { let rets, h = h in
     let s2 = { s2 with sp_ret = rets } in
     { empty_vspec with sp_header = Some h; sp_spec_pre=s1; sp_spec_post=s2 } }
+| s1=val_spec_pre_empty h=val_exn_header s2=val_spec_exn EOF
+   { { empty_vspec with sp_header = Some h; sp_spec_pre=s1; sp_spec_post=s2 } }
 | s=val_spec_pre h=val_spec_header? EOF
   { let h = Option.map (fun (_, h) -> h) h in
     { empty_vspec with sp_spec_pre = s; sp_header = h } }
@@ -292,12 +302,45 @@ val_spec_header:
   { ret, app }
 ;
 
+val_exn_header:
+| MATCH app=val_app WITH
+  { app }
+;
+
+exn_clauses_empty:
+|(* epsilon *)
+  { [], [] }
+|c=exn_clauses
+  { c }
+
+exn_clauses:
+| ENSURES t=term bd=exn_clauses_empty
+  { let xpost, xprod = bd in
+        t :: xpost, xprod }
+| PRODUCES pr=separated_nonempty_list(COMMA, spatial_term)
+           bd=exn_clauses_empty
+  { let xpost, xprod = bd in
+        xpost, pr @ xprod }
+
+val_spec_exn_empty:
+| (* epsilon *)
+  { empty_sp_post }
+| s=val_spec_exn
+  { s }
+
+val_spec_exn:
+| BAR EXCEPTION id=qualid bd=val_spec_exn_empty
+  { { bd with sp_xspec=mk_xspec id [] [] [] :: bd.sp_xspec } }
+| BAR EXCEPTION id=qualid l=exn_args
+                ARROW xspec=exn_clauses bd=val_spec_exn_empty
+  { let xpost, xprod = xspec in
+      { bd with sp_xspec=mk_xspec id l xprod xpost :: bd.sp_xspec } }
+| BAR r=ret_name ARROW bd1=val_spec_post bd2=val_spec_exn_empty
+  { { bd1 with sp_xspec=bd1.sp_xspec @ bd2.sp_xspec; sp_ret=r } }
+  
 val_spec_post:
 | ENSURES t=term bd=val_spec_post_empty
-  { { bd with sp_post = t :: bd.sp_post} }
-| RAISES r=bar_list1(raises) bd=val_spec_post_empty
-  { let xp = mk_loc $loc(r), r in
-    { bd with sp_xpost = xp :: bd.sp_xpost } }
+  { { bd with sp_post = t :: bd.sp_post } }
 | PRODUCES pr=separated_nonempty_list(COMMA, spatial_term) 
            bd=val_spec_post_empty
   { { bd with sp_produces = pr @ bd.sp_produces } }
@@ -335,15 +378,13 @@ ret_name:
 | LEFTPAR RIGHTPAR { Unit_ret }
 | UNDERSCORE { Wildcard };
 
-raises:
-| q=uqualid ARROW t=term
-  { q, Some (mk_pat (Ptuple []) $loc(q), t) }
-| q=uqualid p=pat_arg ARROW t=term
-  { q, Some (p, t) }
-| q=uqualid p=pat_arg
-  { q, Some (p, mk_term Ttrue $loc(p)) }
-| q=uqualid
-  { q, None}
+exn_args:
+| (* epsilon *)
+  { [] }
+| r=lident
+  { [r] }
+| LEFTPAR l=comma_list(lident) RIGHTPAR 
+  { l }
 ;
 
 params:

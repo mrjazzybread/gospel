@@ -18,9 +18,9 @@ module type S = sig
 
   val pop : 'a t -> 'a
   (*@ modifies p @ 'a t
+      requires p <> Sequence.empty
       let r = pop p in
-        raises Not_found
-        ensures (old p) = Sequence.cons r p *)
+      ensures (old p) = Sequence.cons r p *)
 
   val clear : 'a t -> unit
   (*@ modifies p @ 'a t

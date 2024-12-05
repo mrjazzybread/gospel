@@ -116,24 +116,19 @@ let print_lb_arg fmt arg =
   | Lghost -> pp fmt "[%a: %a]" print_vs vs print_ty vs.vs_ty
   | Lunit -> pp fmt "%s" "()"
 
-let print_xposts f xposts =
-  if xposts = [] then ()
-  else
-    let print xs f (p, t) =
-      pp f "@[@[%a@ %a@] -> @[%a@]@]" print_xs xs
-        (print_pattern ~print_type:true)
-        p print_term t
-    in
-    let print_xpost (xs, tl) =
-      match tl with
-      | [] -> pp f "@\n@[raises %a@]" print_xs xs
-      | tl ->
-          list
-            ~first:(newline ++ const string "raises")
-            ~sep:(sp ++ const string "| ")
-            (print xs) f tl
-    in
-    List.iter print_xpost xposts
+let print_xspec fmt xspec =
+  let print_posts fmt = function
+    | [] -> ()
+    | _ ->
+        let sep = newline ++ const string "ensures" in
+        pp fmt " begin %a end" (list ~first:sep ~sep print_term) xspec.xpost
+  in
+  let print_args fmt l =
+    List.iter (fun x -> pp fmt "%a" (print_vs ~print_type:true) x.x_vs) l
+  in
+
+  pp fmt "raises %a%a%a" print_xs xspec.xid print_args xspec.xargs print_posts
+    xspec.xpost
 
 let print_vd_spec val_id fmt vs =
   let print_term f t = pp f "@[%a@]" print_term t in
@@ -159,7 +154,9 @@ let print_vd_spec val_id fmt vs =
        ~first:(newline ++ const string "ensures ")
        ~sep:(newline ++ const string "ensures ")
        print_term)
-    vs.sp_post print_xposts vs.sp_xpost
+    vs.sp_post
+    (list ~first:newline ~sep:newline print_xspec)
+    vs.sp_xspec
     (list
        ~first:(newline ++ const string "equivalent ")
        ~sep:(newline ++ const string "equivalent ")

@@ -61,22 +61,22 @@ end) : sig
   exception Empty
 
   val find_min_exn : heap -> elt
-  (*@ let x = find_min_exn h in
-      raises  Empty -> Bag.cardinal h.bag = 0
-      ensures Bag.cardinal h.bag > 0 && x = minimum h *)
+  (*@ match find_min_exn h with
+      |exception Empty -> ensures Bag.cardinal h.bag = 0
+      |x -> ensures Bag.cardinal h.bag > 0 && x = minimum h *)
 
   val delete_min_exn : heap -> unit
   (*@ modifies h
-      let _ = delete_min_exn h in
-      raises  Empty -> Bag.cardinal h.bag = 0 && h.bag = old h.bag
-      ensures (old h).bag = Bag.add (minimum (old h)) h.bag *)
+      match delete_min_exn h with
+      | exception Empty -> ensures Bag.cardinal h.bag = 0 && h.bag = old h.bag
+      | _ -> ensures (old h).bag = Bag.add (minimum (old h)) h.bag *)
 
   val extract_min_exn : heap -> elt
   (*@ modifies h
-      let x = extract_min_exn h in
-        raises  Empty -> Bag.cardinal h.bag = 0 && h.bag = old h.bag
-        ensures x = minimum (old h)
-        ensures (old h).bag = Bag.add x h.bag *)
+      match extract_min_exn h with
+        |exception Empty -> ensures Bag.cardinal h.bag = 0 && h.bag = old h.bag
+        |x -> ensures x = minimum (old h)
+              ensures (old h).bag = Bag.add x h.bag *)
 
   val insert : elt -> heap -> unit
   (*@ checks   Bag.cardinal h.bag < Sys.max_array_length

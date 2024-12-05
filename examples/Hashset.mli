@@ -230,15 +230,13 @@ module SET : sig
 
      Time complexity: {m O(1)}. *)
   val find : set -> element -> element
-  (*@ let y = find s x in
-        ensures mem_equiv x s
-        ensures equiv x y
-        ensures mem y s
-      (* raises Not_found { *)
-      (*   produces s *)
-      (*   ensures s = old s *)
-      (*   ensures not mem_equiv x s *)
-      (*   }   *) *)
+  (*@ match find s x with
+     | y -> 
+       ensures mem_equiv x s
+       ensures equiv x y
+       ensures mem y s
+     |exception Not_found ->
+       ensures not mem_equiv x s *)
 
   (*If the set [s] has nonzero cardinality, then [choose s] returns
      an element of the set [s]. This element is chosen at random.
@@ -260,13 +258,10 @@ module SET : sig
      then it is recommended to repeatedly call [tighten] so as to
      maintain a high occupancy rate. *)
   val choose : set -> element
-  (*@ let x = choose s in
-        ensures mem x s
-      (* raises Not_found { *)
-      (*   produces s *)
-      (*   ensures s = old s = empty *)
-      (* } *) *)
 
+  (*@ match choose s with
+      | x -> ensures mem x s
+      | exception Not_found -> ensures s = empty *)
   (* {2 Insertion and lookup} *)
 
   (*[find_else_add s x] determines whether some element [y] that is equivalent
@@ -284,16 +279,15 @@ module SET : sig
 
   (*@ requires valid x
       modifies s
-      let y = find_else_add s x in
+      match find_else_add s x with
+      | y ->
         ensures mem_equiv x s
         ensures equiv x y
         ensures mem y s
-        raises Not_found
-        (* begin *)
-        (*   produces s *)
-        (*   ensures s = add x (old s) *)
-        (*   ensures not mem_equiv x (old s)
-        end *) *)
+      | exception Not_found ->
+        produces s
+        ensures s = add x (old s)
+        ensures not mem_equiv x (old s) *)
   (* {2 Deletion} *)
 
   (*If some element [y] that is equivalent to [x] is a member of the
@@ -316,31 +310,16 @@ module SET : sig
   val find_and_remove : set -> element -> element
   (*@ requires valid x
       modifies s
-      let y = find_and_remove s x in
+      match find_and_remove s x with
+      | y -> 
         ensures mem_equiv x s
         ensures equiv x y
         ensures mem y (old s)
         ensures s = remove y s
-        (* raises Not_found begin *)
-        (*   produces s *)
-        (*   ensures s = old s *)
-        (*   ensures not mem_equiv x s
-        end *) *)
-
-  (*@ forall s x,
-    consumes s
-    requires valid x
-    match find_and_remove s x with
-      | y ->
-         produces s
-         ensures mem_equiv x s
-         ensures equiv x y
-         ensures mem y (old s)
-         ensures s = remove y s
       | exception Not_found ->
-         produces s
-         ensures s = old s
-         ensures not mem_equiv x s *)
+        produces s
+        ensures s = old s
+        ensures not mem_equiv x s *)
 
   (* {2 Iteration} *)
 

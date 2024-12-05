@@ -32,6 +32,7 @@
         "ensures", ENSURES;
         "ephemeral", EPHEMERAL;
         "equivalent", EQUIVALENT;
+	"exception", EXCEPTION;
         "false", FALSE;
         "forall", FORALL;
         "fun", FUN;
@@ -50,7 +51,6 @@
 	"preserves", PRESERVES;
 	"produces", PRODUCES;
         "pure", PURE;
-        "raises", RAISES;
         "rec", REC;
         "requires", REQUIRES;
         "then", THEN;

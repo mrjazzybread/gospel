@@ -81,9 +81,11 @@ exception Empty
 
 val pop: 'a t -> 'a
 (*@ modifies q
-	let v = pop q in
-    ensures  old q.view = q.view ++ Sequence.cons v Sequence.empty
-    raises   Empty -> q.view = old q.view = Sequence.empty *)
+	match pop q with
+    | v ->
+	  ensures old q.view = q.view ++ Sequence.cons v Sequence.empty
+    | exception Empty -> 
+	  ensures q.view = old q.view = Sequence.empty *)
 ```
 
 We have two postconditions:

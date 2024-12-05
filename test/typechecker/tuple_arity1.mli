@@ -8,14 +8,15 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 
-exception E of (int * int)
+exception E of int * int
 
 (*@ function integer_of_int (x:int): integer *)
 (*@ function fst (x: 'a * 'a): 'a *)
 
 val f : 'a -> 'a
-(*@ let x = f y in
-    raises E (x,y,z) -> integer_of_int x = 1 *)
+(*@ match f y with
+    | exception E (x,y,z) ->
+       ensures integer_of_int x = 1 *)
 
 (* ERROR:
    Line 18
@@ -23,9 +24,5 @@ val f : 'a -> 'a
    remove one of the tuple elements in line 18 *)
 
 (* {gospel_expected|
-   [125] File "tuple_arity1.mli", line 18, characters 13-20:
-         18 |     raises E (x,y,z) -> integer_of_int x = 1 *)
-                           ^^^^^^^
-         Error: This pattern matches values of type 'a663 * 'a664 * 'a665
-                but a pattern was expected which matches values of type int * int.
+   [125] Error: Type checking error: Exception pattern has 3 arguments but expected 2.
    |gospel_expected} *)

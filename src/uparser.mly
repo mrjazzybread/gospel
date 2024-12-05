@@ -36,7 +36,7 @@
     sp_pre = [];
     sp_checks = [];
     sp_post = [];
-    sp_xpost = [];
+    sp_xspec = [];
     sp_consumes = [];
     sp_produces = [];
     sp_writes = [];
@@ -56,6 +56,14 @@
     fun_text = "";
     fun_loc = Location.none;
   }
+
+  let mk_xspec id args prod post = {
+      xid = id;
+      xrets = args;
+      xproduces = prod;
+      xpost = post;
+      xloc = Location.none
+    }
 
   let loc_of_qualid = function Qpreid pid | Qdot (_, pid) -> pid.pid_loc
 
@@ -269,9 +277,9 @@ val_spec_body:
   { { bd with sp_checks = t :: bd.sp_checks } }
 | ENSURES t=term bd=val_spec_body
   { { bd with sp_post = t :: bd.sp_post} }
-| RAISES r=bar_list1(raises) bd=val_spec_body
-  { let xp = mk_loc $loc(r), r in
-    { bd with sp_xpost = xp :: bd.sp_xpost } }
+| RAISES r=raises bd=val_spec_body
+  { let r = List.map (fun s -> { s with xloc = mk_loc $loc(r) }) r in
+    { bd with sp_xspec = r @ bd.sp_xspec } }
 | EQUIVALENT e=STRING bd=val_spec_body
   { { bd with sp_equiv = e :: bd.sp_equiv} }
 ;
@@ -301,15 +309,36 @@ ret_name:
   { $2 }
 | comma_list(ret_value) EQUAL { $1 } ;
 
+xspec:
+| (* epsilon *)
+    { ([], []) }
+| spec = xspec_non_empty
+    { spec }
+
+xspec_non_empty:
+| ENSURES t=term s=xspec
+    { let prod, post = s in
+      (prod, t::post) }
+| PRODUCES prod=separated_list(COMMA, spatial_term) s=xspec
+    { let pr, post = s in
+        (prod @ pr, post)}
+
+xspec_args:
+| (* epsilon *)
+    { [] }
+| id = lident
+    { [id] }
+| LEFTPAR l = comma_list1(lident) RIGHTPAR
+    { l }
+
 raises:
-| q=uqualid ARROW t=term
-  { q, Some (mk_pat (Ptuple []) $loc(q), t) }
-| q=uqualid p=pat_arg ARROW t=term
-  { q, Some (p, t) }
-| q=uqualid p=pat_arg
-  { q, Some (p, mk_term Ttrue $loc(p)) }
-| q=uqualid
-  { q, None}
+| l=comma_list1(qualid)
+    { List.map (fun x -> mk_xspec x [] [] []) l }
+| q=qualid l=xspec_args ARROW t=term
+    { [ mk_xspec q l [] [t]] }
+| q=qualid l=xspec_args BEGIN s=xspec_non_empty END
+    { let prod, post = s in
+      [mk_xspec q l prod post] }
 ;
 
 params:

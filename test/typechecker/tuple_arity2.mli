@@ -19,10 +19,8 @@ val f : 'a -> 'a
 *)
 
 (* {gospel_expected|
-   [125] File "tuple_arity2.mli", line 18, characters 13-18:
+   [125] File "tuple_arity2.mli", line 18, characters 11-42:
          18 |     raises E (x,y) -> integer_of_int x = 1
-                           ^^^^^
-         Error: This pattern matches values of type 'a657 * 'a658
-                but a pattern was expected which matches values of type
-                int * int * int.
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+         Error: Type checking error: Exception pattern has 2 arguments but expected 1.
    |gospel_expected} *)

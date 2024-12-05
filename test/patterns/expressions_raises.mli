@@ -18,8 +18,8 @@ val f : int -> t -> bool
              | D (_, _)
              | D ((_, _))
              | D _ -> true
-    raises E (_, _) -> true
+    raises E -> true
     (* but not: *)
     (* raises E _ -> false *)
-    raises F _ -> true
-    raises F (_, _) -> true *)
+    raises F -> true
+    raises F -> true *)

@@ -81,9 +81,16 @@ and term_desc =
 
 (* Specification *)
 
-type xpost = Location.t * (qualid * (pattern * term) option) list
 type lens = pty
 type spatial_term = { s_term : term; s_lens : lens option }
+
+type xspec = {
+  xid : qualid;
+  xrets : Preid.t list;
+  xproduces : spatial_term list;
+  xpost : term list;
+  xloc : Location.t;
+}
 
 type spec_header = {
   sp_hd_nm : Preid.t;
@@ -98,7 +105,7 @@ type val_spec = {
   sp_pre : term list;
   sp_checks : term list;
   sp_post : term list;
-  sp_xpost : xpost list;
+  sp_xspec : xspec list;
   sp_consumes : spatial_term list;
   sp_produces : spatial_term list;
   sp_writes : spatial_term list;

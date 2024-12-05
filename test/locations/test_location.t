@@ -630,7 +630,7 @@ First, create a test artifact:
                    };
                  t_attrs = []; t_loc = foo.mli:12:12 }
                ];
-             sp_xpost = []; sp_diverge = false; sp_pure = false; sp_equiv = [];
+             sp_xspec = []; sp_diverge = false; sp_pure = false; sp_equiv = [];
              sp_text =
              " t = create i\n    checks i >= 0\n    ensures t.contents = []\n    ensures t.size = i ";
              sp_loc = foo.mli:9:3 };
@@ -2739,7 +2739,7 @@ First, create a test artifact:
                   };
                 t_attrs = []; t_loc = foo.mli:32:12 }
                ];
-             sp_xpost = []; sp_diverge = false; sp_pure = false; sp_equiv = [];
+             sp_xspec = []; sp_diverge = false; sp_pure = false; sp_equiv = [];
              sp_text =
              " add a t\n    modifies t.contents\n    (* comments *)\n    ensures t.contents = if is_full t.contents t.size\n                         then old t.contents\n                         else a :: (old t.contents) ";
              sp_loc = foo.mli:29:3 };

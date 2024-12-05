@@ -235,11 +235,9 @@ module type SET = sig
       ensures mem_equiv x s
       ensures equiv x y
       ensures mem y s
-      (* raises Not_found { *)
-      (*   produces s *)
-      (*   ensures s = old s *)
-      (*   ensures not mem_equiv x s *)
-      (*   }   *) *)
+      raises Not_found begin
+        ensures not mem_equiv x s
+      end *)
 
   (*If the set [s] has nonzero cardinality, then [choose s] returns
      an element of the set [s]. This element is chosen at random.
@@ -261,13 +259,13 @@ module type SET = sig
      then it is recommended to repeatedly call [tighten] so as to
      maintain a high occupancy rate. *)
   val choose : set -> element
+
   (*@ x = choose s
       ensures mem x s
-      (* raises Not_found { *)
+      raises Not_found begin
       (*   produces s *)
-      (*   ensures s = old s = empty *)
-      (* } *) *)
-
+        ensures s = empty
+      end *)
   (* {2 Insertion and lookup} *)
 
   (*[find_else_add s x] determines whether some element [y] that is equivalent
@@ -289,11 +287,11 @@ module type SET = sig
       ensures mem_equiv x s
       ensures equiv x y
       ensures mem y s
-      (* raises Not_found { *)
+      raises Not_found begin
       (*   produces s *)
       (*   ensures s = add x (old s) *)
-      (*   ensures not mem_equiv x (old s) *)
-      (*   } *) *)
+        ensures not mem_equiv x (old s)
+      end *)
   (* {2 Deletion} *)
 
   (*If some element [y] that is equivalent to [x] is a member of the
@@ -321,11 +319,11 @@ module type SET = sig
       ensures equiv x y
       ensures mem y (old s)
       ensures s = remove y s
-      (* raises Not_found { *)
-      (*   produces s *)
-      (*   ensures s = old s *)
-      (*   ensures not mem_equiv x s *)
-      (*   } *) *)
+      raises Not_found begin
+        (* produces s *)
+        (* ensures s = old s *)
+        ensures not mem_equiv x s
+      end *)
 
   (* {2 Iteration} *)
 

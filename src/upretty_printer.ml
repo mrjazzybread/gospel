@@ -69,7 +69,7 @@ let val_spec fmt vspec =
           (list_keyword "requires ...")
           s.sp_pre
           (list_keyword "ensures ...")
-          s.sp_post (list_keyword "with ...") s.sp_xpost
+          s.sp_post (list_keyword "with ...") s.sp_xspec
           (list_keyword "modifies ...")
           s.sp_writes
           (list_keyword "consumes ...")

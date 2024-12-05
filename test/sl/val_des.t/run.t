@@ -12,8 +12,8 @@
   ∀(x_1 : elt), (y_1 : elt). 
   {  }
   st_eq x y 
-  { λ (b : bool).
-      [b <-> (x_1 = y_1)] }
+  { λ (b_1 : bool).
+      [b_1 <-> (x_1 = y_1)] }
   
   Triple identity :
   ∀(__arg0 : elt). 
@@ -30,7 +30,7 @@
   { λ (r : 'a).
       Pointer(_prog_p_1, p) * [(r = p)] }
   
-  Triple set :
+  Triple set_1 :
   ∀ 'a. (_prog_p_2 : 'a pointer loc), (p_1 : 'a), (x_2 : 'a). 
   { Pointer(_prog_p_2, p_1) }
   set _prog_p x 
@@ -40,8 +40,8 @@
   ∀ 'a. (x_3 : 'a pointer loc), (y_2 : 'a pointer loc). 
   {  }
   ph_eq x y 
-  { λ (b_1 : bool).
-      [b_1 <-> (x_3 = y_2)] }
+  { λ (b_2 : bool).
+      [b_2 <-> (x_3 = y_2)] }
   
   Type ∀ 'a. array = { size : int; elts : 'a sequence }
   
@@ -53,7 +53,7 @@
   set_i _prog_arr i x 
   { ∃ (_arr_ : 'a array).
       Array(_prog_arr_1, _arr_) *
-      [((_arr_).elts = (set_1  (arr).elts (integer_of_int  i) x_4))] }
+      [((_arr_).elts = (set_2  (arr).elts (integer_of_int  i) x_4))] }
   
   Triple concat :
   ∀ 'a. (_prog_arr1 : 'a array loc), (arr1 : 'a array),

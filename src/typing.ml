@@ -1131,81 +1131,69 @@ let process_val_spec kid crcm ns id args ret vs =
   let pre_env = { env = old_env; old_env } in
   let pre = List.map (fmla Requires kid crcm ns pre_env) vs.sp_pre in
   let checks = List.map (fmla Checks kid crcm ns pre_env) vs.sp_checks in
-  let post = List.map (fmla Ensures kid crcm ns { env; old_env }) vs.sp_post in
-
-  let process_xpost (loc, exn) =
-    let merge_xpost t tl =
-      match (t, tl) with
-      | None, None -> Some []
-      | None, Some tl -> Some tl
-      | Some t, None -> Some [ t ]
-      | Some t, Some tl -> Some (t :: tl)
-    in
-    let process mxs (q, pt) =
-      let xs = find_q_xs ns q in
-      match pt with
-      | None -> (
-          match xs.xs_type with
-          | Exn_tuple [] -> Mxs.update xs (merge_xpost None) mxs
-          | _ ->
-              W.type_checking_error ~loc
-                "Exception pattern does not match its type")
-      | Some (p, t) ->
-          let dp = dpattern kid ns p in
-          let ty =
-            let rec aux p xs =
-              match (p.pat_desc, xs.xs_type) with
-              | (Pvar _ | Pwild), Exn_tuple [] ->
-                  W.type_checking_error ~loc "Exception pattern not expected"
-              | ( ( Pvar _ | Pwild | Ptuple _ | Pconst _
-                  | Pinterval (_, _)
-                  | Ptrue | Pfalse ),
-                  Exn_tuple [ ty ] ) ->
-                  ty
-              | (Pvar _ | Pwild), Exn_tuple (_ :: _ :: _) ->
-                  W.type_checking_error ~loc
-                    "Exception pattern doesn't match its type"
-              | Ptuple _, Exn_tuple tyl ->
-                  ty_app (ts_tuple (List.length tyl)) tyl
-              | Pas (p, _), _ -> aux p xs
-              | Por (p0, p1), _ ->
-                  let ty0 = aux p0 xs and ty1 = aux p1 xs in
-                  if Ttypes.ty_equal ty0 ty1 then ty0
-                  else W.type_checking_error ~loc "Type mismatch"
-              | Prec _, Exn_record _ ->
-                  (* TODO unify types and field names *)
-                  W.error ~loc (W.Unsupported "Record type in exceptions")
-              | Pcast (_, _), _ ->
-                  (* This is not handled in Dterm.pattern *)
-                  W.error ~loc (W.Unsupported "Cast in exceptions")
-              | Papp (_, _), _ ->
-                  W.error ~loc (W.Unsupported "Qualified pattern in exceptions")
-              | _, _ ->
-                  W.type_checking_error ~loc
-                    "Exception pattern does not match its type"
-            in
-            aux p xs
+  let post = List.map (fmla Ensures kid crcm ns { old_env; env }) vs.sp_post in
+  let mk_dummy_xvar i =
+    Preid.create ~loc:Location.none ("__xarg" ^ string_of_int i)
+  in
+  let process_xspec xspec =
+    let xid = find_q_xs ns xspec.Uast.xid in
+    let ty = xid.xs_type in
+    let prog_xenv, xrets =
+      match ty with
+      | Exn_tuple l ->
+          let xargs =
+            let len = List.length l in
+            let arg_len = List.length xspec.xrets in
+            if xspec.xrets = [] then List.init len mk_dummy_xvar
+            else if len <> arg_len then
+              let msg =
+                Printf.sprintf
+                  "Exception pattern has %d arguments but expected %d" arg_len
+                  len
+              in
+              W.type_checking_error msg ~loc:xspec.xloc
+            else xspec.xrets
           in
-          dpattern_unify dp (dty_of_ty ty);
-          let p, vars = pattern dp in
-          let choose_snd _ _ vs = Some vs in
-          let env = Mstr.union choose_snd env vars in
-          let t = fmla Raises kid crcm ns { env; old_env = env } t in
-          Mxs.update xs (merge_xpost (Some (p, t))) mxs
+          let l = List.map2 (fun id ty -> create_vsymbol id ty) xargs l in
+          (args_to_env l, l)
+      | Exn_record _ -> assert false (* Decide on proper syntax *)
     in
-    List.fold_left process Mxs.empty exn |> Mxs.bindings
+    let apply_spatial_xspec l sa =
+      match apply_spatial l sa.x_vs with
+      | None -> sa
+      | Some sp -> { sa with x_produces = sp }
+    in
+
+    let xprod_env = Mstr.union (fun _ -> assert false) prod_env prog_xenv in
+    let prog_xenv = { old_env = Mstr.empty; env = xprod_env } in
+    let xprod = List.map (type_spatial prog_xenv) xspec.xproduces in
+    let in_xprod x = List.exists (equal_arg x) xprod in
+    let xargs = List.map (fun (_, x) -> mk_xarg x (in_xprod x)) args in
+    let xrets = List.map (fun x -> mk_xarg x (in_xprod x)) xrets in
+
+    let xargs = List.map (apply_spatial_xspec xprod) xargs in
+    let xrets = List.map (apply_spatial_xspec xprod) xrets in
+    let xenv =
+      List.fold_left
+        (fun env x -> update_env env x.x_vs (Some x.x_produces))
+        Mstr.empty (xargs @ xrets)
+    in
+
+    let xenv = { old_env; env = xenv } in
+    let xpost = List.map (fmla Ensures kid crcm ns xenv) xspec.xpost in
+    mk_xspec xid xargs xrets xpost xspec.xloc
   in
-  let xpost =
-    List.fold_right (fun xp acc -> process_xpost xp @ acc) vs.sp_xpost []
-  in
+
+  let xspec = List.map process_xspec vs.sp_xspec in
+
   if vs.sp_pure then (
     if vs.sp_diverge then
       W.type_checking_error ~loc "a pure function cannot diverge";
     if wr <> [] then
       W.type_checking_error ~loc "a pure function cannot have writes";
-    if xpost <> [] || checks <> [] then
+    if xspec <> [] || checks <> [] then
       W.type_checking_error ~loc "a pure function cannot raise exceptions");
-  mk_val_spec spec_args spec_ret pre checks post xpost vs.sp_diverge vs.sp_pure
+  mk_val_spec spec_args spec_ret pre checks post xspec vs.sp_diverge vs.sp_pure
     vs.sp_equiv vs.sp_text vs.sp_loc
 
 let empty_spec preid ret args =
@@ -1214,7 +1202,7 @@ let empty_spec preid ret args =
     sp_pre = [];
     sp_checks = [];
     sp_post = [];
-    sp_xpost = [];
+    sp_xspec = [];
     sp_consumes = [];
     sp_produces = [];
     sp_writes = [];

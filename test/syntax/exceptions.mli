@@ -29,21 +29,30 @@ exception E11 of char
 
 val f : 'a -> 'a
 (*@ x = f y
-    raises E1 x -> integer_of_int x = 1 | E1 _ -> false
-    raises E2 (_, _)
-    raises E2 (_, _) -> true
-    raises E2 (_, _) -> true
-    raises E2pair _ -> true
-    raises E2pair (x, y) -> true
-    raises E2pair (_, _) -> true
+    raises E1 z -> integer_of_int z = 1
+    raises E1 -> false
+    raises E1, E2
+    raises E2 -> true
+    raises E1 -> true
+    raises E2pair -> true
+    raises E2pair z -> true
     raises E2pair z -> true
     raises E3 l -> (match l with
                    | [] -> false
-                   | y :: ys -> integer_of_int y = 2)
-         | E4 (i,l) -> match l with
+                   | z :: zs -> integer_of_int z = 2)
+    raises E4 (i,l) -> match l with
                    | [] -> true
-                   | y :: ys -> y = i
+                   | z :: zs -> z = i
     raises E5 f -> integer_of_int (f (int_of_integer 3)) = 4
-    raises E11 'a' -> true
-    raises E11 ('a' | 'b') -> true
-    raises E11 ('c'..'z') -> true *)
+    raises E11 begin
+      ensures true
+    end
+    raises E11 z begin
+      ensures true
+    end
+    raises E4 (i, l) begin
+      produces i
+      produces l
+      ensures true
+    end
+*)

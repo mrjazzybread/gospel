@@ -28,6 +28,18 @@ type lb_arg = {
 }
 [@@deriving show]
 
+type xarg = { x_vs : vsymbol; x_produces : lens * ty; x_modified : bool }
+[@@deriving show]
+
+type xspec = {
+  xid : xsymbol;
+  xrets : xarg list;
+  xargs : xarg list;
+  xpost : term list;
+  xloc : Location.t; [@printer Utils.Fmt.pp_loc]
+}
+[@@deriving show]
+
 type val_spec = {
   sp_args : lb_arg list;
   sp_ret : lb_arg list;
@@ -35,8 +47,7 @@ type val_spec = {
   sp_pre : term list;  (** Preconditions *)
   sp_checks : term list;  (** Checks preconditions *)
   sp_post : term list;  (** Postconditions *)
-  sp_xpost : (xsymbol * (pattern * term) list) list;
-      (** Exceptional postconditions. *)
+  sp_xspec : xspec list;  (** Exceptional specifications. *)
   sp_diverge : bool;  (** Diverges *)
   sp_pure : bool;  (** Pure *)
   sp_equiv : string list;  (** Equivalent *)

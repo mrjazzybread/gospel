@@ -26,5 +26,5 @@ val f : 'a -> 'a
    [125] File "exception_arity.mli", line 18, characters 11-44:
          18 |     raises E x -> integer_of_int (fst x) = 1
                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-         Error: Type checking error: Exception pattern doesn't match its type.
+         Error: Type checking error: Exception pattern has 1 arguments but expected 2.
    |gospel_expected} *)

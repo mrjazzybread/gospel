@@ -23,9 +23,8 @@ val f : 'a -> 'a
    remove one of the tuple elements in line 18 *)
 
 (* {gospel_expected|
-   [125] File "tuple_arity1.mli", line 18, characters 13-20:
+   [125] File "tuple_arity1.mli", line 18, characters 11-44:
          18 |     raises E (x,y,z) -> integer_of_int x = 1 *)
-                           ^^^^^^^
-         Error: This pattern matches values of type 'a41 * 'a42 * 'a43
-                but a pattern was expected which matches values of type int * int.
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+         Error: Type checking error: Exception pattern has 3 arguments but expected 1.
    |gospel_expected} *)

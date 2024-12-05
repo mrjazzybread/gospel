@@ -21,11 +21,13 @@
       [
         "as", AS;
         "axiom", AXIOM;
+	"begin", BEGIN;
         "checks", CHECKS;
         "coercion", COERCION;
         "consumes", CONSUMES;
         "diverges", DIVERGES;
         "else", ELSE;
+	"end", END;
         "exists", EXISTS;
         "ensures", ENSURES;
         "ephemeral", EPHEMERAL;

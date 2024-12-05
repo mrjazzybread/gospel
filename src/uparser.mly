@@ -90,6 +90,8 @@
 %token IF IN
 %token OLD NOT RAISES
 %token THEN TRUE EQUIVALENT CHECKS DIVERGES PURE
+%token BEGIN
+%token END
 
 %token AS
 %token LET MATCH PREDICATE
@@ -438,6 +440,7 @@ term_dot_:
 
 term_block_:
 | LEFTPAR t=term RIGHTPAR                           { t.term_desc }
+| BEGIN t=term END                                  { t.term_desc }
 | LEFTPAR RIGHTPAR                                  { Ttuple [] }
 | LEFTSQRIGHTSQ
     { Tpreid (Qpreid (mk_pid "[]"  $loc)) }

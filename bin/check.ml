@@ -13,7 +13,12 @@ open Tmodule
 open Parser_frontend
 module W = Gospel.Warnings
 
-type config = { verbose : bool; sep : bool; load_path : string list }
+type config = {
+  verbose : bool;
+  sep : bool;
+  omit : bool;
+  load_path : string list;
+}
 
 let fmt = Format.std_formatter
 let pp = Format.fprintf
@@ -55,7 +60,7 @@ let run_file config file =
       pp fmt "@[********* Typed GOSPEL ********@]@.";
       pp fmt "@[*******************************@]@.";
       pp fmt "@[%a@]@." print_file file);
-    write_gospel_file md;
+    let () = if not config.omit then write_gospel_file md else () in
     if config.sep then (
       let file = Semantics.process_sigs file in
       if config.verbose then (

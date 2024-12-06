@@ -30,6 +30,10 @@ let verbose =
   let doc = "Print all intermediate forms." in
   Arg.(value & flag & info [ "v"; "verbose" ] ~doc)
 
+let omit =
+  let doc = "Omit the .gospel file." in
+  Arg.(value & flag & info [ "o"; "omit" ] ~doc)
+
 let sep =
   let doc =
     "Print the separation logic semantics of the Gospel specifications."
@@ -48,7 +52,7 @@ let files =
   let doc = "File to be processed, expect a .mli or a .ml file" in
   Arg.(non_empty & pos_all test_file [] & info [] ~doc ~docv:"FILE")
 
-let run_check verbose sep load_path file =
+let run_check verbose sep omit load_path file =
   let load_path =
     List.fold_left
       (fun acc f ->
@@ -56,7 +60,7 @@ let run_check verbose sep load_path file =
         if not (List.mem dir acc) then dir :: acc else acc)
       load_path file
   in
-  let b = Check.run { verbose; sep; load_path } file in
+  let b = Check.run { verbose; sep; omit; load_path } file in
   if not b then exit 125 else ()
 
 let run_dumpast load_path file =
@@ -79,7 +83,9 @@ let dumpast =
 let tc =
   let doc = "Gospel type-checker." in
   let info = Cmd.info "check" ~doc in
-  let term = Term.(const run_check $ verbose $ sep $ load_path $ intfs) in
+  let term =
+    Term.(const run_check $ verbose $ sep $ omit $ load_path $ intfs)
+  in
   Cmd.v info term
 
 let pps =

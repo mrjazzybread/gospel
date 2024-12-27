@@ -591,6 +591,13 @@ module Set : sig
       forall x.
       not (mem x empty) *)
 
+  (*@ function init (f : 'a -> bool) : 'a t *)
+  (** [init f] creates a set where for all x, [mem x (init f)) <-> f x] *)
+
+  (*@ axiom init_mem :
+        forall x f.
+        mem x (init f) <-> f x *)
+
   (*@ function add (x: 'a) (s: 'a t) : 'a t *)
   (** [add x s] is [s ∪ {x}]. *)
 

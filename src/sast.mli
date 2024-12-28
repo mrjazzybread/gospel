@@ -27,6 +27,12 @@ and sep_term =
   | Wand of sep_terms * sep_terms
   | Quant of Tterm.quant * Symbols.vsymbol list * sep_terms
 
+type xpost = {
+  xid : Ttypes.xsymbol;
+  xrets : Symbols.vsymbol list;
+  xterm : sep_terms;
+}
+
 type triple = {
   triple_name : Ident.t;  (** Name of the function *)
   triple_poly : Ttypes.tvsymbol list;  (** The function's type arguments*)
@@ -36,6 +42,7 @@ type triple = {
           Includes all the variables within [triple_args]*)
   triple_rets : Symbols.vsymbol list;  (** The return values for the function *)
   triple_checks : Tterm.term list;
+  triple_xposts : xpost list;
   triple_pre : sep_terms;
   triple_type : core_type;
   triple_post : Symbols.vsymbol list * sep_terms;

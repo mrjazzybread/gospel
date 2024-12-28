@@ -23,6 +23,7 @@ and print_terms fmt l = list print_term ~sep:star fmt l
 
 let print_app fmt vs = pp fmt "%s" vs.Symbols.vs_name.id_str
 let dot fmt _ = pp fmt "."
+let print_terms = list ~sep:star print_term
 
 let print_post rets fmt (vl, tl) =
   if tl = [] then ()
@@ -34,23 +35,27 @@ let print_post rets fmt (vl, tl) =
       (list ~first:first_lm field ~sep:comma ~last)
       rets
       (list ~first:first_ex field ~sep:comma ~last)
-      vl
-      (list print_term ~sep:star)
-      tl
+      vl print_terms tl
 
 let print_targs none fmt l =
   match l with
   | [] -> pp fmt "%s" none
   | _ -> pp fmt "@[∀ %a @]" (list ~sep:sp Ttypes.print_tv ~last:dot) l
 
+let print_xpost fmt x =
+  pp fmt "@[{ %a %a-> %a}@]" Ident.pp_simpl x.xid.xs_ident
+    (list ~sep:sp ~last:sp print_app)
+    x.xrets print_terms x.xterm
+
 let print_triple fmt t =
-  pp fmt "@[%a%a @\n{@[ %a @]}@\n@[%s %a @]@\n{@[ %a @]}@]" (print_targs "∀")
+  pp fmt "@[%a%a @\n{@[ %a @]}@\n@[%s %a @]@\n{@[ %a @]}%a@]" (print_targs "∀")
     t.triple_poly
     (list field ~sep:comma ~last:dot)
-    t.triple_vars
-    (list print_term ~sep:star)
-    t.triple_pre t.triple_name.id_str (list print_app ~sep:sp) t.triple_args
-    (print_post t.triple_rets) t.triple_post
+    t.triple_vars print_terms t.triple_pre t.triple_name.id_str
+    (list print_app ~sep:sp) t.triple_args (print_post t.triple_rets)
+    t.triple_post
+    (list ~first:newline ~sep:newline print_xpost)
+    t.triple_xposts
 
 let print_rec_field fmt (id, ty) =
   pp fmt "@[%a : %a@]" Ident.pp_simpl id Ttypes.print_ty ty

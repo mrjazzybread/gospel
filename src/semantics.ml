@@ -126,32 +126,36 @@ let get_value_poly l = ty_poly (List.map (fun x -> x.arg_log.vs_ty) l)
 
 (** Translates a value description into a Separation Logic triple. *)
 let val_description ns des =
+  let spec = des.vd_spec in
+  (* Maps variable names to their respective variable symbol that
+     stores its type *)
   let env = ref empty_env in
   (* Turns a typed argument into a record consisting of the variable's
      ownership conditions and its logical type *)
-  let lifted_args is_old =
+  let lifted is_old arg_vs modified (s_ty, l_ty) =
+    let ro = not modified in
+    let arg_log, env' = map_id !env (is_old || ro) arg_vs l_ty in
+    let () = env := env' in
+    let pred = get_pred ns s_ty in
+    let arg_prog = to_prog arg_vs in
+    let arg_spatial =
+      Option.map (fun arg_pred -> { arg_pred; arg_prog; ro }) pred
+    in
+    { arg_spatial; arg_log }
+  in
+
+  let lifted_spec is_old =
     List.filter_map (fun arg ->
         let arg_vs = arg.lb_vs in
         if arg.lb_label = Lunit then
           Some { arg_spatial = None; arg_log = unit_vs }
         else
-          match if is_old then arg.lb_consumes else arg.lb_produces with
-          | None -> None
-          | Some (s_ty, l_ty) ->
-              let ro = not arg.lb_modified in
-              let arg_log, env' = map_id !env (is_old || ro) arg_vs l_ty in
-              let () = env := env' in
-              let pred = get_pred ns s_ty in
-              let arg_prog = to_prog arg.lb_vs in
-              let arg_spatial =
-                Option.map (fun arg_pred -> { arg_pred; arg_prog; ro }) pred
-              in
-              Some { arg_spatial; arg_log })
+          let s = if is_old then arg.lb_consumes else arg.lb_produces in
+          Option.map (lifted is_old arg_vs arg.lb_modified) s)
   in
-  let spec = des.vd_spec in
 
   let lifts = List.filter_map mk_lift in
-  let args = lifted_args true spec.sp_args in
+  let args = lifted_spec true spec.sp_args in
   (* Gets the program value for the argument. If there is no
      ownership condition, the program value is equivalent to the
      logical value*)
@@ -163,12 +167,13 @@ let val_description ns des =
 
   (* Gospel preconditions tranformed into Separation Logic terms *)
   let pre = List.concat_map (fun t -> map_term !env ns true t) spec.sp_pre in
+  let old_env = !env in
 
   (* Gospel preconditions joined with Separation Logic ownership
      conditions for the function's arguments *)
   let triple_pre = lifts args @ pre in
-  let updates = lifted_args false spec.sp_args in
-  let rets = lifted_args false spec.sp_ret in
+  let updates = lifted_spec false spec.sp_args in
+  let rets = lifted_spec false spec.sp_ret in
 
   (* Gospel postconditions tranformed into Separation Logic terms *)
   let post = List.concat_map (fun t -> map_term !env ns false t) spec.sp_post in
@@ -178,11 +183,25 @@ let val_description ns des =
      conditions for the function's arguments and return values*)
   let post_cond = lifts (updates @ rets) @ post in
 
-  (* Determines what variables require and existentially
-     quantified model in the postcondition *)
+  (* Determines what variables require an existentially quantified
+     model in the postcondition *)
   let mk_updates = function
     | { arg_log; arg_spatial } ->
         Option.bind arg_spatial (fun x -> if x.ro then None else Some arg_log)
+  in
+
+  (* Processes exceptional postconditions in basically the same way as
+     normal postconditions with the only difference being that we use
+     the exceptional produces clause. *)
+  let xpost xspec =
+    let () = env := old_env in
+    let lifted_xspec xr = lifted false xr.x_vs xr.x_modified xr.x_produces in
+    let xrets = List.map lifted_xspec xspec.Tast.xrets in
+    let xargs = List.map lifted_xspec xspec.xargs in
+    let xrets_prog = List.map to_prog_arg xrets in
+    let xpost = List.concat_map (map_term !env ns false) xspec.xpost in
+    let xterm = lifts xargs @ lifts xrets @ xpost in
+    { xid = xspec.xid; xrets = xrets_prog; xterm }
   in
 
   let updated_vars = List.filter_map mk_updates (updates @ rets) in
@@ -205,6 +224,7 @@ let val_description ns des =
          triple_args = prog_args;
          triple_rets = List.map to_prog_arg rets;
          triple_checks = spec.sp_checks;
+         triple_xposts = List.map xpost spec.sp_xspec;
          triple_pre;
          triple_poly;
          triple_type = des.vd_type;
@@ -345,6 +365,17 @@ let rec signature_item_desc ns = function
           let defs = List.concat_map f s in
           [ Module (nm, defs) ]
       | _ -> assert false)
+  | Sig_modtype m -> (
+      let nm = m.mtd_name in
+      match m.mtd_type with
+      | None -> []
+      | Some m -> (
+          match m.mt_desc with
+          | Mod_signature s ->
+              let f s = snd (signature_item ns s) in
+              let defs = List.concat_map f s in
+              [ Module (nm, defs) ]
+          | _ -> []))
   | _ -> []
 
 and signature_item ns s =

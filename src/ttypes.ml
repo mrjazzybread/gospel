@@ -13,6 +13,8 @@ open Ppxlib
 open Utils
 module Ident = Identifier.Ident
 
+let is_stdlib = ref true
+
 (** type variables *)
 
 type tvsymbol = { tv_name : Ident.t } [@@deriving show]

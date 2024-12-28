@@ -1547,6 +1547,7 @@ and process_sig_item path penv muc { sdesc; sloc } =
   (muc, signature)
 
 and type_sig_item path penv muc sig_item =
+  let () = Ttypes.is_stdlib := List.hd path = "Gospelstdlib" in
   let muc, _ = process_sig_item path penv muc sig_item in
   muc
 

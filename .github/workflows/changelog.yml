@@ -12,9 +12,7 @@ jobs:
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-changelog-needed') }}
 
     steps:
-    - uses: actions/checkout@v2
-      with: 
-        fetch-depth: 0
+    - uses: actions/checkout@v4
 
     - name: git diff
       env:

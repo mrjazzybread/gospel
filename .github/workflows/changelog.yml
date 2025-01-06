@@ -13,8 +13,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: test
-      run: git branch -l -a
+      with:
+        fetch-depth: 0
 
     - name: git diff
       env:

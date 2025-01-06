@@ -13,9 +13,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with: 
+        fetch-depth: 0
+
+    - name: test
+      run: git remote get-url origin
 
     - name: git diff
       env:
         BASE_REF: ${{ github.event.pull_request.base.ref }}
       run: |
-        ! git diff --exit-code origin/$BASE_REF -- CHANGES.md
+        ! git diff --exit-code $BASE_REF -- CHANGES.md

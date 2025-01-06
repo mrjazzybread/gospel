@@ -14,6 +14,12 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: test env
+      env:
+        BASE_REF: ${{ github.event.pull_request.base.ref }}
+
+      run:
+        echo $BASE_REF
     - name: git diff
       env:
         BASE_REF: ${{ github.event.pull_request.base.ref }}

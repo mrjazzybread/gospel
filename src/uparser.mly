@@ -241,8 +241,8 @@ val_spec_header:
 ;
 
 spatial_term:
-| t=term { {s_term = t; s_lens = None} }
-| t=term SPATIAL ty=typ { {s_term = t; s_lens = Some ty } }
+| t=term_dot { {s_term = t; s_lens = None} }
+| t=term_dot SPATIAL ty=typ { {s_term = t; s_lens = Some ty } }
 ;
 
 val_spec_body:

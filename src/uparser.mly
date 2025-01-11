@@ -251,16 +251,16 @@ val_spec_body:
   { {bd with sp_pure = true} }
 | DIVERGES bd=val_spec_body
   { {bd with sp_diverge = true} }
-| CONSUMES cs=separated_list(COMMA, spatial_term) 
+| CONSUMES cs=separated_nonempty_list(COMMA, spatial_term) 
            bd=val_spec_body
   { { bd with sp_consumes = cs @ bd.sp_consumes } }
-| PRODUCES cs=separated_list(COMMA, spatial_term) 
+| PRODUCES cs=separated_nonempty_list(COMMA, spatial_term) 
            bd=val_spec_body
   { { bd with sp_produces = cs @ bd.sp_produces } }
-| MODIFIES wr=separated_list(COMMA, spatial_term) 
+| MODIFIES wr=separated_nonempty_list(COMMA, spatial_term) 
            bd=val_spec_body
   { { bd with sp_writes = wr @ bd.sp_writes } }
-| PRESERVES cs=separated_list(COMMA, spatial_term) 
+| PRESERVES cs=separated_nonempty_list(COMMA, spatial_term) 
            bd=val_spec_body
   { { bd with sp_preserves = cs @ bd.sp_preserves } }
 | REQUIRES t=term bd=val_spec_body

@@ -3,14 +3,14 @@ module type S = sig
   (*@ ephemeral *)
 
   val st_eq : t -> t -> bool
-  (*@ b = st_eq x y
-        preserves x @ t
-        preserves y @ t
+  (*@ preserves x @ t
+      preserves y @ t
+      let b = st_eq x y in
         ensures b <-> x = y *)
 
   val ph_eq : t -> t -> bool
-  (*@ b = ph_eq x y
-        preserves x @ loc
-        preserves y @ loc
+  (*@ preserves x @ loc
+      preserves y @ loc
+      let b = ph_eq x y in
         ensures b <-> x = y *)
 end

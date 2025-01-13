@@ -50,14 +50,17 @@ let type_spec f ts =
   then pp f "@[%a@]" (spec print_tspec) ts
   else ()
 
-let spec_header fmt h =
-  pp fmt "@[<h>%a%s %a %a@]@\n"
-    (list ~sep:comma labelled_arg)
-    h.sp_hd_ret
-    (if h.sp_hd_ret = [] then "" else " =")
-    Preid.pp h.sp_hd_nm
+let print_ret fmt ret =
+  match ret with
+  | Wildcard -> pp fmt "_"
+  | Unit_ret -> pp fmt "()"
+  | Rets l -> pp fmt "%a" (list ~sep:comma labelled_arg) l
+
+let spec_header ret has_post fmt h =
+  pp fmt "@[let %a = %a %a %s@]@\n" print_ret ret Preid.pp h.sp_hd_nm
     (list ~sep:sp labelled_arg)
     h.sp_hd_args
+    (if has_post then "in" else "")
 
 let val_spec fmt vspec =
   match vspec with
@@ -65,17 +68,21 @@ let val_spec fmt vspec =
   | Some vspec ->
       let diverge fmt x = if x then pp fmt "diverges@\n" else () in
       let print_content fmt s =
-        pp fmt "@[%a%a%a%a%a%a%a%a@]" (option spec_header) s.sp_header
+        let pre = s.sp_spec_pre in
+        let post = s.sp_spec_post in
+        pp fmt "@[%a%a%a%a%a%a%a@]"
           (list_keyword "requires ...")
-          s.sp_pre
-          (list_keyword "ensures ...")
-          s.sp_post (list_keyword "with ...") s.sp_xpost
+          pre.sp_pre
           (list_keyword "modifies ...")
-          s.sp_writes
+          pre.sp_modifies
           (list_keyword "consumes ...")
-          s.sp_consumes diverge s.sp_diverge
+          pre.sp_consumes
+          (option (spec_header post.sp_ret (post.sp_post <> [])))
+          s.sp_header
+          (list_keyword "ensures ...")
+          post.sp_post diverge pre.sp_diverge
           (list_keyword "equivalent ...")
-          s.sp_equiv
+          post.sp_equiv
       in
       spec print_content fmt vspec
 

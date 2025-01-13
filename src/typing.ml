@@ -1074,23 +1074,27 @@ let process_val_spec kid crcm ns id args ret vs =
     (typed, spatial_type)
   in
 
-  let wr = List.map (type_spatial env) vs.sp_writes in
-  let cs = List.map (type_spatial env) vs.sp_consumes in
-  let pres = List.map (type_spatial env) vs.sp_preserves in
+  let vs_pre = vs.sp_spec_pre in
+  let vs_post = vs.sp_spec_post in
+  let wr = List.map (type_spatial env) vs_pre.sp_modifies in
+  let cs = List.map (type_spatial env) vs_pre.sp_consumes in
+  let pres = List.map (type_spatial env) vs_pre.sp_preserves in
 
   let ret, ret_env =
-    match (header.sp_hd_ret, ret.ty_node) with
-    | [], _ -> ([], Mstr.empty)
-    | _, Tyapp (ts, tyl) when is_ts_tuple ts ->
+    match (vs_post.sp_ret, ret.ty_node) with
+    | Unit_ret, Tyapp (ts, []) when ts_equal ts ts_unit -> ([], Mstr.empty)
+    | Unit_ret, _ -> W.error ~loc W.Does_not_return_unit
+    | Wildcard, _ -> ([], Mstr.empty)
+    | Rets args, Tyapp (ts, tyl) when is_ts_tuple ts ->
         let tyl = List.map (fun ty -> (ty, Asttypes.Nolabel)) tyl in
-        process_args `Return header.sp_hd_ret tyl
-    | _, _ -> process_args `Return header.sp_hd_ret [ (ret, Asttypes.Nolabel) ]
+        process_args `Return args tyl
+    | Rets args, _ -> process_args `Return args [ (ret, Asttypes.Nolabel) ]
   in
   let prod_env = Mstr.union (fun _ -> assert false) arg_env ret_env in
   let prod =
     List.map
       (type_spatial { env = prod_env; old_env = Mstr.empty })
-      vs.sp_produces
+      vs_post.sp_produces
   in
 
   let equal_arg arg (t, _) =
@@ -1184,9 +1188,11 @@ let process_val_spec kid crcm ns id args ret vs =
   in
 
   let pre_env = { env = old_env; old_env } in
-  let pre = List.map (fmla Requires kid crcm ns pre_env) vs.sp_pre in
-  let checks = List.map (fmla Checks kid crcm ns pre_env) vs.sp_checks in
-  let post = List.map (fmla Ensures kid crcm ns { env; old_env }) vs.sp_post in
+  let pre = List.map (fmla Requires kid crcm ns pre_env) vs_pre.sp_pre in
+  let checks = List.map (fmla Checks kid crcm ns pre_env) vs_pre.sp_checks in
+  let post =
+    List.map (fmla Ensures kid crcm ns { old_env; env }) vs_post.sp_post
+  in
 
   let process_xpost (loc, exn) =
     let merge_xpost t tl =
@@ -1251,32 +1257,39 @@ let process_val_spec kid crcm ns id args ret vs =
     List.fold_left process Mxs.empty exn |> Mxs.bindings
   in
   let xpost =
-    List.fold_right (fun xp acc -> process_xpost xp @ acc) vs.sp_xpost []
+    List.fold_right (fun xp acc -> process_xpost xp @ acc) vs_post.sp_xpost []
   in
-  if vs.sp_pure then (
-    if vs.sp_diverge then
+  if vs_pre.sp_pure then (
+    if vs_pre.sp_diverge then
       W.type_checking_error ~loc "a pure function cannot diverge";
     if wr <> [] then
       W.type_checking_error ~loc "a pure function cannot have writes";
     if xpost <> [] || checks <> [] then
       W.type_checking_error ~loc "a pure function cannot raise exceptions");
-  mk_val_spec spec_args spec_ret pre checks post xpost vs.sp_diverge vs.sp_pure
-    vs.sp_equiv vs.sp_text vs.sp_loc
+  mk_val_spec spec_args spec_ret pre checks post xpost vs_pre.sp_diverge
+    vs_pre.sp_pure vs_post.sp_equiv vs.sp_text vs.sp_loc
 
-let empty_spec preid ret args =
+let empty_spec preid args =
   {
-    sp_header = Some { sp_hd_nm = preid; sp_hd_ret = ret; sp_hd_args = args };
-    sp_pre = [];
-    sp_checks = [];
-    sp_post = [];
-    sp_xpost = [];
-    sp_consumes = [];
-    sp_produces = [];
-    sp_writes = [];
-    sp_preserves = [];
-    sp_diverge = false;
-    sp_pure = false;
-    sp_equiv = [];
+    sp_header = Some { sp_hd_nm = preid; sp_hd_args = args };
+    sp_spec_pre =
+      {
+        sp_pre = [];
+        sp_checks = [];
+        sp_consumes = [];
+        sp_modifies = [];
+        sp_preserves = [];
+        sp_diverge = false;
+        sp_pure = false;
+      };
+    sp_spec_post =
+      {
+        sp_post = [];
+        sp_xpost = [];
+        sp_produces = [];
+        sp_equiv = [];
+        sp_ret = Wildcard;
+      };
     sp_text = "";
     sp_loc = Location.none;
   }
@@ -1292,39 +1305,50 @@ let mk_dummy_var i (ty, arg) =
 let process_val path ~loc ?(ghost = Nonghost) kid crcm ns vd =
   let id = Ident.create ~path ~loc:vd.vloc vd.vname.txt in
   let args, ret = val_parse_core_type ns vd.vtype in
+  let pid = Preid.create ~loc:vd.vloc vd.vname.txt in
   let spec =
     match vd.vspec with
     | None | Some { sp_header = None; _ } -> (
-        let id = Preid.create ~loc:vd.vloc vd.vname.txt in
-        let rets =
-          match ret with
-          | { ty_node = Tyapp (ts, _) } when is_ts_tuple ts ->
-              let arity = ts_arity ts in
-              List.init arity (fun i ->
-                  Uast.Lnone (Preid.create ~loc:vd.vloc (Fmt.str "result%d" i)))
-          | _ ->
-              [
-                Uast.Lnone
-                  (if args = [] then id else Preid.create ~loc:vd.vloc "result");
-              ]
-        in
         let args = List.mapi mk_dummy_var args in
         match vd.vspec with
-        | None -> empty_spec id rets args
+        | None -> empty_spec pid args
         | Some s ->
-            {
-              s with
-              sp_header =
-                Some { sp_hd_nm = id; sp_hd_ret = rets; sp_hd_args = args };
-            })
+            { s with sp_header = Some { sp_hd_nm = pid; sp_hd_args = args } })
     | Some s -> s
+  in
+  let post = spec.sp_spec_post in
+  let spec =
+    if post.sp_ret = Wildcard then
+      let rets =
+        match ret with
+        | { ty_node = Tyapp (ts, []) } when ts_equal ts ts_unit -> Unit_ret
+        | { ty_node = Tyapp (ts, _) } when is_ts_tuple ts ->
+            let arity = ts_arity ts in
+            let l =
+              List.init arity (fun i ->
+                  Uast.Lnone (Preid.create ~loc:vd.vloc (Fmt.str "result%d" i)))
+            in
+            Rets l
+        | { ty_node = Tyapp (ts, _) } when ts_equal ts ts_unit -> Rets []
+        | _ ->
+            Rets
+              [
+                Uast.Lnone
+                  (if args = [] then pid else Preid.create ~loc:vd.vloc "result");
+              ]
+      in
+      { spec with sp_spec_post = { post with sp_ret = rets } }
+    else spec
   in
   let spec = process_val_spec kid crcm ns id args ret spec in
   let () =
     (* check there is a modifies clause if the return type is unit, throw a warning if not *)
     if Ttypes.(ty_equal ret ty_unit) && args <> [] then
-      if Option.fold ~none:false ~some:(fun s -> s.sp_writes = []) vd.vspec then
-        W.error ~loc (W.Return_unit_without_modifies id.id_str)
+      if
+        Option.fold ~none:false
+          ~some:(fun s -> s.sp_spec_pre.sp_modifies = [])
+          vd.vspec
+      then W.error ~loc (W.Return_unit_without_modifies id.id_str)
   in
   let vd =
     mk_val_description id vd.vtype vd.vprim vd.vattributes spec.sp_args

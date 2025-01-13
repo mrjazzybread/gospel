@@ -3,17 +3,17 @@ module type S = sig
   (*@ mutable model : 'a *)
 
   val ref : 'a -> 'a ref
-  (*@ r = ref v
+  (*@ let r = ref v in
         produces r @ 'a ref
         ensures r = v *)
 
   val get : 'a ref -> 'a
-  (*@ v = get r
-        preserves r @ 'a ref
+  (*@ preserves r @ 'a ref
+      let v = get r in
         ensures r = v *)
 
   val update : 'a ref -> 'a -> unit
-  (*@ update r v
-        modifies r @ 'a ref
+  (*@ modifies r @ 'a ref
+      let _ = update r v in
         ensures r = v *)
 end

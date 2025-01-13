@@ -28,8 +28,8 @@ module type HashedType = sig
      up to the user to define an equivalence relation on keys. In the
      simplest and most common case, equivalence is just equality. *)
   val equal : t -> t -> bool
-  (*@ b = equal x y
-      ensures b <-> equiv x y *)
+  (*@ let b = equal x y in
+        ensures b <-> equiv x y *)
 
   (*@ function h (x : t) : int *)
   (*@ axiom h_equal :
@@ -41,8 +41,8 @@ module type HashedType = sig
      equivalence: that is, it must be the case that [equiv x y] implies
      [hash x = hash y]. *)
   val hash : t -> int
-  (*@ r = hash x
-      ensures r = h x *)
+  (*@ let r = hash x in
+        ensures r = h x *)
 end
 
 module type SENTINELS = sig
@@ -138,16 +138,16 @@ module SET : sig
 
      Time complexity: {m O(1)}. *)
   val create : unit -> set
-  (*@ s = create ()
-      ensures s = empty *)
+  (*@ let s = create () in
+        ensures s = empty *)
 
   (*[copy s] returns a new set whose elements are the elements of [s].
 
      Time complexity: {m O(c)},
      where {m c} is the capacity of the set [s]. *)
   val copy : set -> set
-  (*@ s' = copy s
-      ensures s' = s *)
+  (*@ let s' = copy s in
+        ensures s' = s *)
 
   (* {2 Insertion} *)
 
@@ -181,10 +181,10 @@ module SET : sig
      Because this costly event is infrequent, the amortized complexity of
      insertion is {m O(\log n)}. *)
   val add_if_absent : set -> element -> bool
-  (*@ b = add_if_absent s x
-      requires valid x
-      ensures b <-> not (mem_equiv x (old s))
-      ensures s = if b then add x (old s) else old s *)
+  (*@ requires valid x
+      let b = add_if_absent s x in
+        ensures b <-> not (mem_equiv x (old s))
+        ensures s = if b then add x (old s) else old s *)
 
   (*@ function class (p : 'a -> bool) : 'a Set.t *)
   (*@ axiom class_axiom :
@@ -209,10 +209,10 @@ module SET : sig
      Because this costly event is infrequent, the amortized complexity of
      insertion is {m O(\log n)}. *)
   val replace : set -> element -> bool
-  (*@ b = replace s x
-      requires valid x
-      ensures b <-> not (mem_equiv x (old s))
-      ensures s = add x (diff (old s) (eq_class x)) *)
+  (*@ requires valid x
+      let b = replace s x in
+        ensures b <-> not (mem_equiv x (old s))
+        ensures s = add x (diff (old s) (eq_class x)) *)
 
   (* {2 Lookup} *)
 
@@ -221,8 +221,8 @@ module SET : sig
 
      Time complexity: {m O(1)}. *)
   val mem : set -> element -> bool
-  (*@ b = mem s x
-      ensures b <-> mem_equiv x s *)
+  (*@ let b = mem s x in
+        ensures b <-> mem_equiv x s *)
 
   (*[find s x] determines whether some element [y] that is equivalent to
      [x] is a member of the set [s]. If so, [y] is returned. Otherwise,
@@ -230,10 +230,10 @@ module SET : sig
 
      Time complexity: {m O(1)}. *)
   val find : set -> element -> element
-  (*@ y = find s x
-      ensures mem_equiv x s
-      ensures equiv x y
-      ensures mem y s
+  (*@ let y = find s x in
+        ensures mem_equiv x s
+        ensures equiv x y
+        ensures mem y s
       (* raises Not_found { *)
       (*   produces s *)
       (*   ensures s = old s *)
@@ -260,8 +260,8 @@ module SET : sig
      then it is recommended to repeatedly call [tighten] so as to
      maintain a high occupancy rate. *)
   val choose : set -> element
-  (*@ x = choose s
-      ensures mem x s
+  (*@ let x = choose s in
+        ensures mem x s
       (* raises Not_found { *)
       (*   produces s *)
       (*   ensures s = old s = empty *)
@@ -282,18 +282,18 @@ module SET : sig
      insertion is {m O(\log n)}. *)
   val find_else_add : set -> element -> element
 
-  (*@ y = find_else_add s x
-      requires valid x
+  (*@ requires valid x
       modifies s
-      ensures mem_equiv x s
-      ensures equiv x y
-      ensures mem y s
-      raises Not_found
-      (* begin *)
-      (*   produces s *)
-      (*   ensures s = add x (old s) *)
-      (*   ensures not mem_equiv x (old s)
-      end *) *)
+      let y = find_else_add s x in
+        ensures mem_equiv x s
+        ensures equiv x y
+        ensures mem y s
+        raises Not_found
+        (* begin *)
+        (*   produces s *)
+        (*   ensures s = add x (old s) *)
+        (*   ensures not mem_equiv x (old s)
+        end *) *)
   (* {2 Deletion} *)
 
   (*If some element [y] that is equivalent to [x] is a member of the
@@ -303,10 +303,10 @@ module SET : sig
      Time complexity: {m O(1)}. *)
   val remove : set -> element -> unit
 
-  (*@ remove s x
-      requires valid x
+  (*@ requires valid x
       modifies s
-      ensures s = diff s (eq_class x) *)
+      let _ = remove s x in
+        ensures s = diff s (eq_class x) *)
   (*If some element [y] that is equivalent to [x] is a member of the set
      [s], then [find_and_remove s x] removes [y] from the set [s] and
      returns [y]. Otherwise, the set [s] is unaffected, and [Not_found] is
@@ -314,18 +314,18 @@ module SET : sig
 
      Time complexity: {m O(1)}. *)
   val find_and_remove : set -> element -> element
-  (*@ y = find_and_remove s x
-      requires valid x
+  (*@ requires valid x
       modifies s
-      ensures mem_equiv x s
-      ensures equiv x y
-      ensures mem y (old s)
-      ensures s = remove y s
-      (* raises Not_found begin *)
-      (*   produces s *)
-      (*   ensures s = old s *)
-      (*   ensures not mem_equiv x s
-      end *) *)
+      let y = find_and_remove s x in
+        ensures mem_equiv x s
+        ensures equiv x y
+        ensures mem y (old s)
+        ensures s = remove y s
+        (* raises Not_found begin *)
+        (*   produces s *)
+        (*   ensures s = old s *)
+        (*   ensures not mem_equiv x s
+        end *) *)
 
   (*@ forall s x,
     consumes s
@@ -366,14 +366,14 @@ module SET : sig
      Time complexity: {m O(1)}. *)
   val cardinal : set -> int
 
-  (*@ n = cardinal s
+  (*@ let n = cardinal s in
       ensures n = cardinal s *)
   (*[is_empty s] is equivalent to [cardinal s = 0].
 
      Time complexity: {m O(1)}. *)
   val is_empty : set -> bool
 
-  (*@ b = is_empty s
+  (*@ let b = is_empty s in
       ensures b <-> s = {} *)
   (* {2 Cleanup} *)
 
@@ -383,8 +383,8 @@ module SET : sig
      Time complexity: {m O(c)},
      where {m c} is the capacity of the set [s]. *)
   val clear : set -> unit
-  (*@ clear s
-      modifies s
+  (*@ modifies s
+      let _ = clear s in
       ensures s = {} *)
 
   (*[reset s] empties the set [s]. The internal data array is abandoned.
@@ -392,8 +392,8 @@ module SET : sig
 
      Time complexity: {m O(1)}. *)
   val reset : set -> unit
-  (*@ reset s
-      modifies s
+  (*@ modifies s
+      let _ = reset s in
       ensures s = {} *)
 
   (*[tighten s] decreases the capacity of the set [s], if necessary and if

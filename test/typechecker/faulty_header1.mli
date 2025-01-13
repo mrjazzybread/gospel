@@ -9,11 +9,12 @@
 (**************************************************************************)
 
 val f : ('a -> 'b -> 'c) -> 'a -> 'b -> 'c
-(*@ r = f x y *)
+(*@ let r = f x y in 
+    ensures true *)
 
 (* {gospel_expected|
-   [125] File "faulty_header1.mli", line 12, characters 8-9:
-         12 | (*@ r = f x y *)
-                      ^
+   [125] File "faulty_header1.mli", line 12, characters 12-13:
+         12 | (*@ let r = f x y in 
+                          ^
          Error: Type checking error: too few parameters.
    |gospel_expected} *)

@@ -1,7 +1,7 @@
 exception E of int * int
 
 val f : int -> unit
-(*@ f i
+(*@ let _ = f i in
     raises E _ -> false *)
 
 (* {gospel_expected|

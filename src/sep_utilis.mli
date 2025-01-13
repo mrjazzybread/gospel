@@ -94,7 +94,5 @@ val get_term_poly : Tterm.term -> tvsymbol list
 val inline_def : Sast.triple -> Sast.triple
 (** [inline_def t] inlines, when possible, the existential variables in the
     postcondition of the triple [t]. This is done when the postcondition is a
-    term with the following shape:
-    [exists
-    m'. P(e1, m') * ... * m' = e2 * ...] which is then simplified
-    into [P(e1, e2)] *)
+    term with the following shape: [exists m'. P(e1, m') * ... * m' = e2 * ...]
+    which is then simplified into [P(e1, e2)] *)

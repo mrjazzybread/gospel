@@ -9,7 +9,8 @@
 (**************************************************************************)
 
 val f : x:('a -> 'b -> 'c) -> y:'a -> 'b -> 'c
-(*@ [b:integer],[a:'a] = f ~x [w:int] ~y [p:integer] z *)
+(*@ let [b:integer],[a:'a] = f ~x [w:int] ~y [p:integer] z in
+    ensures true *)
 
 (* ERROR:
    Line 12
@@ -17,8 +18,8 @@ val f : x:('a -> 'b -> 'c) -> y:'a -> 'b -> 'c
    add a new return var in line 12 *)
 
 (* {gospel_expected|
-   [125] File "no_return.mli", line 12, characters 25-26:
-         12 | (*@ [b:integer],[a:'a] = f ~x [w:int] ~y [p:integer] z *)
-                                       ^
+   [125] File "no_return.mli", line 12, characters 29-30:
+         12 | (*@ let [b:integer],[a:'a] = f ~x [w:int] ~y [p:integer] z in
+                                           ^
          Error: Type checking error: too few returned values.
    |gospel_expected} *)

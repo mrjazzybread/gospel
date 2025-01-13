@@ -1,11 +1,11 @@
 (** Tests for constant literals *)
 
 val f : int -> float
-(*@ y = f x
-    requires x = 0
+(*@ requires x = 0
+    let y = f x in
     ensures y = 0. *)
 
 val g : char -> string
-(*@ y = g x
-    requires x = 'c'
+(*@ requires x = 'c'
+    let y = g x in
     ensures y = "c" *)

@@ -42,18 +42,18 @@ val create : ?capacity:int -> dummy:'a -> 'a t
 (** [create] returns a fresh vector of length [0]. All the elements of this new
     vector are initially physically equal to [dummy] (in the sense of the [==]
     predicate). When [capacity] is omitted, it defaults to 0. *)
-(*@ a = create ?capacity ~dummy
-      requires let capacity = match capacity with
+(*@ requires let capacity = match capacity with
                  | None -> 0 | Some c -> c in
                0 <= capacity <= Sys.max_array_length
+    let a = create ?capacity ~dummy in
       ensures  Sequence.length a.view = 0 *)
 
 val make : ?dummy:'a -> int -> 'a -> 'a t
 (** [make dummy n x] returns a fresh vector of length [n] with all elements
     initialized with [x]. If [dummy] is omitted, [x] is also used as a dummy
     value for this vector. *)
-(*@ a = make ?dummy n x
-      requires 0 <= n <= Sys.max_array_length
+(*@ requires 0 <= n <= Sys.max_array_length
+    let a = make ?dummy n x in
       ensures  Sequence.length a.view = n
       ensures  forall i: integer. 0 <= i < n -> a.view[i] = x *)
 
@@ -63,8 +63,8 @@ val init : dummy:'a -> int -> (int -> 'a) -> 'a t
     results of [f] applied to the integers [0] to [n-1].
 
     Raise [Invalid_argument] if [n < 0] or [n > Sys.max_array_length]. *)
-(*@ a = init ~dummy n f
-      requires 0 <= n <= Sys.max_array_length
+(*@ requires 0 <= n <= Sys.max_array_length
+    let a = init ~dummy n f in
       ensures  Sequence.length a.view = n
       ensures  forall i: int. 0 <= i < n -> a.view[i] = f i *)
 
@@ -76,9 +76,9 @@ val resize : 'a t -> int -> unit
     collected when possible.
 
     Raise [Invalid_argument] if [n < 0] or [n > Sys.max_array_length]. *)
-(*@ resize a n
-      checks   0 <= n <= Sys.max_array_length
-      modifies a
+(*@ checks   0 <= n <= Sys.max_array_length
+    modifies a
+    let () = resize a n in
       ensures  Sequence.length a.view = n
       ensures  forall i. 0 <= i < min (Sequence.length (old a.view)) n ->
                  a.view[i] = (old a.view)[i] *)
@@ -88,19 +88,19 @@ val resize : 'a t -> int -> unit
 val clear : 'a t -> unit
 (** Discard all elements from a vector. This is equivalent to setting the size
     to 0 with [resize]. *)
-(*@ clear a
-      modifies a
+(*@ modifies a
+    let () = clear a in
       ensures Sequence.length a.view = 0 *)
 
 val is_empty : 'a t -> bool
 (** Return [true] if the given vector is empty, [false] otherwise. *)
-(*@ r = is_empty a
+(*@ let r = is_empty a in
       ensures r <-> Sequence.length a.view = 0 *)
 
 val length : 'a t -> int
 (** Return the length (number of elements) of the given vector. Note: the number
     of memory words occupied by the vector can be larger. *)
-(*@ n = length a
+(*@ let n = length a in
       ensures n = Sequence.length a.view *)
 
 val get : 'a t -> int -> 'a
@@ -109,8 +109,8 @@ val get : 'a t -> int -> 'a
 
     Raise [Invalid_argument "Vector.get"] if [n] is outside the range [0] to
     [length a - 1]. *)
-(*@ x = get a i
-      requires 0 <= i < Sequence.length a.view
+(*@ requires 0 <= i < Sequence.length a.view
+      let x = get a i in
       ensures  x = a.view[i] *)
 
 val set : 'a t -> int -> 'a -> unit
@@ -119,9 +119,9 @@ val set : 'a t -> int -> 'a -> unit
 
     Raise [Invalid_argument "Vector.set"] if [n] is outside the range 0 to
     [length a - 1]. *)
-(*@ set a i x
-      requires 0 <= i < Sequence.length a.view
-      modifies a
+(*@ requires 0 <= i < Sequence.length a.view
+    modifies a
+    let _ = set a i x in
       ensures Sequence.length a.view = Sequence.length (old a).view
       ensures  a.view[i] = x
       ensures  forall j. 0 <= j < Sequence.length a.view -> j <> i ->
@@ -130,8 +130,8 @@ val set : 'a t -> int -> 'a -> unit
 val sub : 'a t -> int -> int -> 'a t
 (** [sub a start len] returns a fresh vector of length [len], containing the
     elements number [start] to [start + len - 1] of vector [a]. *)
-(*@ r = sub a ofs n
-      requires 0 <= ofs /\ 0 <= n /\ ofs + n <= Sequence.length a.view
+(*@ requires 0 <= ofs /\ 0 <= n /\ ofs + n <= Sequence.length a.view
+    let r = sub a ofs n in
       ensures  Sequence.length r.view = n
       ensures  forall i. 0 <= i < n -> r.view[i] = a.view[ofs + i] *)
 
@@ -141,9 +141,9 @@ val fill : 'a t -> int -> int -> 'a -> unit
 
     Raise [Invalid_argument "Vector.fill"] if [ofs] and [len] do not designate a
     valid subvector of [a]. *)
-(*@ fill a ofs n x
-      requires 0 <= ofs /\ 0 <= n /\ ofs + n <= Sequence.length a.view
-      modifies a
+(*@ requires 0 <= ofs /\ 0 <= n /\ ofs + n <= Sequence.length a.view
+    modifies a
+    let _ = fill a ofs n x in
       ensures  forall i. (0 <= i < ofs \/ ofs + n <= i < Sequence.length a.view) ->
                  a.view[i] = (old a).view[i]
       ensures  forall i. ofs <= i < ofs + n -> a.view[i] = x *)
@@ -157,11 +157,11 @@ val blit : 'a t -> int -> 'a t -> int -> int -> unit
     Raise [Invalid_argument "Vector.blit"] if [o1] and [len] do not designate a
     valid subvector of [a1], or if [o2] and [len] do not designate a valid
     subvector of [a2]. *)
-(*@ blit a1 ofs1 a2 ofs2 n
-      requires 0 <= n
-      requires 0 <= ofs1 /\ ofs1 + n <= Sequence.length a1.view
-      requires 0 <= ofs2 /\ ofs2 + n <= Sequence.length a2.view
-      modifies a2
+(*@ requires 0 <= n
+    requires 0 <= ofs1 /\ ofs1 + n <= Sequence.length a1.view
+    requires 0 <= ofs2 /\ ofs2 + n <= Sequence.length a2.view
+    modifies a2
+    let _ = blit a1 ofs1 a2 ofs2 n in
       ensures  forall i. (0 <= i < ofs2 \/ ofs2 + n <= i < Sequence.length a2.view) ->
                          a2.view[i] = (old a2).view[i]
       ensures  forall i. ofs2 <= i < ofs2 + n ->
@@ -172,8 +172,8 @@ val append : 'a t -> 'a t -> 'a t
     elements of [a1] and [a2].
 
     It works correctly even if [a1] and [a2] are the same vector. *)
-(*@ a3 = append a1 a2
-      requires Sequence.length a1.view + Sequence.length a2.view <= Sys.max_array_length
+(*@ requires Sequence.length a1.view + Sequence.length a2.view <= Sys.max_array_length
+    let a3 = append a1 a2 in
       ensures  Sequence.length a3.view = Sequence.length a1.view + Sequence.length a2.view
       ensures  forall i. 0 <= i < Sequence.length a1.view -> a3.view[i] = a1.view[i]
       ensures  forall i. 0 <= i < Sequence.length a2.view ->
@@ -182,9 +182,9 @@ val append : 'a t -> 'a t -> 'a t
 val merge_right : 'a t -> 'a t -> unit
 (** [merge_right a1 a2] moves all elements of [a2] to the end of [a1]. Empties
     [a2]. Assumes [a1] and [a2] to be disjoint. *)
-(*@ merge_right a1 a2
-      requires Sequence.length a1.view + Sequence.length a2.view <= Sys.max_array_length
-      modifies a1, a2
+(*@ requires Sequence.length a1.view + Sequence.length a2.view <= Sys.max_array_length
+    modifies a1, a2
+    let _ = merge_right a1 a2 in
       ensures  Sequence.length a2.view = 0
       ensures  Sequence.length a1.view = Sequence.length (old a1).view + Sequence.length (old a2).view
       ensures  forall i. 0 <= i < Sequence.length (old a1).view ->
@@ -201,7 +201,7 @@ val map : dummy:'b -> 'a t -> ('a -> 'b) -> 'b t
     Note: the dummy value of the returned vector is obtained by applying [f] to
     the dummy value of [a]. If this is not what you want, first create a new
     vector and then fill it with the value [f (get a 0)], [f (get a 1)], etc. *)
-(*@ a2 = map ~dummy a1 f
+(*@ let a2 = map ~dummy a1 f in
       ensures  Sequence.length a2.view = Sequence.length a1.view
       ensures  forall i. 0 <= i < Sequence.length a1.view -> a2.view[i] = f a1.view[i] *)
 
@@ -211,7 +211,7 @@ val mapi : dummy:'b -> 'a t -> (int -> 'a -> 'b) -> 'b t
 
     Note: the dummy value of the returned vector is obtained by applying [f 0]
     to the dummy value of [a]. *)
-(*@ a2 = mapi ~dummy a1 f
+(*@ let a2 = mapi ~dummy a1 f in
       ensures  Sequence.length a2.view = Sequence.length a1.view
       ensures  forall i: int. 0 <= i < Sequence.length a1.view ->
                a2.view[i] = f i a1.view[i] *)
@@ -219,7 +219,7 @@ val mapi : dummy:'b -> 'a t -> (int -> 'a -> 'b) -> 'b t
 val copy : 'a t -> 'a t
 (** [copy a] returns a copy of [a], that is, a fresh vector containing the same
     elements as [a]. *)
-(*@ a2 = copy a1
+(*@ let a2 = copy a1 in
       ensures  Sequence.length a2.view = Sequence.length a1.view
       ensures  forall i. 0 <= i < Sequence.length a1.view -> a2.view[i] = a1.view[i] *)
 
@@ -227,14 +227,14 @@ val fold_left : 'b t -> ('a -> 'b -> 'a) -> 'a -> 'a
 (** [fold_left f x a] computes
     [f (... (f (f x (get a 0)) (get a 1)) ...) (get a (n-1))], where [n] is the
     length of the vector [a]. *)
-(*@ r = fold_left a f acc
+(*@ let r = fold_left a f acc in
       ensures  r = Sequence.fold_left f acc a.view *)
 
 val fold_right : 'b t -> ('b -> 'a -> 'a) -> 'a -> 'a
 (** [fold_right f a x] computes
     [f (get a 0) (f (get a 1) ( ... (f (get a (n-1)) x) ...))], where [n] is the
     length of the vector [a]. *)
-(*@ r = fold_right a f acc
+(*@ let r = fold_right a f acc in
       ensures  r = Sequence.fold_right f a.view acc *)
 
 (* val iter : ('a -> unit) -> 'a t -> unit
@@ -261,9 +261,9 @@ val push : 'a t -> 'a -> unit
     [a] by one and stores [x] at the rightmost position.
 
     Note: the order of the arguments is not that of {!Stack.push}. *)
-(*@ push a x
-      requires Sequence.length a.view < Sys.max_array_length
-      modifies a
+(*@ requires Sequence.length a.view < Sys.max_array_length
+    modifies a
+    let _ = push a x in
       ensures  Sequence.length a.view = Sequence.length (old a.view) + 1
       ensures  a.view[Sequence.length a.view - 1] = x
       ensures  forall i. 0 <= i < Sequence.length (old a.view) ->
@@ -274,8 +274,8 @@ exception Empty
 val pop : 'a t -> 'a
 (** [pop a] removes and returns the rightmost element in vector [a], or raises
     [Empty] if the stack is empty. *)
-(*@ x = pop a
-      modifies a
+(*@ modifies a
+    let x = pop a in
       raises   Empty -> Sequence.length a.view = Sequence.length (old a).view = 0
       ensures  Sequence.length a.view = Sequence.length (old a).view - 1
       ensures  x = (old a).view[Sequence.length a.view]
@@ -284,8 +284,8 @@ val pop : 'a t -> 'a
 
 val pop_opt : 'a t -> 'a option
 (** similar to [pop], but with an option instead of an exception *)
-(*@ r = pop_opt a
-      modifies a
+(*@ modifies a
+    let r = pop_opt a in
       ensures  match r with
                | None   -> Sequence.length a.view = Sequence.length (old a).view = 0
                | Some x -> Sequence.length a.view = Sequence.length (old a).view - 1 /\
@@ -296,13 +296,13 @@ val pop_opt : 'a t -> 'a option
 val top : 'a t -> 'a
 (** [top a] returns the rightmost element in vector [a], or raises [Empty] if
     the vector is empty. *)
-(*@ x = top a
-      requires 0 < Sequence.length a.view
+(*@ requires 0 < Sequence.length a.view
+    let x = top a in
       ensures  x = a.view[Sequence.length a.view - 1] *)
 
 val top_opt : 'a t -> 'a option
 (** similar to [top], but with an option instead of an exception *)
-(*@ r = top_opt a
+(*@ let r = top_opt a in
       ensures  match r with
                | None   -> Sequence.length a.view = 0
                | Some x -> x = a.view[Sequence.length a.view - 1] *)

@@ -14,7 +14,7 @@ exception E of (int * int)
 (*@ function fst (x: 'a * 'a): 'a *)
 
 val f : 'a -> 'a
-(*@ x = f y
+(*@ let x = f y in
     raises E (x,y,z) -> integer_of_int x = 1 *)
 
 (* ERROR:
@@ -26,6 +26,6 @@ val f : 'a -> 'a
    [125] File "tuple_arity1.mli", line 18, characters 13-20:
          18 |     raises E (x,y,z) -> integer_of_int x = 1 *)
                            ^^^^^^^
-         Error: This pattern matches values of type 'a658 * 'a659 * 'a660
+         Error: This pattern matches values of type 'a663 * 'a664 * 'a665
                 but a pattern was expected which matches values of type int * int.
    |gospel_expected} *)

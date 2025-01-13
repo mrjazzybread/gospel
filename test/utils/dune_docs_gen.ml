@@ -31,7 +31,7 @@ let print_rule md =
 |}
     mli md out mli
 
-let _ =
+let () =
   for i = 1 to Array.length Sys.argv - 1 do
     print_rule Sys.argv.(i)
   done

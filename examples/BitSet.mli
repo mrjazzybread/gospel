@@ -8,21 +8,21 @@ module type S = sig
   (*@ model : int set *)
 
   val singleton : int -> t
-  (*@ s = singleton v
-        requires valid v
+  (*@ requires valid v
+      let s = singleton v in
         ensures s = singleton v *)
 
   val add : int -> t -> t
-  (*@ s2 = add i s1
-        requires valid i
+  (*@ requires valid i
+      let s2 = add i s1 in
         ensures s2 = add i s1 *)
 
   val remove : int -> t -> t
-  (*@ s2 = remove i s1
-        requires valid i
+  (*@ requires valid i
+      let s2 = remove i s1 in
         ensures s2 = remove i s1 *)
 
   val is_singleton : t -> bool
-  (*@ b = is_singleton s
+  (*@ let b = is_singleton s in
         ensures b <-> (exists v. s = Set.singleton v) *)
 end

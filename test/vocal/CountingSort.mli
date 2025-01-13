@@ -15,18 +15,18 @@
       forall i j. 0 <= i <= j < Sequence.length a -> a[i] <= a[j] *)
 
 val counting_sort : int -> int array -> int array -> unit
-(*@ counting_sort k a b
-      requires 0 < k
-      requires k_values k a
-      requires Sequence.length a = Sequence.length b
-      modifies b
+(*@ requires 0 < k
+    requires k_values k a
+    requires Sequence.length a = Sequence.length b
+    modifies b
+    let () = counting_sort k a b in
       ensures  sorted b
       ensures  Sequence.permut a b *)
 
 val in_place_counting_sort : int -> int array -> unit
-(*@ in_place_counting_sort k a
-      requires 0 < k
-      requires k_values k a
-      modifies a
+(*@ requires 0 < k
+    requires k_values k a
+    modifies a
+    let () = in_place_counting_sort k a in
       ensures  sorted a
       ensures  Sequence.permut (old a) a *)

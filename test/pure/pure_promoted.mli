@@ -4,5 +4,5 @@ val f : int -> int
 (*@ pure *)
 
 val g : int -> int
-(*@ y = g x
-    requires f x > 0 *)
+(*@ requires f x > 0
+    let y = g x *)

@@ -10,5 +10,5 @@ type u = private { tag : int; next : u }
     invariant self.tag = self.next.tag = self.next.next.tag *)
 
 val f : u -> u
-(*@ y = f x
-    requires x.tag = 0 *)
+(*@ requires x.tag = 0
+    let y = f x *)

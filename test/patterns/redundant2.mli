@@ -1,7 +1,7 @@
 type t = A | B of t
 
 val f : t -> int
-(*@ y = f x
+(*@ let y = f x in
     ensures match x with
     | A -> false
     | B (B _) -> false

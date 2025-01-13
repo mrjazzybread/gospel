@@ -1,9 +1,9 @@
 val hd : 'a list -> 'a
-(*@ x = hd l
+(*@ let x = hd l in
       raises Failure _ -> l = [] *)
 
 val find : ('a -> bool) -> 'a list -> 'a
-(*@ r = find f l
+(*@ let r = find f l in
       raises Not_found -> forall x. Sequence.mem x l -> not f x *)
 
 val invalid_arg : string -> 'a

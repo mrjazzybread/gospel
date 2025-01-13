@@ -11,6 +11,7 @@ type kind =
   | Coercion_already_defined of (string * string * string) list
   | Coercion_cycle of (string * string * string) list
   | Cyclic_type_declaration of string
+  | Does_not_return_unit
   | Duplicated_argument of string
   | Duplicated_record_field of string
   | Duplicated_variable of string
@@ -89,6 +90,8 @@ let pp_kind ppf = function
         fl
   | Cyclic_type_declaration t ->
       pf ppf "The type declaration for %s contains a cycle" t
+  | Does_not_return_unit ->
+      pf ppf "This header expects a function that returns unit"
   | Duplicated_argument arg -> pf ppf "Duplicated argument %s" arg
   | Duplicated_record_field f ->
       pf ppf "A record field with name %s already exists" f

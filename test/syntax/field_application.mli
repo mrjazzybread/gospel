@@ -1,7 +1,7 @@
 type t = { a : int }
 
 val f : t -> int
-(*@ r = f x
+(*@ let r = f x in
       ensures r = a x
 *)
 

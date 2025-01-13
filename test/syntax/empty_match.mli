@@ -1,8 +1,10 @@
 val f : int -> int
-(*@ y = f x
-    requires match x with *)
+(*@ requires match x with
+    let y = f x *)
 
 (* {gospel_expected|
-   [125] File "empty_match.mli", line 3, characters 26-26:
+   [125] File "empty_match.mli", line 3, characters 4-7:
+         3 |     let y = f x *)
+                 ^^^
          Error: Syntax error.
    |gospel_expected} *)

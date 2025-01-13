@@ -13,8 +13,8 @@ First, create a test artifact:
   >     model size : int *)
   > 
   > val create : int -> 'a t
-  > (*@ t = create i
-  >     checks i >= 0
+  > (*@ checks i >= 0
+  >     let t = create i in
   >     ensures t.contents = []
   >     ensures t.size = i *)
   > 
@@ -33,8 +33,8 @@ First, create a test artifact:
   >       | h :: (y :: _ as t) -> h <= y /\ is_sorted_list t *)
   > 
   > val add : 'a -> 'a t -> unit
-  > (*@ add a t
-  >     modifies t.contents
+  > (*@ modifies t.contents
+  >     let () = add a t in
   >     (* comments *)
   >     ensures t.contents = if is_full t.contents t.size
   >                          then old t.contents
@@ -359,7 +359,7 @@ First, create a test artifact:
                                    ts_model = (false, Ttypes.Self) },
                                  []))
                               };
-                            t_attrs = []; t_loc = foo.mli:10:11 }
+                            t_attrs = []; t_loc = foo.mli:9:11 }
                            ]
                          ));
                       t_ty =
@@ -369,7 +369,7 @@ First, create a test artifact:
                              ts_alias = None; ts_model = (false, Ttypes.Self) },
                            []))
                         };
-                      t_attrs = []; t_loc = foo.mli:10:11 };
+                      t_attrs = []; t_loc = foo.mli:9:11 };
                      { Tterm.t_node = <constant>;
                        t_ty =
                        { Ttypes.ty_node =
@@ -379,7 +379,7 @@ First, create a test artifact:
                               },
                             []))
                          };
-                       t_attrs = []; t_loc = foo.mli:10:16 }
+                       t_attrs = []; t_loc = foo.mli:9:16 }
                      ]
                    ));
                 t_ty =
@@ -389,7 +389,7 @@ First, create a test artifact:
                        ts_model = (false, Ttypes.Self) },
                      []))
                   };
-                t_attrs = []; t_loc = foo.mli:10:11 }
+                t_attrs = []; t_loc = foo.mli:9:11 }
                ];
              sp_post =
              [{ Tterm.t_node =
@@ -632,7 +632,7 @@ First, create a test artifact:
                ];
              sp_xpost = []; sp_diverge = false; sp_pure = false; sp_equiv = [];
              sp_text =
-             " t = create i\n    checks i >= 0\n    ensures t.contents = []\n    ensures t.size = i ";
+             " checks i >= 0\n    let t = create i in\n    ensures t.contents = []\n    ensures t.size = i ";
              sp_loc = foo.mli:9:3 };
            vd_loc = foo.mli:8:0 },
          Tast.Nonghost));
@@ -2741,12 +2741,30 @@ First, create a test artifact:
                ];
              sp_xpost = []; sp_diverge = false; sp_pure = false; sp_equiv = [];
              sp_text =
-             " add a t\n    modifies t.contents\n    (* comments *)\n    ensures t.contents = if is_full t.contents t.size\n                         then old t.contents\n                         else a :: (old t.contents) ";
+             " modifies t.contents\n    let () = add a t in\n    (* comments *)\n    ensures t.contents = if is_full t.contents t.size\n                         then old t.contents\n                         else a :: (old t.contents) ";
              sp_loc = foo.mli:29:3 };
            vd_loc = foo.mli:28:0 },
          Tast.Nonghost));
       sig_loc = foo.mli:28:0 }
     ]
+<<<<<<< HEAD
+=======
+>>>>>>> 204ffb3 (Headers appear in the middle of specs in a let bind)
+<<<<<<< HEAD
+=======
+>>>>>>> 204ffb3 (Headers appear in the middle of specs in a let bind)
+<<<<<<< HEAD
+=======
+>>>>>>> 204ffb3 (Headers appear in the middle of specs in a let bind)
+<<<<<<< HEAD
+=======
+>>>>>>> 204ffb3 (Headers appear in the middle of specs in a let bind)
+<<<<<<< HEAD
+=======
+>>>>>>> 204ffb3 (Headers appear in the middle of specs in a let bind)
+<<<<<<< HEAD
+=======
+>>>>>>> 204ffb3 (Headers appear in the middle of specs in a let bind)
 <<<<<<< HEAD
 =======
 >>>>>>> 2de243f (Type symbols store the logical model of the type)

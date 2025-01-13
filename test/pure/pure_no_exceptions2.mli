@@ -1,11 +1,11 @@
 val f : int -> int
-(*@ y = f x
-    pure
-    checks x > 0 *)
+(*@ pure
+    checks x > 0
+    let y = f x *)
 
 (* {gospel_expected|
-   [125] File "pure_no_exceptions2.mli", line 2, characters 8-9:
-         2 | (*@ y = f x
-                     ^
+   [125] File "pure_no_exceptions2.mli", line 4, characters 12-13:
+         4 |     let y = f x *)
+                         ^
          Error: Type checking error: a pure function cannot raise exceptions.
    |gospel_expected} *)

@@ -11,7 +11,7 @@ First, create a test artifact:
   > val w : t
   > 
   > val z : t ->  t
-  > (*@ r = z arg
+  > (*@ let r = z arg in
   >     ensures arg = r *)
   > 
   > module M : sig

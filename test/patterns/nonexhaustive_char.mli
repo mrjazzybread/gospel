@@ -1,7 +1,7 @@
 type t7 = char * char
 
 val f7 : t7 -> int
-(*@ r = f7 a
+(*@ let r = f7 a in
     ensures
       match a with
       | '\000', x -> true

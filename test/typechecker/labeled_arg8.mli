@@ -9,14 +9,15 @@
 (**************************************************************************)
 
 val f : x:('a -> 'b -> 'c) -> 'a -> 'b -> 'c
-(*@ r = f x y z *)
+(*@ let r = f x y z in
+    ensures true *)
 
 (* ERROR:
    named parameter not specified in function header *)
 
 (* {gospel_expected|
-   [125] File "labeled_arg8.mli", line 12, characters 10-11:
-         12 | (*@ r = f x y z *)
-                        ^
+   [125] File "labeled_arg8.mli", line 12, characters 14-15:
+         12 | (*@ let r = f x y z in
+                            ^
          Error: Type checking error: parameter does not match with val type.
    |gospel_expected} *)

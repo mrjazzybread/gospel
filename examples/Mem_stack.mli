@@ -17,19 +17,19 @@ module Ephemeral : sig
         e m = e m' *)
 
   val ecreate : 'a -> 'a stack
-  (*@ r = ecreate [m: 'a memory] x
+  (*@ let r = ecreate [m: 'a memory] x in
         produces r @ 'a stack
         ensures r m = Sequence.empty *)
 
   val epush : 'a stack -> 'a -> unit
-  (*@ epush [m: 'a memory] s x
-        modifies s @ 'a stack
+  (*@ modifies s @ 'a stack
+      let _ = epush [m: 'a memory] s x in
         ensures  s m = Sequence.cons x (old s m) *)
 
   val epop : 'a stack -> 'a
-  (*@ r = epop [m: 'a memory] s
-        modifies s @ 'a stack
-        requires s m <> Sequence.empty
+  (*@ modifies s @ 'a stack      
+      requires s m <> Sequence.empty
+      let r = epop [m: 'a memory] s in
         ensures  (old s m) = Sequence.cons r (s m) *)
 end
 
@@ -44,29 +44,29 @@ module Persistent : sig
         p.pview m = p.pview m' *)
 
   val pcreate : 'a -> 'a stack
-  (*@ r, [m': 'a memory] = pcreate [m: 'a memory] x
+  (*@ let r, [m': 'a memory] = pcreate [m: 'a memory] x in
         ensures r.pview m' = Sequence.empty
         ensures extend m m' *)
 
   val ppush : 'a stack -> 'a -> 'a stack
-  (*@ r, [m': 'a memory] = ppush [m: 'a memory] s x
-        modifies s
+  (*@ modifies s
+      let r, [m': 'a memory] = ppush [m: 'a memory] s x in
         ensures  r.pview m' = Sequence.cons x (s.pview m)
         ensures  extend m m' *)
 
   val ppop : 'a stack -> 'a stack * 'a
-  (*@ (rs, res) = ppop [m: 'a memory] s
-        modifies s
-        requires s.pview m <> Sequence.empty
+  (*@ modifies s
+      requires s.pview m <> Sequence.empty
+      let (rs, res) = ppop [m: 'a memory] s in
         ensures  s.pview m = Sequence.cons res (rs.pview m) *)
 end
 
 val pstack_to_estack : 'a Persistent.stack -> 'a Ephemeral.stack
-(*@ re = pstack_to_estack [m: 'a memory] ps
+(*@ let re = pstack_to_estack [m: 'a memory] ps in
       ensures re m = ps.Persistent.pview m *)
 
 val estack_to_pstack : 'a Ephemeral.stack -> 'a Persistent.stack
-(*@ rp, [m': 'a memory] = estack_to_pstack [m: 'a memory] es
-      consumes es
+(*@ consumes es
+    let rp, [m': 'a memory] = estack_to_pstack [m: 'a memory] es in
       ensures  rp.Persistent.pview m' = (old es) m
       ensures  extend m m' *)

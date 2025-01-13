@@ -88,24 +88,33 @@ type spatial_term = { s_term : term; s_lens : lens option }
 type spec_header = {
   sp_hd_nm : Preid.t;
   (* header name *)
-  sp_hd_ret : labelled_arg list;
-  (* Can only be LNone or LGhost *)
   sp_hd_args : labelled_arg list; (* header arguments' names *)
+}
+
+type spec_pre = {
+  sp_pre : term list;
+  sp_checks : term list;
+  sp_pure : bool;
+  sp_diverge : bool;
+  sp_preserves : spatial_term list;
+  sp_modifies : spatial_term list;
+  sp_consumes : spatial_term list;
+}
+
+type ret = Wildcard | Unit_ret | Rets of labelled_arg list
+
+type spec_post = {
+  sp_ret : ret;
+  sp_post : term list;
+  sp_xpost : xpost list;
+  sp_produces : spatial_term list;
+  sp_equiv : string list;
 }
 
 type val_spec = {
   sp_header : spec_header option;
-  sp_pre : term list;
-  sp_checks : term list;
-  sp_post : term list;
-  sp_xpost : xpost list;
-  sp_consumes : spatial_term list;
-  sp_produces : spatial_term list;
-  sp_writes : spatial_term list;
-  sp_preserves : spatial_term list;
-  sp_diverge : bool;
-  sp_pure : bool;
-  sp_equiv : string list;
+  sp_spec_post : spec_post;
+  sp_spec_pre : spec_pre;
   sp_text : string;
   sp_loc : Location.t;
 }

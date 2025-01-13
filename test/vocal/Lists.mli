@@ -20,7 +20,7 @@
     below. *)
 
 val map : ('a -> 'b) -> 'a list -> 'b list
-(*@ r = map f l
+(*@ let r = map f l in
       ensures Sequence.length r = Sequence.length l
       ensures forall i. 0 <= i < Sequence.length l ->
                 r[i] = f (l[i])

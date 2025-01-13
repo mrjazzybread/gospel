@@ -1,12 +1,12 @@
 type t = O | S of t
 
 val succ : t -> t
-(*@ y = succ x
+(*@ let y = succ x in
     ensures y = S x *)
 
 val test1 : t -> t -> t
-(*@ r = test1 x y
-    requires x <> O && y = O
+(*@ requires x <> O && y = O
+    let r = test1 x y in
     ensures  match x, y with
              | _, S _ -> false
              | O, _   -> false
@@ -14,9 +14,9 @@ val test1 : t -> t -> t
 
 (* pattern of type unit *)
 val f_unit : int array -> unit
-(*@ x1 = f_unit a
-     modifies a
-     ensures match x1 with () -> true *)
+(*@ modifies a
+    let x1 = f_unit a in
+      ensures match x1 with () -> true *)
 
 (*@ function fun_unit (x: unit): string =
     match x with
@@ -43,7 +43,7 @@ type t1 = A1 | A2 | B of t1
 type t2 = E | I of int
 
 val f2 : t2 -> int
-(*@ r = f2 i
+(*@ let r = f2 i in
     ensures match i with
       | E    -> true
       | I 1i -> true
@@ -69,7 +69,7 @@ type t4 = A of string | B
 
 val f5 : bool -> int
 
-(*@ r = f5 x
+(*@ let r = f5 x in
     ensures match x with
       | false -> r <> 1
       | true -> true
@@ -80,7 +80,7 @@ val f5 : bool -> int
 type t6 = A | B of t6 * float
 
 val f6 : t6 -> int
-(*@ r = f6 x
+(*@ let r = f6 x in
     ensures match x with
     | A -> false
     | B (B _, _) -> true
@@ -89,7 +89,7 @@ val f6 : t6 -> int
 type 'a t7 = 'a * int
 
 val f7 : char t7 -> int
-(*@ r = f7 a
+(*@ let r = f7 a in
     ensures match a with
       | '\000', 0i
       | 'z', 0i -> false
@@ -97,13 +97,13 @@ val f7 : char t7 -> int
 *)
 
 val f8 : 'a option -> int
-(*@ r = f8 o
+(*@ let r = f8 o in
     ensures match o with
     | None -> r = 2
     | Some x -> r <> 2 *)
 
 val f9 : char -> int
-(*@ r = f9 a
+(*@ let r = f9 a in
     ensures
       match a with
       | '\000' .. '\031'
@@ -117,7 +117,7 @@ val f9 : char -> int
 *)
 
 val f10 : bool -> int
-(*@ r = f10 x
+(*@ let r = f10 x in
     ensures
       match x with
       | true -> r <> 1
@@ -158,8 +158,7 @@ type t13 = { n : int; s : string }
     | { n=m ; s = y } -> 0 *)
 
 val f14 : 'a list -> int
-(*@ r = f14 l
-    requires match l with
+(*@ requires match l with
       | [] -> true
       | x::y::_ -> false
       | x::_ -> false
@@ -171,14 +170,14 @@ val f14 : 'a list -> int
       | None -> false
       | Some [] -> true
       | Some (x :: _ as a) -> false
+    let r = f14 l
 *)
 
 type t15 = A | B
 
 val f15 : t15 * t15 * t15 * t15 -> int
 
-(*@ r = f15 x
-    requires match x with
+(*@ requires match x with
      | A,A,A,A
      | B,B,B,B
      | _,A,A,A
@@ -187,13 +186,13 @@ val f15 : t15 * t15 * t15 * t15 -> int
      | _,_,B,B
      | _,_,_,A
      | _,_,_,B -> true
+    let r = f15 x
 *)
 
 type t16 = A | B of t16 | C of t16 * t16
 
 val f16 : t16 -> int
-(*@ r = f16 x
-  requires match x with
+(*@ requires match x with
            | A when true  -> true
            | B y when y=A -> true
            | B y when false -> true && y=A
@@ -201,4 +200,5 @@ val f16 : t16 -> int
            | C (y,z) when (y=A -> z=A) -> true
            | C (y,z) when (match y with A -> true | _ -> false) -> true
            | _ -> true
+    let r = f16 x
 *)

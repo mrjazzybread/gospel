@@ -1,7 +1,7 @@
 val ( == ) : 'a -> 'a -> bool
-(*@ r = (==) x y
+(*@ let r = (==) x y in
       ensures r <-> x = y *)
 
 val ( == ) : 'a -> 'a -> bool
-(*@ r = x == y
+(*@ let r = x == y in
       ensures r <-> x = y *)

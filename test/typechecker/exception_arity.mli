@@ -14,8 +14,8 @@ exception E of int * int
 (*@ function fst (x: 'a * 'a): 'a *)
 
 val f : 'a -> 'a
-(*@ x = f y
-    raises E x -> integer_of_int (fst x) = 1
+(*@ let x = f y in
+    raises E x -> integer_of_int (fst x) = 1 
 *)
 
 (* ERROR:
@@ -24,7 +24,7 @@ val f : 'a -> 'a
 
 (* {gospel_expected|
    [125] File "exception_arity.mli", line 18, characters 11-44:
-         18 |     raises E x -> integer_of_int (fst x) = 1
+         18 |     raises E x -> integer_of_int (fst x) = 1 
                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
          Error: Type checking error: Exception pattern doesn't match its type.
    |gospel_expected} *)

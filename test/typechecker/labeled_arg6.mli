@@ -9,14 +9,15 @@
 (**************************************************************************)
 
 val f : y:int -> int -> int
-(*@ r = f ?y x*)
+(*@ let r = f ?y x in
+    ensures true *)
 
 (* ERROR:
    the first parameter is named but is defined as optional in spec header *)
 
 (* {gospel_expected|
-   [125] File "labeled_arg6.mli", line 12, characters 11-12:
-         12 | (*@ r = f ?y x*)
-                         ^
+   [125] File "labeled_arg6.mli", line 12, characters 15-16:
+         12 | (*@ let r = f ?y x in
+                             ^
          Error: Type checking error: parameter does not match with val type.
    |gospel_expected} *)

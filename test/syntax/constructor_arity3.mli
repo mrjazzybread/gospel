@@ -1,7 +1,7 @@
 type t = L of t * t | E
 
 val f : t -> int
-(*@ r = f a
+(*@ let r = f a in
     ensures
       match a with
       | L E E -> r = 1

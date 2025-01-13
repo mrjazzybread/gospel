@@ -1,5 +1,5 @@
 val f : bool -> int
-(*@ r = f x
+(*@ let r = f x in
     ensures
       match x with
       | true

@@ -10,8 +10,8 @@ the `.gospel` file.
   >     invariant Sequence.length x.contents > 0 *)
   > 
   > val create : int -> 'a -> 'a t
-  > (*@ t = create n a
-  >     checks n > 0
+  > (*@ checks n > 0
+  >     let t = create n a in
   >     ensures t.contents = Sequence.init n (fun _ -> a) *)
   > EOF
   $ gospel check --verbose foo.mli > foo

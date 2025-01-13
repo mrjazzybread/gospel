@@ -1,5 +1,5 @@
 val f : int option -> int
-(*@ r = f x
-    requires match x with
+(*@  requires match x with
              | Some (y:int) -> y >= 0
-             | None -> true *)
+             | None -> true
+     let r = f x *)

@@ -14,7 +14,7 @@ exception E of (int * int)
 (*@ function fst (x: 'a * 'a): 'a *)
 
 val f : 'a -> 'a
-(*@ x = f y
+(*@ let x = f y in
     raises E (x,y,z) -> integer_of_int x = 1 *)
 
 (* ERROR:

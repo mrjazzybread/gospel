@@ -17,12 +17,12 @@ module type HashedType = sig
   (*@ axiom trans: forall x y z: t. equiv x y -> equiv y z -> equiv x z *)
   val equal : t -> t -> bool
 
-  (*@ b = equal x y
+  (*@ let b = equal x y in
       ensures b <-> equiv x y *)
   (*@ function hash_f (x: t) : integer *)
   (*@ axiom compatibility: forall x y: t. equiv x y -> hash_f x = hash_f y *)
   val hash : t -> int
-  (*@ h = hash x
+  (*@ let h = hash x in
       ensures h = hash_f x *)
 end
 
@@ -39,23 +39,23 @@ module Make (K : HashedType) : sig
   type 'a t = 'a table
 
   val create : int -> 'a t
-  (*@ h = create n
-    requires n >= 0
-    ensures  forall k: key. h.view k = [] *)
+  (*@ requires n >= 0
+      let h = create n in
+        ensures  forall k: key. h.view k = [] *)
 
   val clear : 'a t -> unit
-  (*@ clear h
-    modifies h
-    ensures  forall k: key. h.view k = [] *)
+  (*@ modifies h
+      let _ = clear h in
+        ensures  forall k: key. h.view k = [] *)
 
   val reset : 'a t -> unit
-  (*@ reset h
-    modifies h
-    ensures  forall k: key. h.view k = [] *)
+  (*@ modifies h
+      let _ = reset h in
+        ensures  forall k: key. h.view k = [] *)
 
   val copy : 'a t -> 'a t
-  (*@ h2 = copy h1
-    ensures  forall k: key. h2.view k = h1.view k *)
+  (*@ let h2 = copy h1 in
+        ensures  forall k: key. h2.view k = h1.view k *)
 
   (*@ function pop (h: 'a t) : integer =
     Set.fold
@@ -63,12 +63,12 @@ module Make (K : HashedType) : sig
       (fun l c -> l + c) h.dom 0 *)
 
   val population : 'a t -> int
-  (*@ n = population h
-    ensures n = pop h *)
+  (*@ let n = population h in
+        ensures n = pop h *)
 
   val length : 'a t -> int
-  (*@ n = length h
-    ensures n = pop h *)
+  (*@ let n = length h in
+        ensures n = pop h *)
 
   val iter : (key -> 'a -> unit) -> 'a t -> unit
   val fold : (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
@@ -82,38 +82,38 @@ module Make (K : HashedType) : sig
 
   val stats : 'a t -> statistics
   val add : 'a t -> key -> 'a -> unit
-  (*@ add h k v
-    modifies h
-    ensures  forall k': key.
-             h.view k = if K.equiv k' k then v :: old (h.view k')
+  (*@ modifies h
+      let _ = add h k v in
+        ensures  forall k': key.
+               h.view k = if K.equiv k' k then v :: old (h.view k')
                         else old (h.view k') *)
 
   (*@ function tail (l: 'a list) : 'a list =
         match l with [] -> [] | _ :: s -> s*)
 
   val remove : 'a t -> key -> unit
-  (*@ remove h k
-    modifies h
-    ensures  forall k': key.
+  (*@ modifies h
+      let _ = remove h k in
+        ensures  forall k': key.
              h.view k = if K.equiv k' k then tail (old (h.view k'))
                         else old (h.view k') *)
 
   val find : 'a t -> key -> 'a option
-  (*@ r = find h k
-    ensures r = match h.view k with [] -> None | x :: _ -> Some x*)
+  (*@ let r = find h k in
+        ensures r = match h.view k with [] -> None | x :: _ -> Some x*)
 
   val find_all : 'a t -> key -> 'a list
-  (*@ l = find_all h k
-    ensures l = h.view k *)
+  (*@ let l = find_all h k in
+        ensures l = h.view k *)
 
   val replace : 'a t -> key -> 'a -> unit
-  (*@ replace h k v
-    modifies h
-    ensures  forall k': key.
+  (*@ modifies h
+      let _ = replace h k v in
+        ensures  forall k': key.
              h.view k = if K.equiv k' k then v :: tail (old (h.view k))
                         else old (h.view k') *)
 
   val mem : 'a t -> key -> bool
-  (*@ b = mem h k
-    ensures b <-> h.view k <> [] *)
+  (*@ let b = mem h k in
+        ensures b <-> h.view k <> [] *)
 end

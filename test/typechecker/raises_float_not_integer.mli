@@ -11,7 +11,7 @@
 exception E of float list
 
 val f : 'a -> 'a
-(*@ x = f y
+(*@ let x = f y in
     raises E l -> match l with
                   | [] -> false
                   | y :: ys -> y = 2

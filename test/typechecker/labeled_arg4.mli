@@ -9,7 +9,8 @@
 (**************************************************************************)
 
 val f : y:int -> int -> int
-(*@ r = f ~y y*)
+(*@ let r = f ~y y in
+    ensures true *)
 
 (* ERROR:
    Line 12
@@ -17,8 +18,8 @@ val f : y:int -> int -> int
    remove replace the second y by z in line 12 *)
 
 (* {gospel_expected|
-   [125] File "labeled_arg4.mli", line 12, characters 13-14:
-         12 | (*@ r = f ~y y*)
-                           ^
+   [125] File "labeled_arg4.mli", line 12, characters 17-18:
+         12 | (*@ let r = f ~y y in
+                               ^
          Error: The variable y is duplicated in this pattern.
    |gospel_expected} *)

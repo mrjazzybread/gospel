@@ -1,5 +1,5 @@
 val f : Stdlib.Float.Array.t -> int
-(*@ l = f xs
+(*@ let l = f xs in
     ensures l >= 0 *)
 
 (* {gospel_expected|

@@ -4,8 +4,7 @@ exception E of int * int
 exception F of (int * int)
 
 val f : int -> t -> bool
-(*@ b = f n t
-    requires t = D (n, n)
+(*@ requires t = D (n, n)
     requires t = C (n, n)
     requires let x = (n, n) in D x = D x
     (* but not: *)
@@ -18,6 +17,7 @@ val f : int -> t -> bool
              | D (_, _)
              | D ((_, _))
              | D _ -> true
+    let b = f n t in
     raises E (_, _) -> true
     (* but not: *)
     (* raises E _ -> false *)

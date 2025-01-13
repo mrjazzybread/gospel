@@ -21,7 +21,7 @@ module Make (X : sig
   (*@ axiom is_pre_order: Order.is_pre_order cmp *)
 
   val compare : t -> t -> int
-  (*@ r = compare x y
+  (*@ let r = compare x y in
         ensures r = cmp x y *)
 end) : sig
   type elt = X.t
@@ -33,16 +33,16 @@ end) : sig
   (*@ predicate mem (x: elt) (h: heap) = Bag.multiplicity x h.bag > 0 *)
 
   val create : unit -> heap
-  (*@ h = create ()
-      ensures h.bag = Bag.empty *)
+  (*@ let h = create () in
+        ensures h.bag = Bag.empty *)
 
   val is_empty : heap -> bool
-  (*@ b = is_empty h
-      ensures b <-> Bag.empty = h.bag *)
+  (*@ let b = is_empty h in
+        ensures b <-> Bag.empty = h.bag *)
 
   val size : heap -> int
-  (*@ x = size h
-      ensures x = Bag.cardinal h.bag *)
+  (*@ let x = size h in
+        ensures x = Bag.cardinal h.bag *)
 
   (*@ function minimum (h: heap) : elt *)
 
@@ -53,34 +53,34 @@ end) : sig
         forall h. 0 < Bag.cardinal h.bag -> is_minimum (minimum h) h *)
 
   val find_min : heap -> elt option
-  (*@ r = find_min h
-      ensures match r with
-      | None   -> Bag.cardinal h.bag = 0
-      | Some x -> Bag.cardinal h.bag > 0 && x = minimum h *)
+  (*@ let r = find_min h in
+        ensures match r with
+        | None   -> Bag.cardinal h.bag = 0
+        | Some x -> Bag.cardinal h.bag > 0 && x = minimum h *)
 
   exception Empty
 
   val find_min_exn : heap -> elt
-  (*@ x = find_min_exn h
+  (*@ let x = find_min_exn h in
       raises  Empty -> Bag.cardinal h.bag = 0
       ensures Bag.cardinal h.bag > 0 && x = minimum h *)
 
   val delete_min_exn : heap -> unit
-  (*@ delete_min_exn h
-      modifies h
+  (*@ modifies h
+      let _ = delete_min_exn h in
       raises  Empty -> Bag.cardinal h.bag = 0 && h.bag = old h.bag
       ensures (old h).bag = Bag.add (minimum (old h)) h.bag *)
 
   val extract_min_exn : heap -> elt
-  (*@ x = extract_min_exn h
-      modifies h
-      raises  Empty -> Bag.cardinal h.bag = 0 && h.bag = old h.bag
-      ensures x = minimum (old h)
-      ensures (old h).bag = Bag.add x h.bag *)
+  (*@ modifies h
+      let x = extract_min_exn h in
+        raises  Empty -> Bag.cardinal h.bag = 0 && h.bag = old h.bag
+        ensures x = minimum (old h)
+        ensures (old h).bag = Bag.add x h.bag *)
 
   val insert : elt -> heap -> unit
-  (*@ insert x h
-      checks   Bag.cardinal h.bag < Sys.max_array_length
+  (*@ checks   Bag.cardinal h.bag < Sys.max_array_length
       modifies h
+      let _ = insert x h in
       ensures  h.bag = Bag.add x (old h).bag *)
 end

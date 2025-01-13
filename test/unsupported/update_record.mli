@@ -4,7 +4,7 @@ type t
 (*@ model r : r *)
 
 val f : t -> t
-(*@ y = f x
+(*@ let y = f x in
     ensures y.r = { x.r with b = 42 }
 *)
 

@@ -56,7 +56,7 @@ end
 module MF : MTF
 
 val default : MF.ft -> MF.ft
-(*@ x = default y
-    requires MF.fp1 y
+(*@ requires MF.fp1 y
+    let x = default y in
     ensures MF.fp2 x
 *)

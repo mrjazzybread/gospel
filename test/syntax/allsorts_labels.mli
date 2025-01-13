@@ -9,48 +9,57 @@
 (**************************************************************************)
 
 val f : int -> int -> int
-(*@ r = f y x *)
+(*@ let r = f y x in  
+      ensures true *)
 
 val f : y:int -> int -> int
-(*@ r = f ~y x *)
+(*@ let r = f ~y x in  
+      ensures true *)
 
 val f : ?y:int -> int -> int
-(*@ r = f ?y x *)
+(*@ let r = f ?y x in  
+      ensures true *)
 
 val f : y:int -> ?x:int -> int
-(*@ r = f ~y ?x *)
+(*@ let r = f ~y ?x in  
+      ensures true *)
 
 val f : ?y:int -> x:int -> int
-(*@ r = f ?y ~x *)
+(*@ let r = f ?y ~x in  
+      ensures true *)
 
 val f : ('a -> 'b -> 'c) -> 'a -> 'b -> 'c
-(*@ r = f x y z *)
+(*@ let r = f x y z in  
+      ensures true *)
 
 val f : x:('a -> 'b -> 'c) -> 'a -> 'b -> 'c
-(*@ r = f ~x y z *)
+(*@ let r = f ~x y z in  
+      ensures true *)
 
 val f : x:('a -> 'b -> 'c) -> y:'a -> 'b -> 'c
-(*@ r = f ~x ~y z *)
+(*@ let r = f ~x ~y z in  
+      ensures true *)
 
 val f : x:('a -> 'b -> 'c) -> y:'a -> 'b -> 'c
-(*@ r = f ~x [w:int] ~y z *)
+(*@ let r = f ~x [w:int] ~y z in  
+      ensures true *)
 
 val f : x:('a -> 'b -> 'c) -> y:'a -> 'b -> 'c
-(*@ r = f ~x [w:int] ~y [p:integer] z *)
+(*@ let r = f ~x [w:int] ~y [p:integer] z in  
+      ensures true *)
 
 val f : x:('a -> 'b -> 'c) -> y:'a -> 'b -> 'c
-(*@ r,[a:'a] = f ~x [w:int] ~y [p:integer] z *)
+(*@ let r,[a:'a] = f ~x [w:int] ~y [p:integer] z in  
+      ensures true *)
 
 val f : x:('a -> 'b -> 'c) -> y:'a -> 'b -> 'c
-(*@ [b:integer],r,[a:'a] = f ~x [w:int] ~y [p:integer] z *)
+(*@ let [b:integer],r,[a:'a] = f ~x [w:int] ~y [p:integer] z in  
+      ensures true *)
 
 val f : x:('a -> 'b -> 'c) -> y:'a -> 'b -> 'c
-(*@ [b:integer],r,[a:'a] = f ~x [w:int] ~y [p:integer] z *)
+(*@ let [b:integer],r,[a:'a] = f ~x [w:int] ~y [p:integer] z in  
+      ensures true *)
 
 val f : int ref -> unit
-(*@ () = f x
-    modifies x *)
-
-val f : int ref -> unit
-(*@ f x
-    modifies x *)
+(*@ modifies x
+    let _ = f x *)

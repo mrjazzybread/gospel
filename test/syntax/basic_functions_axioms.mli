@@ -89,9 +89,9 @@ type 'a t2 = C2 of 'a | C3 of bool | C4 of int * 'a
 (*@ axiom ax1: forall x y. y = f x *)
 
 val f : int -> int -> int
-(*@ r = f x y
-    requires x > 0
+(*@ requires x > 0
     requires y + 2 < 0
+    let r = f x y in
     ensures r = x + y *)
 
 type 'a t3 = A

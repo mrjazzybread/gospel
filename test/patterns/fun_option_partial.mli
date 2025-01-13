@@ -1,5 +1,5 @@
 val f : 'a option list -> bool
-(*@ b = f os
+(*@ let b = f os in
     ensures Sequence._exists (fun (Some _) -> false) os
 *)
 (* {gospel_expected|

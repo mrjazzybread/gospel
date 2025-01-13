@@ -28,7 +28,7 @@ exception E11 of char
 (*@ function int_of_integer (x:integer): int *)
 
 val f : 'a -> 'a
-(*@ x = f y
+(*@ let x = f y in
     raises E1 x -> integer_of_int x = 1 | E1 _ -> false
     raises E2 (_, _)
     raises E2 (_, _) -> true

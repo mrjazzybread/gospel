@@ -1,5 +1,5 @@
 val f : 'a list -> 'a
-(*@ x = f xs
+(*@ let x = f xs in
     ensures x = (fun (_ :: y :: _ | y :: []) -> y) xs
 *)
 

@@ -10,14 +10,17 @@ documentation comment and gospel specification:
   $ cat > foo.mli << EOF
   > val f : int -> int
   > (** documentation *)
-  > (*@ y = f x *)
+  > (*@ let y = f x in
+  >     ensures true *)
   > EOF
 
 Now, we look at how the OCaml compiler understand the output of the gospel
 preprocessor. We also enable the compiler warning about unexpected docstring:
 
   $ ocamlc -pp "gospel pps" -dsource -w +50 foo.mli
-  val f : int -> int[@@ocaml.doc {| documentation |}][@@gospel {| y = f x |}]
+  val f : int -> int[@@ocaml.doc {| documentation |}][@@gospel
+                                                       {| let y = f x in
+      ensures true |}]
 
 Another problematic interleaving is the documentation of ghost declaration with
 and without specifications:
@@ -217,7 +220,8 @@ specifications after an multi-line informal documentation block:
   > (** multi
   >     (* line *)
   >     documentation *)
-  > (*@ y = f x z *)
+  > (*@ let y = f x z in
+  >     ensures x = z -> x = y *)
   > EOF
 
 Gospel preprocessing should indicate the correct location with the `#` syntax:
@@ -234,9 +238,10 @@ Gospel preprocessing should indicate the correct location with the `#` syntax:
                      ]
   [@@gospel
   # 5 "foo.mli"
-   {| y = f x z |}
-  # 5 "foo.mli"
-                 ]
+   {| let y = f x z in
+      ensures x = z -> x = y |}
+  # 6 "foo.mli"
+                              ]
   
 
 
@@ -244,9 +249,9 @@ Gospel preprocessing should indicate the correct location with the `#` syntax:
 Gospel typechecking should spot an error and locate it at the fifth line of the file:
 
   $ gospel check foo.mli
-  File "foo.mli", line 5, characters 8-9:
-  5 | (*@ y = f x z *)
-              ^
+  File "foo.mli", line 5, characters 12-13:
+  5 | (*@ let y = f x z in
+                  ^
   Error: Type checking error: too many parameters.
   [125]
 
@@ -271,7 +276,8 @@ Another corner case is the empty documentation attribute:
   $ cat > foo.mli << EOF
   > val f : int -> int
   > (**)
-  > (*@ y = f x z *)
+  > (*@ let y = f x z in
+  >     ensures y = 0 *)
   > EOF
   $ gospel pps foo.mli
   # 1 "foo.mli"
@@ -281,9 +287,10 @@ Another corner case is the empty documentation attribute:
      ]
   [@@gospel
   # 3 "foo.mli"
-   {| y = f x z |}
-  # 3 "foo.mli"
-                 ]
+   {| let y = f x z in
+      ensures y = 0 |}
+  # 4 "foo.mli"
+                     ]
   
 
 
@@ -291,22 +298,22 @@ Another corner case is the empty documentation attribute:
 And some other corner cases with different spacing:
 
   $ cat > foo.mli << EOF
-  > val f : int -> int(*@ y = f x z *)
+  > val f : int -> int(*@ let y = f x z in ensures true *)
   > EOF
   $ gospel pps foo.mli
   # 1 "foo.mli"
   val f : int -> int[@@gospel
   # 1 "foo.mli"
-                     {| y = f x z |}
+                     {| let y = f x z in ensures true |}
   # 1 "foo.mli"
-                                   ]
+                                                       ]
   
 
 
 
   $ cat > foo.mli << EOF
   > val f : int -> int(** documentation *)
-  > (*@ y = f x *)
+  > (*@ let y = f x in ensures false *)
   > EOF
   $ gospel pps foo.mli
   # 1 "foo.mli"
@@ -317,15 +324,15 @@ And some other corner cases with different spacing:
                                        ]
   [@@gospel
   # 2 "foo.mli"
-   {| y = f x |}
+   {| let y = f x in ensures false |}
   # 2 "foo.mli"
-               ]
+                                    ]
   
 
 
 
   $ cat > foo.mli << EOF
-  > val f : int -> int(** documentation *)(*@ y = f x *)
+  > val f : int -> int(** documentation *)(*@ let y = f x in ensures false *)
   > EOF
   $ gospel pps foo.mli
   # 1 "foo.mli"
@@ -335,9 +342,9 @@ And some other corner cases with different spacing:
   # 1 "foo.mli"
                                        ][@@gospel
   # 1 "foo.mli"
-                                         {| y = f x |}
+                                         {| let y = f x in ensures false |}
   # 1 "foo.mli"
-                                                     ]
+                                                                          ]
   
 
 

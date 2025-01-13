@@ -1,5 +1,7 @@
 val function' : int -> int
-(*@ function' x *)
+(*@ let _ = function' x in
+    ensures true *)
 
 val lemma_not_lemma : int -> int
-(*@ lemma_not_lemma x *)
+(*@ let _ = lemma_not_lemma x in
+    ensures true *)

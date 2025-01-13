@@ -9,11 +9,12 @@
 (**************************************************************************)
 
 val f : x:('a -> 'b -> 'c) -> y:'a -> 'b -> 'c
-(*@ r = f ~x [z:int] ~y z *)
+(*@ let r = f ~x [z:int] ~y z in 
+    ensures true *)
 
 (* {gospel_expected|
-   [125] File "faulty_header3.mli", line 12, characters 24-25:
-         12 | (*@ r = f ~x [z:int] ~y z *)
-                                      ^
+   [125] File "faulty_header3.mli", line 12, characters 28-29:
+         12 | (*@ let r = f ~x [z:int] ~y z in 
+                                          ^
          Error: The variable z is duplicated in this pattern.
    |gospel_expected} *)

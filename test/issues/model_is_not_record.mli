@@ -2,9 +2,9 @@ type 'a t
 (*@ mutable model contents: 'a list *)
 
 val f : 'a t -> unit
-(*@ f xs
-    modifies xs
-    ensures xs = { contents = [] }
+(*@ modifies xs
+    let _ = f xs in
+      ensures xs = { contents = [] }
 *)
 (* {gospel_expected|
    [125] gospel: internal error, uncaught exception:

@@ -1,5 +1,5 @@
 val f : int -> int
-(*@ y = f x
+(*@ let y = f x in
     ensures match x with
     | _ -> true
     | 1i -> false *)

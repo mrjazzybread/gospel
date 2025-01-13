@@ -1,7 +1,7 @@
 type 'a t = 'a * int
 
 val f : int t -> int
-(*@ r = f a
+(*@ let r = f a in
     ensures
       match a with
       | x, 0i -> true

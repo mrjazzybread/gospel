@@ -28,6 +28,7 @@ let type_check load_path name sigs =
   md
 
 let run_file config file =
+  let () = Typing.wow := config.verbose in
   try
     let md =
       if String.equal ".gospel" (Filename.extension file) then

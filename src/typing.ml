@@ -687,7 +687,12 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
       | fields, [] -> mk_dterm ~loc (DTapp (cs, fields)) dty
       | _, missing -> W.error ~loc (W.Label_missing missing))
 
+let wow = ref false
+
 let dterm whereami kid crcm ns env t =
+  let () = 
+    if !wow then
+      let _ = Mini_typing.typecheck t in () in
   let denv = Mstr.map (fun vs -> dty_of_ty vs.vs_ty) env in
   dterm whereami kid crcm ns denv t
 

@@ -690,9 +690,11 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
 let wow = ref false
 
 let dterm whereami kid crcm ns env t =
-  let () = 
-    if !wow then
-      let _ = Mini_typing.typecheck t in () in
+  let _ =
+    if !wow && not !Ttypes.is_stdlib then
+      let _ = Mini_typing.typecheck t in
+      ()
+  in
   let denv = Mstr.map (fun vs -> dty_of_ty vs.vs_ty) env in
   dterm whereami kid crcm ns denv t
 

@@ -43,7 +43,7 @@ let run_file config file =
 
         let module_nm = path2module file in
         let sigs = parse_gospel ~filename:file ocaml module_nm in
-        if config.verbose then (
+        if false then (
           pp fmt "@[@\n*******************************@]@.";
           pp fmt "@[****** GOSPEL translation *****@]@.";
           pp fmt "@[*******************************@]@.";

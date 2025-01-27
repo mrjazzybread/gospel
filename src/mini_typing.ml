@@ -161,17 +161,10 @@ let rec hastype (t : Uast.term) (w : variable) =
   | Uast.Tidapp(id, [t1; t2]) ->
      let id = leaf id in
      if id.pid_str = "infix -" then
-       let+ tt1 = lift hastype t1 S.ty_int 
+       let+ tt1 = lift hastype t1 S.ty_int
        and+ tt2 = lift hastype t2 S.ty_int
        and+ () = w --- S.ty_int in
        mk_term (Tsub(tt1, tt2)) O.ty_int
-     else if id.pid_str = "cons" then
-       let@ v = exist in
-       let+ () = w --- S.ty_list v
-       and+ tt1 = lift hastype t1 (S.ty_list v)
-       and+ tt2 = hastype t2 v
-       and+ v = decode v in
-       mk_term (Tcons(tt1, tt2)) (O.ty_list v)
      else
        assert false
   | Uast.Tbinop(t1, Uast.Tand, t2) ->
@@ -200,9 +193,9 @@ let rec hastype (t : Uast.term) (w : variable) =
            let@ v = exist in
            let+ () = w --- S.ty_list v
            and+ tt1 = hastype t1 v
-           and+ tt2 = lift hastype t2 (S.ty_list v)
-           and+ v = decode v in
-           mk_term (Tcons(tt1, tt2)) (O.ty_list v)
+           and+ tt2 = hastype t2 w 
+           and+ t = decode w in
+           mk_term (Tcons(tt1, tt2)) t
          else
            assert false
      | _ -> assert false end

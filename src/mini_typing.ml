@@ -210,14 +210,16 @@ let rec hastype (t : Uast.term) (w : variable) =
 
 let tbl : (string, O.ty) Hashtbl.t = Hashtbl.create 100
 
-let print_ty = function
-  |O.Bool -> print_endline "bool"
-  |O.Int -> print_endline "int"
-  |List _ -> print_endline "list"
-  |Var x -> print_endline ("'" ^ x)
+let rec print_ty = 
+  let pp = Fmt.pf Format.std_formatter "%s" in
+  function
+  |O.Bool -> pp "bool\n"
+  |O.Int -> pp "int\n"
+  |List t -> pp "list "; print_ty t
+  |Var x -> pp "'"; pp x
 
 let typecheck t =
   let _, t = try Solver.solve ~rectypes:false (let0 (exist (hastype t))) with
   |Solver.Unbound (_, t) ->
     print_endline (X.to_string t);
-      raise Exit in t
+      raise Exit in print_ty t.ty; t

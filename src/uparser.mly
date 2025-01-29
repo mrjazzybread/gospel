@@ -306,8 +306,6 @@ term_:
     { Told $2 }
 | prefix_op term %prec prec_prefix_op
     { Tidapp (Qpreid $1, [$2]) }
-| l = term ; o = bin_op ; r = term
-    { Tbinop (l, o, r) }
 | l = term ; o = infix_op_1 ; r = term
     { Tinfix (l, o, r) }
 | l = term ; o = infix_op_234 ; r = term
@@ -431,15 +429,6 @@ term_sub_:
 | term_arg LEFTSQ DOTDOT term RIGHTSQ
     { Tidapp (below_op $loc($2), [$1;$4]) }
 | LEFTPAR comma_list2(term) RIGHTPAR                { Ttuple $2 }
-;
-
-%inline bin_op:
-| ARROW   { Timplies }
-| LRARROW { Tiff }
-| OR      { Tor }
-| BARBAR  { Tor_asym }
-| AND     { Tand }
-| AMPAMP  { Tand_asym }
 ;
 
 quant:
@@ -576,11 +565,17 @@ pattern_rec_field(X):
 (* Symbolic operation names *)
 
 op_symbol:
-| OP1  { $1 }
-| OP2  { $1 }
-| OP3  { $1 }
-| OP4  { $1 }
-| STAR { "*" }
+| OP1     { $1 }
+| OP2     { $1 }
+| OP3     { $1 }
+| OP4     { $1 }
+| ARROW   { "->" }  
+| LRARROW { "<->" }  
+| OR      { "\\/" }  
+| BARBAR  { "||" }  
+| AND     { "/\\" }  
+| AMPAMP  { "&&" }
+| STAR    { "*" }
 ;
 
 %inline oppref:
@@ -600,6 +595,12 @@ prefix_op:
 | o = OP3   { mk_pid (infix o) $loc }
 | STAR      { mk_pid (infix "*") $loc }
 | o = OP4   { mk_pid (infix o) $loc }
+| ARROW     { mk_pid (infix "->")  $loc }
+| LRARROW   { mk_pid (infix "<->") $loc }
+| OR        { mk_pid (infix "\\/") $loc }
+| BARBAR    { mk_pid (infix "||")  $loc }
+| AND       { mk_pid (infix "/\\") $loc }
+| AMPAMP    { mk_pid (infix "&&")  $loc }
 ;
 
 (* Idents *)

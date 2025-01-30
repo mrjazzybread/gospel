@@ -11,7 +11,6 @@
 module W = Warnings
 open Ppxlib
 open Utils
-open Identifier
 open Uast
 open Ttypes
 open Tmodule
@@ -337,7 +336,8 @@ let rec dpattern kid ns { pat_desc; pat_loc = loc } =
       in
       mk_dpattern ~loc (DPconst c) dty Mstr.empty
 
-let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
+let rec dterm whereami kid crcm ns denv ({ term_desc; term_loc = loc } as t) :
+    dterm =
   let mk_dterm ~loc dt_node dty =
     { dt_node; dt_dty = Some dty; dt_loc = loc }
   in
@@ -350,11 +350,18 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
   in
   (* CHECK location *)
   let map_apply dt tl = List.fold_left apply dt tl in
-  let gen_app ~loc ls tl =
+  let gen_app ~loc:id_loc ls tl =
     let nls = List.length (get_args ls) and ntl = List.length tl in
     let args, extra = split_at_i nls tl in
     let dtl = List.map (dterm whereami kid crcm ns denv) args in
     let dtyl, dty = specialize_ls ls in
+    (if ls_equal ls ps_equ || ls_equal ls ps_nequ then
+       let max = max_dty crcm dtl in
+       try
+         dty_unify ~loc:id_loc
+           (Option.value max ~default:dty_bool)
+           (List.hd dtyl)
+       with Exit -> ());
     if ntl < nls then
       let dtyl1, dtyl2 = split_at_i ntl dtyl in
       let dtl = List.map2 (dterm_expected crcm) dtl dtyl1 in
@@ -540,41 +547,7 @@ let rec dterm whereami kid crcm ns denv { term_desc; term_loc = loc } : dterm =
       let denv = denv_add_var denv pid.pid_str (dty_of_dterm dt1) in
       let dt2 = dterm whereami kid crcm ns denv t2 in
       mk_dterm ~loc (DTlet (pid, dt1, dt2)) (Option.get dt2.dt_dty)
-  | Uast.Tinfix (t1, op1, t23) ->
-      let apply de1 op de2 =
-        let symbol =
-          if op.Preid.pid_str = neq.id_str then eq.id_str else op.pid_str
-        in
-        let ls = find_ls ~loc:op1.pid_loc ns [ symbol ] in
-        let dtyl, dty = specialize_ls ls in
-        (if ls_equal ls ps_equ then
-           let max = max_dty crcm [ de1; de2 ] in
-           try
-             dty_unify ~loc (Option.value max ~default:dty_bool) (List.hd dtyl)
-           with Exit -> ());
-        let dtl =
-          app_unify_map ~loc ls (dterm_expected crcm) [ de1; de2 ] dtyl
-        in
-        if op.pid_str = neq.id_str then
-          mk_dterm ~loc (DTnot (mk_dterm ~loc (DTapp (ls, dtl)) dty)) dty_bool
-        else mk_dterm ~loc (DTapp (ls, dtl)) dty_bool
-      in
-      let rec chain _ de1 op1 t23 =
-        match t23 with
-        | { term_desc = Uast.Tinfix (t2, op2, t3); term_loc = loc23 } ->
-            let de2 = dterm whereami kid crcm ns denv t2 in
-            (* TODO: improve locations of subterms.
-               See loc_cutoff function in why3 typing.ml *)
-            (* let loc12 = loc_cutoff loc loc23 t2.term_loc in *)
-            let de12 = apply de1 op1 de2 in
-            let de23 = chain loc23 de2 op2 t3 in
-            dfmla_unify de12;
-            dfmla_unify de23;
-            let ls = find_ls ns [ "infix /\\" ] ~loc:Location.none in
-            mk_dterm ~loc (DTapp (ls, [ de12; de23 ])) dty_bool
-        | _ -> apply de1 op1 (dterm whereami kid crcm ns denv t23)
-      in
-      chain loc (dterm whereami kid crcm ns denv t1) op1 t23
+  | Uast.Tinfix _ -> dterm whereami kid crcm ns denv (Uast_utils.chain t)
   | Uast.Tquant (q, vl, t) ->
       let get_dty pty =
         match pty with None -> dty_fresh () | Some pty -> dty_of_pty ns pty

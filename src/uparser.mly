@@ -12,6 +12,7 @@
   open Ppxlib
   open Identifier
   open Uast
+  open Uast_utils
 
   let mk_loc (s, e) = {
     Location.loc_start = s;
@@ -299,7 +300,7 @@ term: t = mk_term(term_) { t }
 
 term_:
 | term_arg_
-    { $1 }
+    { chain_desc $1 }
 | NOT term
     { Tnot $2 }
 | OLD term
@@ -573,9 +574,9 @@ op_symbol:
 | LRARROW { "<->" }  
 | OR      { "\\/" }  
 | BARBAR  { "||" }  
-| AND     { "/\\" }  
+| AND     { "/\\"}  
 | AMPAMP  { "&&" }
-| STAR    { "*" }
+| STAR    { "*"  }
 ;
 
 %inline oppref:

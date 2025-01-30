@@ -87,6 +87,7 @@ end
 let prefix s = "prefix " ^ s
 let infix s = "infix " ^ s
 let mixfix s = "mixfix " ^ s
+let chain s = "chain " ^ s
 
 let is_somefix f s =
   let sl = String.split_on_char ' ' s in
@@ -95,6 +96,7 @@ let is_somefix f s =
 let is_prefix = is_somefix "prefix"
 let is_infix = is_somefix "infix"
 let is_mixfix = is_somefix "mixfix"
+let is_chain = is_somefix "chain"
 let eq = Ident.create ~loc:Location.none (infix "=")
 let neq = Ident.create ~loc:Location.none (infix "<>")
 let none = Ident.create ~loc:Location.none "None"

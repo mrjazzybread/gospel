@@ -118,14 +118,6 @@ let rec hastype (t : Uast.term) (w : variable) =
           let+ () = w --- S.ty_int in
           mk_term (Tint (int_of_string s)) O.ty_int
       | _ -> assert false)
-  | Uast.Tidapp (id, [ t1; t2 ]) ->
-      let id = leaf id in
-      if id.pid_str = "infix -" then
-        let+ tt1 = lift hastype t1 S.ty_int
-        and+ tt2 = lift hastype t2 S.ty_int
-        and+ () = w --- S.ty_int in
-        mk_term (Tsub (tt1, tt2)) O.ty_int
-      else assert false
   | Uast.Tpreid q ->
       if (leaf q).pid_str = "empty" then
         let@ v = exist in

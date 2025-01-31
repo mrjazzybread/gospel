@@ -53,6 +53,8 @@ let run_check verbose load_path file =
   let b = Check.run { verbose; load_path } file in
   if not b then exit 125 else ()
 
+let run_icheck file = List.iter Icheck.run file
+
 let run_dumpast load_path file =
   let load_path =
     List.fold_left
@@ -76,6 +78,12 @@ let tc =
   let term = Term.(const run_check $ verbose $ load_path $ intfs) in
   Cmd.v info term
 
+let itc =
+  let doc = "Gospel type-checker (Experimental)." in
+  let info = Cmd.info "icheck" ~doc in
+  let term = Term.(const run_icheck $ intfs) in
+  Cmd.v info term
+
 let pps =
   let doc = "Gospel preprocessor." in
   let info = Cmd.info "pps" ~doc in
@@ -97,5 +105,5 @@ let () =
       | Some v -> Build_info.V1.Version.to_string v)
   in
   let info = Cmd.info "gospel" ~doc ~version in
-  let commands = Cmd.group info [ tc; wc; pps; dumpast ] in
+  let commands = Cmd.group info [ tc; itc; wc; pps; dumpast ] in
   Stdlib.exit (Cmd.eval commands)

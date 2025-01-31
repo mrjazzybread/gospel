@@ -8,24 +8,16 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 
-type 'a t1 = C of 'a * int
-type 'a t2 = T of 'a * int
+open Gospel
+open Parser_frontend
+open Checker
 
-(*@ function i (a:'a t1): int =
-      match a with
-      | T (_,y) -> y
-*)
+let path2module p =
+  Filename.basename p |> Filename.chop_extension |> String.capitalize_ascii
 
-(* ERROR:
-   Line 17
-   Pattern mysmatch 'a t1 with 'b t2
-   Replace T by C in line 8
-*)
-
-(* {gospel_expected|
-   [125] File "t1_not_t2.mli", line 16, characters 8-15:
-         16 |       | T (_,y) -> y
-                      ^^^^^^^
-         Error: This pattern matches values of type 'a660 t2
-                but a pattern was expected which matches values of type 'a t1.
-   |gospel_expected} *)
+let run file =
+  let ocaml = parse_ocaml file in
+  let module_nm = path2module file in
+  let sigs = parse_gospel ~add_std:false ~filename:file ocaml module_nm in
+  let _ = signatures sigs in
+  ()

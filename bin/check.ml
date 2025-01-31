@@ -10,7 +10,8 @@
 
 open Gospel
 open Parser_frontend
-open Checker
+open Solver
+module W = Warnings
 
 let path2module p =
   Filename.basename p |> Filename.chop_extension |> String.capitalize_ascii

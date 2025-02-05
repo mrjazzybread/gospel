@@ -19,5 +19,7 @@ let run file =
   let ocaml = parse_ocaml file in
   let module_nm = path2module file in
   let sigs = parse_gospel ~add_std:false ~filename:file ocaml module_nm in
-  let _ = signatures sigs in
-  ()
+  try
+    let _ = signatures sigs in
+    ()
+  with Warnings.Error e -> Fmt.epr "%a@." W.pp e

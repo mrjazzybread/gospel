@@ -19,6 +19,7 @@ open Uast
 open Tast2
 module Solver = Solver.Make (X) (S) (Types)
 open Solver
+module W = Warnings
 
 module Ns = Map.Make (String)
 (** Environment to store type declarations **)
@@ -99,6 +100,10 @@ let rec hastype ts (t : Uast.term) (r : variable) =
      logical terms, the environemnt will remain the same in all
      recursive calls.*)
   let hastype = hastype ts in
+  (* This line ensures that Inferno errors refer to the correct code
+     fragment. *)
+  Solver.correlate (t.term_loc.loc_start, t.term_loc.loc_end)
+  @@
   let+ t_node =
     match t.term_desc with
     | Uast.Ttrue ->
@@ -190,7 +195,7 @@ let typecheck c = Solver.solve ~rectypes:false c
 let process_fun_spec f =
   Option.fold ~some:(fun _ -> assert false) ~none:(pure None) f
 
-let ty_of_pty = (Types.Tyapp (Itypes.S.bool_id, []))
+let ty_of_pty = Types.Tyapp (Itypes.S.bool_id, [])
 
 (** [function_cstr ts f cstr] Creates a constraint whose semantic value is a
     list of signatures whose head is the declaration of the function described
@@ -252,9 +257,7 @@ let function_cstr ts (f : Uast.function_) (cstr : signature list co) :
   and+ params, tt = build_def deep_params body_c
   (* Typed function specification *)
   and+ fun_spec = process_fun_spec f.fun_spec in
-  let fun_ty =
-    Option.fold ~some:(fun t -> t.t_ty) ~none:ty_of_pty tt
-  in
+  let fun_ty = Option.fold ~some:(fun t -> t.t_ty) ~none:ty_of_pty tt in
   Sig_function (mk_function f params tt fun_ty fun_spec) :: l
 
 (** Creates a constraint ensuring the term within an axiom has type [bool]. *)
@@ -296,4 +299,12 @@ let signatures l =
   in
   (* Build a constraint for the entire Gospel file and solve it. *)
   let c = List.fold_right (signature ts) l (pure []) in
-  typecheck (let0 c)
+  let loc l = Uast_utils.mk_loc l in
+  let error r = W.error ~loc:(loc r) in
+  try typecheck (let0 c) with
+  | Solver.Unbound (r, t) -> error r (W.Unbound_variable t.pid_str)
+  | Solver.Unify (r, ty1, ty2) ->
+      let ty1s = Fmt.str "%a" Types.print_ty ty1 in
+      let ty2s = Fmt.str "%a" Types.print_ty ty2 in
+      error r (Bad_type (ty1s, ty2s))
+  | _ -> assert false

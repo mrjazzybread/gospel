@@ -119,4 +119,19 @@ module O = struct
   (** Since Gospel types are not allowed to be cyclic, we do not need to define
       the mu funciton *)
   let mu _ _ = assert false
+
+  open Utils.Fmt
+
+  let is_id_arrow = Ident.equal S.arrow_id
+
+  let rec print_tv fmt tv = pp fmt "%d" tv
+  and print_arrow_ty fmt = list ~sep:arrow print_ty fmt
+
+  and print_ty fmt = function
+    | Tyvar v -> pp fmt "%a" print_tv v
+    | Tyapp (ts, []) -> Ident.pp fmt ts
+    | Tyapp (ts, tys) when is_id_arrow ts -> print_arrow_ty fmt tys
+    | Tyapp (ts, [ ty ]) -> pp fmt "%a %a" print_ty ty Ident.pp ts
+    | Tyapp (ts, tyl) ->
+        pp fmt "(%a) %a" (list ~sep:comma print_ty) tyl Ident.pp ts
 end

@@ -19,6 +19,7 @@ open Uast
 open Tast2
 module Solver = Solver.Make (X) (S) (O)
 open Solver
+module W = Warnings
 
 module Ns = Map.Make (String)
 (** Environment to store type declarations **)
@@ -295,4 +296,12 @@ let signatures l =
   in
   (* Build a constraint for the entire Gospel file and solve it. *)
   let c = List.fold_right (signature ts) l (pure []) in
-  typecheck (let0 c)
+  let loc l = Uast_utils.mk_loc l in
+  let error r = W.error ~loc:(loc r) in
+  try typecheck (let0 c) with
+  | Solver.Unbound (r, t) -> error r (W.Unbound_variable t.pid_str)
+  | Solver.Unify (r, ty1, ty2) ->
+      let ty1s = Fmt.str "%a" O.print_ty ty1 in
+      let ty2s = Fmt.str "%a" O.print_ty ty2 in
+      error r (Bad_type (ty1s, ty2s))
+  | _ -> assert false

@@ -523,10 +523,6 @@ let rec dterm whereami kid crcm ns denv ({ term_desc; term_loc = loc } as t) :
         | _ -> unfold_app t1 t2 []
       with W.(Error (_, Symbol_not_found _)) -> unfold_app t1 t2 [])
   | Uast.Tapply (t1, t2) -> unfold_app t1 t2 []
-  | Uast.Tnot t ->
-      let dt = dterm whereami kid crcm ns denv t in
-      dfmla_unify dt;
-      mk_dterm ~loc (DTnot dt) (Option.get dt.dt_dty)
   | Uast.Tif (t1, t2, t3) ->
       let dt1 = dterm whereami kid crcm ns denv t1 in
       let dt2 = dterm whereami kid crcm ns denv t2 in

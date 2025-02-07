@@ -11,7 +11,7 @@
 module W = Warnings
 open Ppxlib
 open Utils
-open Uast
+open Uast.PreUast
 open Ttypes
 open Tmodule
 open Tast_helper
@@ -42,14 +42,14 @@ let pid_of_label = function
 
 let string_list_of_qualid q =
   let rec fold_q acc = function
-    | Qpreid pid -> pid.pid_str :: acc
+    | Qid pid -> pid.pid_str :: acc
     | Qdot (q, pid) -> fold_q (pid.pid_str :: acc) q
   in
   fold_q [] q
 
 exception Ns_not_found of location * string
 
-let rec q_loc = function Qpreid pid -> pid.pid_loc | Qdot (q, _) -> q_loc q
+let rec q_loc = function Qid pid -> pid.pid_loc | Qdot (q, _) -> q_loc q
 
 let ns_find ~loc f ns sl =
   match sl with
@@ -139,8 +139,8 @@ let parse_record ~loc kid ns fll =
     try find_q_fd ns q
     with W.(Error (_, Symbol_not_found _)) ->
       let label =
-        let open Uast in
-        match q with Qpreid pid | Qdot (_, pid) -> pid.pid_str
+        let open Uast.PreUast in
+        match q with Qid pid | Qdot (_, pid) -> pid.pid_str
       in
       W.(error ~loc (Unbound_label label))
   in
@@ -213,8 +213,8 @@ let rec dpattern kid ns { pat_desc; pat_loc = loc } =
       match find_q_ls ns q with
       | Constructor_symbol { ls_name; ls_args = Cstr_record expected; ls_value }
         as ls -> (
-          let get_pid_str = function Qpreid pid | Qdot (_, pid) -> pid.pid_str
-          and get_pid_loc = function Qpreid pid | Qdot (_, pid) -> pid.pid_loc
+          let get_pid_str = function Qid pid | Qdot (_, pid) -> pid.pid_str
+          and get_pid_loc = function Qid pid | Qdot (_, pid) -> pid.pid_loc
           and constr_str =
             Fmt.(str "%a.%a" print_ty ls_value Ident.pp_simpl ls_name)
           in
@@ -403,7 +403,7 @@ let rec dterm whereami kid crcm ns denv ({ term_desc; term_loc = loc } as t) :
   in
   let qualid_app q tl =
     match q with
-    | Qpreid ({ pid_loc = loc; pid_str = s; _ } as pid) -> (
+    | Qid ({ pid_loc = loc; pid_str = s; _ } as pid) -> (
         match denv_get_opt denv s with
         | Some dty ->
             let dtv = mk_dterm ~loc (DTvar pid) dty in
@@ -413,16 +413,16 @@ let rec dterm whereami kid crcm ns denv ({ term_desc; term_loc = loc } as t) :
   in
   let rec unfold_app t1 t2 tl =
     match t1.term_desc with
-    | Uast.Tpreid q -> qualid_app q (t2 :: tl)
-    | Uast.Tapply (t11, t12) -> unfold_app t11 t12 (t2 :: tl)
+    | Uast.PreUast.Tvar q -> qualid_app q (t2 :: tl)
+    | Uast.PreUast.Tapply (t11, t12) -> unfold_app t11 t12 (t2 :: tl)
     | _ ->
         let dt1 = dterm whereami kid crcm ns denv t1 in
         map_apply dt1 (t2 :: tl)
   in
   match term_desc with
-  | Uast.Ttrue -> mk_dterm ~loc DTtrue dty_bool
-  | Uast.Tfalse -> mk_dterm ~loc DTfalse dty_bool
-  | Uast.Tconst c ->
+  | Uast.PreUast.Ttrue -> mk_dterm ~loc DTtrue dty_bool
+  | Uast.PreUast.Tfalse -> mk_dterm ~loc DTfalse dty_bool
+  | Uast.PreUast.Tconst c ->
       let dty =
         match c with
         | Pconst_integer (_, None) -> dty_integer
@@ -437,22 +437,22 @@ let rec dterm whereami kid crcm ns denv ({ term_desc; term_loc = loc } as t) :
         | Pconst_float _ -> dty_float
       in
       mk_dterm ~loc (DTconst c) dty
-  | Uast.Tpreid (Qpreid pid) when is_in_denv denv pid.pid_str ->
+  | Uast.PreUast.Tvar (Qid pid) when is_in_denv denv pid.pid_str ->
       let dty = denv_find ~loc:pid.pid_loc pid.pid_str denv in
       mk_dterm ~loc (DTvar pid) dty
-  | Uast.Tpreid q -> (
+  | Uast.PreUast.Tvar q -> (
       (* in this case it must be a constant *)
       match find_q_ls ns q with
       | Field_symbol _ ->
           W.error ~loc (W.Symbol_not_found (string_list_of_qualid q))
       | _ as ls -> gen_app ~loc ls [])
-  | Uast.Tfield (t, q) -> (
+  | Uast.PreUast.Tfield (t, q) -> (
       match find_q_fd ns q with
       | Field_symbol _ as ls -> gen_app ~loc ls [ t ]
       | Constructor_symbol { ls_name; _ } | Function_symbol { ls_name; _ } ->
           W.error ~loc (W.Bad_record_field ls_name.id_str))
-  | Uast.Tapply
-      ( ({ term_desc = Tpreid q; _ } as t1),
+  | Uast.PreUast.Tapply
+      ( ({ term_desc = Tvar q; _ } as t1),
         ({ term_desc = Trecord fields_right; _ } as t2) ) -> (
       match find_q_ls ns q with
       | Constructor_symbol
@@ -466,8 +466,8 @@ let rec dterm whereami kid crcm ns denv ({ term_desc; term_loc = loc } as t) :
                hence, we know they have the same length *)
             List.combine fields_left dtyl
           in
-          let get_pid_str = function Qpreid pid | Qdot (_, pid) -> pid.pid_str
-          and get_pid_loc = function Qpreid pid | Qdot (_, pid) -> pid.pid_loc
+          let get_pid_str = function Qid pid | Qdot (_, pid) -> pid.pid_str
+          and get_pid_loc = function Qid pid | Qdot (_, pid) -> pid.pid_loc
           and constr_str =
             Fmt.(str "%a.%a" print_ty ls_value Ident.pp_simpl ls_name)
           in
@@ -513,7 +513,7 @@ let rec dterm whereami kid crcm ns denv ({ term_desc; term_loc = loc } as t) :
       | Function_symbol _ -> unfold_app t1 t2 []
       | Field_symbol { ls_name; _ } ->
           W.error ~loc (W.Field_application ls_name.id_str))
-  | Uast.Tapply (({ term_desc = Tpreid q; _ } as t1), t2) -> (
+  | Uast.PreUast.Tapply (({ term_desc = Tvar q; _ } as t1), t2) -> (
       try
         (* [find_ls_q] might raise an exception if we are not looking in the
            right place but the term is however legal *)
@@ -522,8 +522,8 @@ let rec dterm whereami kid crcm ns denv ({ term_desc; term_loc = loc } as t) :
             W.(error ~loc Inlined_record_expected)
         | _ -> unfold_app t1 t2 []
       with W.(Error (_, Symbol_not_found _)) -> unfold_app t1 t2 [])
-  | Uast.Tapply (t1, t2) -> unfold_app t1 t2 []
-  | Uast.Tif (t1, t2, t3) ->
+  | Uast.PreUast.Tapply (t1, t2) -> unfold_app t1 t2 []
+  | Uast.PreUast.Tif (t1, t2, t3) ->
       let dt1 = dterm whereami kid crcm ns denv t1 in
       let dt2 = dterm whereami kid crcm ns denv t2 in
       let dt3 = dterm whereami kid crcm ns denv t3 in
@@ -532,15 +532,16 @@ let rec dterm whereami kid crcm ns denv ({ term_desc; term_loc = loc } as t) :
       let dt2 = dterm_expected_op crcm dt2 dty in
       let dt3 = dterm_expected_op crcm dt3 dty in
       mk_dterm ~loc (DTif (dt1, dt2, dt3)) (Option.get dt2.dt_dty)
-  | Uast.Ttuple [] -> fun_app ~loc fs_unit []
-  | Uast.Ttuple tl -> fun_app ~loc (fs_tuple (List.length tl)) tl
-  | Uast.Tlet (pid, t1, t2) ->
+  | Uast.PreUast.Ttuple [] -> fun_app ~loc fs_unit []
+  | Uast.PreUast.Ttuple tl -> fun_app ~loc (fs_tuple (List.length tl)) tl
+  | Uast.PreUast.Tlet (pid, t1, t2) ->
       let dt1 = dterm whereami kid crcm ns denv t1 in
       let denv = denv_add_var denv pid.pid_str (dty_of_dterm dt1) in
       let dt2 = dterm whereami kid crcm ns denv t2 in
       mk_dterm ~loc (DTlet (pid, dt1, dt2)) (Option.get dt2.dt_dty)
-  | Uast.Tinfix _ -> dterm whereami kid crcm ns denv (Uast_utils.chain t)
-  | Uast.Tquant (q, vl, t) ->
+  | Uast.PreUast.Tinfix _ ->
+      dterm whereami kid crcm ns denv (Uast_utils.chain t)
+  | Uast.PreUast.Tquant (q, vl, t) ->
       let get_dty pty =
         match pty with None -> dty_fresh () | Some pty -> dty_of_pty ns pty
       in
@@ -549,10 +550,12 @@ let rec dterm whereami kid crcm ns denv ({ term_desc; term_loc = loc } as t) :
       let dt = dterm whereami kid crcm ns denv t in
       dfmla_unify dt;
       let q =
-        match q with Uast.Tforall -> Tforall | Uast.Texists -> Texists
+        match q with
+        | Uast.PreUast.Tforall -> Tforall
+        | Uast.PreUast.Texists -> Texists
       in
       mk_dterm ~loc (DTquant (q, vl, dt)) dty_bool
-  | Uast.Tlambda (pl, t, pty) ->
+  | Uast.PreUast.Tlambda (pl, t, pty) ->
       let arg p =
         let dty = dty_fresh () and dp = dpattern kid ns p in
         dpattern_unify dp dty;
@@ -577,7 +580,7 @@ let rec dterm whereami kid crcm ns denv ({ term_desc; term_loc = loc } as t) :
         Some (List.fold_right apply args dt_dty)
       in
       mk_dterm ~loc (DTlambda (List.map fst args, dt)) (Option.get dty)
-  | Uast.Tcase (t, ptl) ->
+  | Uast.PreUast.Tcase (t, ptl) ->
       let dt = dterm whereami kid crcm ns denv t in
       let dt_dty = dty_of_dterm dt in
       let branch (p, g, t) =
@@ -606,24 +609,24 @@ let rec dterm whereami kid crcm ns denv ({ term_desc; term_loc = loc } as t) :
           pdtl
       in
       mk_dterm ~loc (DTcase (dt, pdtl)) (Option.get dty)
-  | Uast.Tcast (t, pty) ->
+  | Uast.PreUast.Tcast (t, pty) ->
       let dt = dterm whereami kid crcm ns denv t in
       let dty = dty_of_pty ns pty in
       dterm_expected crcm dt dty
-  | Uast.Tscope (q, t) ->
+  | Uast.PreUast.Tscope (q, t) ->
       let ns = find_q_ns ns q in
       dterm whereami kid crcm ns denv t
-  | Uast.Tattr (at, t) ->
+  | Uast.PreUast.Tattr (at, t) ->
       let dt = dterm whereami kid crcm ns denv t in
       mk_dterm ~loc (DTattr (dt, [ at ])) (Option.get dt.dt_dty)
-  | Uast.Told t -> (
+  | Uast.PreUast.Told t -> (
       match whereami with
       | Requires -> W.(error ~loc (Old_in_precond "requires"))
       | Checks -> W.(error ~loc (Old_in_precond "checks"))
       | _ ->
           let dt = dterm whereami kid crcm ns denv t in
           mk_dterm ~loc (DTold dt) (Option.get dt.dt_dty))
-  | Uast.Trecord qtl -> (
+  | Uast.PreUast.Trecord qtl -> (
       let cs, fields_name, fields_def = parse_record ~loc kid ns qtl in
       let dtyl, dty = specialize_ls cs in
       let aux ls dty (fields, missing) =
@@ -933,7 +936,7 @@ let process_val_spec kid crcm ns id args ret vs =
             | `Parameter, _ -> "too few parameters"
           in
           W.type_checking_error ~loc:header.sp_hd_nm.pid_loc msg
-      | Uast.Lghost (pid, pty) :: args, _ ->
+      | Uast.PreUast.Lghost (pid, pty) :: args, _ ->
           let ty = ty_of_pty ns pty in
           let vs = create_vsymbol pid ty in
           let env, lal = add_arg (Lghost vs) env lal in
@@ -1088,10 +1091,11 @@ let empty_spec preid ret args =
 let mk_dummy_var i (ty, arg) =
   let loc = Location.none in
   match arg with
-  | _ when ty_equal ty ty_unit -> Uast.Lunit
-  | Nolabel -> Uast.Lnone (Preid.create ~loc ("__arg" ^ string_of_int i))
-  | Labelled s -> Uast.Lnamed (Preid.create ~loc s)
-  | Optional s -> Uast.Loptional (Preid.create ~loc s)
+  | _ when ty_equal ty ty_unit -> Uast.PreUast.Lunit
+  | Nolabel ->
+      Uast.PreUast.Lnone (Preid.create ~loc ("__arg" ^ string_of_int i))
+  | Labelled s -> Uast.PreUast.Lnamed (Preid.create ~loc s)
+  | Optional s -> Uast.PreUast.Loptional (Preid.create ~loc s)
 
 let process_val path ~loc ?(ghost = Nonghost) kid crcm ns vd =
   let id = Ident.create ~path ~loc:vd.vloc vd.vname.txt in
@@ -1105,10 +1109,11 @@ let process_val path ~loc ?(ghost = Nonghost) kid crcm ns vd =
           | { ty_node = Tyapp (ts, _) } when is_ts_tuple ts ->
               let arity = ts_arity ts in
               List.init arity (fun i ->
-                  Uast.Lnone (Preid.create ~loc:vd.vloc (Fmt.str "result%d" i)))
+                  Uast.PreUast.Lnone
+                    (Preid.create ~loc:vd.vloc (Fmt.str "result%d" i)))
           | _ ->
               [
-                Uast.Lnone
+                Uast.PreUast.Lnone
                   (if args = [] then id else Preid.create ~loc:vd.vloc "result");
               ]
         in
@@ -1186,7 +1191,7 @@ let process_function path kid crcm ns f =
 
   let spec =
     Option.map
-      (fun (spec : Uast.fun_spec) ->
+      (fun (spec : Uast.PreUast.fun_spec) ->
         let req = List.map (fmla Requires kid crcm ns env) spec.fun_req in
         let ens = List.map (fmla Ensures kid crcm ns env) spec.fun_ens in
         let variant =
@@ -1202,8 +1207,8 @@ let process_function path kid crcm ns f =
   mk_sig_item (Sig_function f) f.fun_loc
 
 let process_axiom path loc kid crcm ns a =
-  let id = Ident.of_preid ~path a.Uast.ax_name in
-  let t = fmla Axiom kid crcm ns Mstr.empty a.Uast.ax_term in
+  let id = Ident.of_preid ~path a.Uast.PreUast.ax_name in
+  let t = fmla Axiom kid crcm ns Mstr.empty a.Uast.PreUast.ax_term in
   let ax = mk_axiom id t a.ax_loc a.ax_text in
   mk_sig_item (Sig_axiom ax) loc
 
@@ -1454,30 +1459,37 @@ and process_sig_item path penv muc { sdesc; sloc } =
   let process_sig_item si muc =
     let kid, ns, crcm = (muc.muc_kid, get_top_import muc, muc.muc_crcm) in
     match si with
-    | Uast.Sig_type (r, tdl) ->
+    | Uast.PreUast.Sig_type (r, tdl) ->
         (muc, process_sig_type path ~loc:sloc kid crcm ns r tdl)
-    | Uast.Sig_val vd -> (muc, process_val path ~loc:sloc kid crcm ns vd)
-    | Uast.Sig_typext te -> (muc, mk_sig_item (Sig_typext te) sloc)
-    | Uast.Sig_module m -> process_mod path penv sloc m muc
-    | Uast.Sig_recmodule _ -> W.error ~loc:sloc (W.Unsupported "module rec")
-    | Uast.Sig_modsubst _ | Uast.Sig_modtypesubst _ | Uast.Sig_typesubst _ ->
+    | Uast.PreUast.Sig_val vd -> (muc, process_val path ~loc:sloc kid crcm ns vd)
+    | Uast.PreUast.Sig_typext te -> (muc, mk_sig_item (Sig_typext te) sloc)
+    | Uast.PreUast.Sig_module m -> process_mod path penv sloc m muc
+    | Uast.PreUast.Sig_recmodule _ ->
+        W.error ~loc:sloc (W.Unsupported "module rec")
+    | Uast.PreUast.Sig_modsubst _ | Uast.PreUast.Sig_modtypesubst _
+    | Uast.PreUast.Sig_typesubst _ ->
         W.error ~loc:sloc (W.Unsupported "type substitution")
-    | Uast.Sig_modtype mty_decl ->
+    | Uast.PreUast.Sig_modtype mty_decl ->
         process_modtype_decl path penv sloc mty_decl muc
-    | Uast.Sig_exception te -> (muc, process_exception_sig path sloc ns te)
-    | Uast.Sig_open od -> process_open ~loc:sloc ~ghost:Nonghost penv muc od
-    | Uast.Sig_include id -> (muc, mk_sig_item (Sig_include id) sloc)
-    | Uast.Sig_class cdl -> (muc, mk_sig_item (Sig_class cdl) sloc)
-    | Uast.Sig_class_type ctdl -> (muc, mk_sig_item (Sig_class_type ctdl) sloc)
-    | Uast.Sig_attribute a -> (muc, mk_sig_item (Sig_attribute a) sloc)
-    | Uast.Sig_extension (e, a) -> (muc, mk_sig_item (Sig_extension (e, a)) sloc)
-    | Uast.Sig_function f -> (muc, process_function path kid crcm ns f)
-    | Uast.Sig_axiom a -> (muc, process_axiom path sloc kid crcm ns a)
-    | Uast.Sig_ghost_type (r, tdl) ->
+    | Uast.PreUast.Sig_exception te ->
+        (muc, process_exception_sig path sloc ns te)
+    | Uast.PreUast.Sig_open od ->
+        process_open ~loc:sloc ~ghost:Nonghost penv muc od
+    | Uast.PreUast.Sig_include id -> (muc, mk_sig_item (Sig_include id) sloc)
+    | Uast.PreUast.Sig_class cdl -> (muc, mk_sig_item (Sig_class cdl) sloc)
+    | Uast.PreUast.Sig_class_type ctdl ->
+        (muc, mk_sig_item (Sig_class_type ctdl) sloc)
+    | Uast.PreUast.Sig_attribute a -> (muc, mk_sig_item (Sig_attribute a) sloc)
+    | Uast.PreUast.Sig_extension (e, a) ->
+        (muc, mk_sig_item (Sig_extension (e, a)) sloc)
+    | Uast.PreUast.Sig_function f -> (muc, process_function path kid crcm ns f)
+    | Uast.PreUast.Sig_axiom a -> (muc, process_axiom path sloc kid crcm ns a)
+    | Uast.PreUast.Sig_ghost_type (r, tdl) ->
         (muc, process_sig_type path ~loc:sloc ~ghost:Ghost kid crcm ns r tdl)
-    | Uast.Sig_ghost_val vd ->
+    | Uast.PreUast.Sig_ghost_val vd ->
         (muc, process_val path ~loc:sloc ~ghost:Ghost kid crcm ns vd)
-    | Uast.Sig_ghost_open od -> process_open ~loc:sloc ~ghost:Ghost penv muc od
+    | Uast.PreUast.Sig_ghost_open od ->
+        process_open ~loc:sloc ~ghost:Ghost penv muc od
   in
   let rec process_and_import si muc =
     try process_sig_item si muc

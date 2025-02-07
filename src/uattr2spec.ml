@@ -10,7 +10,7 @@
 
 module W = Warnings
 open Ppxlib
-open Uast
+open Uast.PreUast
 
 let is_spec attr = attr.attr_name.txt = "gospel"
 

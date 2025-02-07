@@ -9,7 +9,7 @@
 (**************************************************************************)
 
 open Ppxlib
-open Uast
+open Uast.PreUast
 open Opprintast
 module Option = Stdlib.Option
 open Utils.Fmt
@@ -18,7 +18,7 @@ let const_hole s fmt _ = pp fmt "%s" s
 
 let rec qualid fmt (q : qualid) =
   match q with
-  | Qpreid pid -> Preid.pp fmt pid
+  | Qid pid -> Preid.pp fmt pid
   | Qdot (q, pid) -> pp fmt "@[%a.%a@]" qualid q Preid.pp pid
 
 let labelled_arg fmt (l : labelled_arg) =

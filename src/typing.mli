@@ -10,6 +10,7 @@
 (********************************************************************)
 
 open Tmodule
+open Uast.PreUast
 
 type parse_env
 (** Parsing environment *)
@@ -19,6 +20,6 @@ val penv : string list -> Utils.Sstr.t -> parse_env
     name `module_nm`. The paths in `load_paths` are to be used when searching
     for modules dependencies. *)
 
-val type_sig_item : parse_env -> module_uc -> Uast.s_signature_item -> module_uc
+val type_sig_item : parse_env -> module_uc -> s_signature_item -> module_uc
 (** `type_sig_item penv muc s` returns a new module under construction after
     type checking `s`. *)

@@ -16,7 +16,7 @@ type term_node =
   | Tlet of Preid.t * term * term
   | Tconst of Ppxlib.constant
   | Tapply of term * term
-  | Tquant of Uast.quant * tsymbol list * term
+  | Tquant of Uast.PreUast.quant * tsymbol list * term
   | Tif of term * term * term
 
 and term = { t_node : term_node; t_ty : O.ty; t_loc : Location.t }
@@ -59,7 +59,7 @@ type signature = Sig_function of function_ | Sig_axiom of axiom
 
 let mk_function f fun_params fun_def fun_spec =
   {
-    fun_name = f.Uast.fun_name;
+    fun_name = f.Uast.PreUast.fun_name;
     fun_rec = f.fun_rec;
     fun_params;
     fun_def;

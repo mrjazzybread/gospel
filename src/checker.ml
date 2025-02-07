@@ -16,6 +16,7 @@
 open Itypes
 open Inferno
 open Uast
+open ParseUast
 open Tast2
 module Solver = Solver.Make (X) (S) (Types)
 open Solver
@@ -24,7 +25,7 @@ module W = Warnings
 module Ns = Map.Make (String)
 (** Environment to store type declarations **)
 
-let leaf q = match q with Qpreid id -> id | _ -> assert false
+let leaf q = match q with Qid id -> id | _ -> assert false
 
 (* The following functions make use of "deep types". These are a
    special encoding provided by Inferno when we already know a type
@@ -48,7 +49,7 @@ let deep_arrow arg ret =
     defined. *)
 let pty_to_deep ts =
   let rec pty_to_deep = function
-    | PTtyapp (Qpreid id, l) -> (
+    | PTtyapp (Qid id, l) -> (
         try
           let id = Ns.find id.pid_str ts in
           DeepStructure (S.Tyapp (id, List.map pty_to_deep l))
@@ -95,7 +96,7 @@ let build_def l c =
     [ts] is used to ensure that all type annotations are valid. No environment
     is used to keep track of what variables are in scope since that is done by
     Inferno. *)
-let rec hastype ts (t : Uast.term) (r : variable) =
+let rec hastype ts (t : ParseUast.term) (r : variable) =
   (* Since Gospel does not allow for type or module definitions within
      logical terms, the environemnt will remain the same in all
      recursive calls.*)
@@ -106,17 +107,17 @@ let rec hastype ts (t : Uast.term) (r : variable) =
   @@
   let+ t_node =
     match t.term_desc with
-    | Uast.Ttrue ->
+    | ParseUast.Ttrue ->
         (* For true and false, we state that the expected type must be
           a boolean *)
         let+ () = r --- S.ty_bool in
         Ttrue
-    | Uast.Tfalse ->
+    | Tfalse ->
         let+ () = r --- S.ty_bool in
         Tfalse
-    | Uast.Tconst constant ->
-        (* Depending on the type of constant, we restrict the expected type
-           accordingly *)
+    | Tconst constant ->
+        (* Depending on the type of constant, we restrict the
+          expected type accordingly *)
         let+ () =
           match constant with
           | Pconst_integer _ -> r --- S.ty_integer
@@ -125,7 +126,7 @@ let rec hastype ts (t : Uast.term) (r : variable) =
           | Pconst_float _ -> r --- S.ty_float
         in
         Tconst constant
-    | Uast.Tpreid q ->
+    | Tvar q ->
         (* TODO add support for variables within other modules *)
         let id = leaf q in
         (* The identifier must be a variable of type [r]. We do not
@@ -135,7 +136,7 @@ let rec hastype ts (t : Uast.term) (r : variable) =
            type scheme. *)
         let+ _ = instance id r in
         Tvar id
-    | Uast.Tlet (id, t1, t2) ->
+    | Tlet (id, t1, t2) ->
         (* let id = t1 in t2 *)
         (* The term [t1] has some arbitrary type [v_type]. *)
         let@ v_type = exist in
@@ -147,7 +148,7 @@ let rec hastype ts (t : Uast.term) (r : variable) =
           def id v_type t2
         in
         Tlet (id, t1, t2)
-    | Uast.Tapply (t1, t2) ->
+    | Tapply (t1, t2) ->
         (* t1 t2 (Function application)*)
         (* The argument [t2] has some type [arg_ty]. *)
         let@ arg_ty = exist in
@@ -155,12 +156,12 @@ let rec hastype ts (t : Uast.term) (r : variable) =
         (* The term [t1] must be of the function type [arg_ty -> r]. *)
         and+ t1 = lift hastype t1 (S.ty_arrow arg_ty r) in
         Tapply (t1, t2)
-    | Uast.Tinfix _ ->
+    | Tinfix _ ->
         (* Desugar a chain of infix operators and call [hastype] again
           to generate the appropriate constraints. *)
         let+ t = hastype (Uast_utils.chain t) r in
         t.t_node
-    | Uast.Tquant (q, l, t) ->
+    | Tquant (q, l, t) ->
         (* forall. x y z. t *)
         (* The term [t] must have the return type [r] *)
         let c = hastype t r in
@@ -175,7 +176,7 @@ let rec hastype ts (t : Uast.term) (r : variable) =
         let l = List.map (fun (x, b) -> (x, binder_to_deep b)) l in
         let+ l, t = build_def l c in
         Tquant (q, l, t)
-    | Uast.Tif (g, then_b, else_b) ->
+    | Tif (g, then_b, else_b) ->
         (* if g then then_b else else_b *)
         (* The guard must have type [bool] *)
         let+ g = lift hastype g S.ty_bool
@@ -186,7 +187,7 @@ let rec hastype ts (t : Uast.term) (r : variable) =
     | _ -> assert false
   (* By calling [decode], we can get the inferred type of the term. *)
   and+ t_ty = decode r in
-  mk_term t_node t_ty t.Uast.term_loc
+  mk_term t_node t_ty t.term_loc
 
 (** Solves an arbitrary constraint assuming types are not allowed to be
     recursive *)
@@ -203,7 +204,7 @@ let ty_of_pty = Types.Tyapp (Itypes.S.bool_id, [])
     function we are processing to the scope of [cstr], another that checks if
     the body of the function is well typed and another that checks if the
     function's specification is well typed. *)
-let function_cstr ts (f : Uast.function_) (cstr : signature list co) :
+let function_cstr ts (f : Uast.ParseUast.function_) (cstr : signature list co) :
     signature list co =
   let pty_to_deep = pty_to_deep ts in
   (* Turn the return type into a deep type *)
@@ -263,15 +264,15 @@ let function_cstr ts (f : Uast.function_) (cstr : signature list co) :
 (** Creates a constraint ensuring the term within an axiom has type [bool]. *)
 let axiom_cstr ts ax =
   let@ ty = shallow S.ty_bool in
-  let+ t = hastype ts ax.Uast.ax_term ty in
+  let+ t = hastype ts ax.Uast.ParseUast.ax_term ty in
   Sig_axiom (mk_axiom ax.ax_name t ax.ax_loc ax.ax_text)
 
 (** Auxiliary function for signatures that do not define any symbols in the top
     level (which is all except [Sig_function]) *)
 let sig_rest ts cstr s =
   let+ s =
-    match s.Uast.sdesc with
-    | Uast.Sig_axiom ax -> axiom_cstr ts ax
+    match s.Uast.ParseUast.sdesc with
+    | Uast.ParseUast.Sig_axiom ax -> axiom_cstr ts ax
     | _ -> assert false
   and+ l = cstr in
   s :: l
@@ -288,8 +289,8 @@ let sig_rest ts cstr s =
     type as well as checking if that type exists. We use values of [Ident.t] so
     that we can differentiate between types with the same name. *)
 let signature ts s cstr =
-  match s.Uast.sdesc with
-  | Uast.Sig_function f -> function_cstr ts f cstr
+  match s.Uast.ParseUast.sdesc with
+  | Uast.ParseUast.Sig_function f -> function_cstr ts f cstr
   | _ -> sig_rest ts cstr s
 
 let signatures l =

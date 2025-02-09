@@ -16,16 +16,16 @@
 open Itypes
 open Inferno
 open Uast
-open Uast.PreUast
+open Uast.IdUast
 open Tast2
-module Solver = Solver.Make (X) (S) (O)
+module Solver = Solver.Make (UniqueId) (S) (O)
 open Solver
 module W = Warnings
 
 module Ns = Map.Make (String)
 (** Environment to store type declarations **)
 
-let leaf q = match q with Qid id -> id | _ -> assert false
+let leaf q = match q with Qid id -> id | Qdot (_, id) -> id
 
 (* The following functions make use of "deep types". These are a
    special encoding provided by Inferno when we already know a type
@@ -47,20 +47,13 @@ let deep_arrow arg ret =
 (** [pty_to_deep ts pty] Transforms the type annotation [pty] into a deep type.
     Also checks if the identifiers within the type are valid i.e. have been
     defined. *)
-let pty_to_deep ts =
-  let rec pty_to_deep = function
-    | PTtyapp (Qid id, l) -> (
-        try
-          let id = Ns.find id.pid_str ts in
-          DeepStructure (S.Tyapp (id, List.map pty_to_deep l))
-        with Not_found -> assert false (* TODO replace with error *))
-    | PTarrow (_, pty1, pty2) ->
-        let dty1 = pty_to_deep pty1 in
-        let dty2 = pty_to_deep pty2 in
-        DeepStructure (S.ty_arrow dty1 dty2)
-    | _ -> assert false
-  in
-  pty_to_deep
+let rec pty_to_deep = function
+  | PTtyapp (Qid id, l) -> DeepStructure (S.Tyapp (id, List.map pty_to_deep l))
+  | PTarrow (_, pty1, pty2) ->
+      let dty1 = pty_to_deep pty1 in
+      let dty2 = pty_to_deep pty2 in
+      DeepStructure (S.ty_arrow dty1 dty2)
+  | _ -> assert false
 
 (* The following functions are used to turn the source program into a
    single Inferno constraint that, when solved, will produce a list of
@@ -85,7 +78,7 @@ let build_def l c =
     let@ ty_var = ty in
     let+ l, t = def id ty_var c and+ ty = decode ty_var in
     (* Duplicate argument *)
-    if List.exists (fun x -> x.ts_id.pid_str = id.pid_str) l then
+    if List.exists (fun x -> x.ts_id.id_str = id.id_str) l then
       assert false (* TODO replace with error *)
     else (mk_ts id ty :: l, t)
   in
@@ -100,22 +93,18 @@ let build_def l c =
     [ts] is used to ensure that all type annotations are valid. No environment
     is used to keep track of what variables are in scope since that is done by
     Inferno. *)
-let rec hastype ts (t : PreUast.term) (r : variable) =
-  (* Since Gospel does not allow for type or module definitions within
-     logical terms, the environemnt will remain the same in all
-     recursive calls.*)
-  let hastype = hastype ts in
+let rec hastype (t : IdUast.term) (r : variable) =
   let+ t_node =
     match t.term_desc with
-    | PreUast.Ttrue ->
+    | IdUast.Ttrue ->
         (* For true and false, we state that the expected type must be
           a boolean *)
         let+ () = r --- S.ty_bool in
         Ttrue
-    | PreUast.Tfalse ->
+    | Tfalse ->
         let+ () = r --- S.ty_bool in
         Tfalse
-    | PreUast.Tconst constant ->
+    | Tconst constant ->
         (* Depending on the type of constraint, we restrict the
           expected type accordingly *)
         let+ () =
@@ -126,7 +115,7 @@ let rec hastype ts (t : PreUast.term) (r : variable) =
           | Pconst_float _ -> r --- S.ty_float
         in
         Tconst constant
-    | PreUast.Tvar q ->
+    | Tvar q ->
         (* TODO add support for variables within other modules *)
         let id = leaf q in
         (* The identifier must be a variable of type [r]. We do not
@@ -136,7 +125,7 @@ let rec hastype ts (t : PreUast.term) (r : variable) =
            type scheme. *)
         let+ _ = instance id r in
         Tvar id
-    | PreUast.Tlet (id, t1, t2) ->
+    | Tlet (id, t1, t2) ->
         (* let id = t1 in t2 *)
         (* The term [t1] has some arbitrary type [v_type]. *)
         let@ v_type = exist in
@@ -148,7 +137,7 @@ let rec hastype ts (t : PreUast.term) (r : variable) =
           def id v_type t2
         in
         Tlet (id, t1, t2)
-    | PreUast.Tapply (t1, t2) ->
+    | Tapply (t1, t2) ->
         (* t1 t2 (Function application)*)
         (* The argument [t2] has some type [arg_ty]. *)
         let@ arg_ty = exist in
@@ -156,12 +145,9 @@ let rec hastype ts (t : PreUast.term) (r : variable) =
         (* The term [t1] must be of the function type [arg_ty -> r]. *)
         and+ t1 = lift hastype t1 (S.ty_arrow arg_ty r) in
         Tapply (t1, t2)
-    | Uast.PreUast.Tinfix _ ->
-        (* Desugar a chain of infix operators and call [hastype] again
-          to generate the appropriate constraints. *)
-        let+ t = hastype (Uast_utils.chain t) r in
-        t.t_node
-    | Uast.PreUast.Tquant (q, l, t) ->
+    | Tinfix _ -> assert false
+    (* This node is replaced by [Tapply] during the pre processing *)
+    | Tquant (q, l, t) ->
         (* forall. x y z. t *)
         (* The term [t] must have the return type [r] *)
         let c = hastype t r in
@@ -169,14 +155,14 @@ let rec hastype ts (t : PreUast.term) (r : variable) =
            and create a binder for it. *)
         let binder_to_deep = function
           | None -> exist
-          | Some t -> deep (pty_to_deep ts t)
+          | Some t -> deep (pty_to_deep t)
         in
         (* Transform the list of Gospel type annotation into a list of
            Inferno binders *)
         let l = List.map (fun (x, b) -> (x, binder_to_deep b)) l in
         let+ l, t = build_def l c in
         Tquant (q, l, t)
-    | PreUast.Tif (g, then_b, else_b) ->
+    | Tif (g, then_b, else_b) ->
         (* if g then then_b else else_b *)
         (* The guard must have type [bool] *)
         let+ g = lift hastype g S.ty_bool
@@ -187,7 +173,7 @@ let rec hastype ts (t : PreUast.term) (r : variable) =
     | _ -> assert false
   (* By calling [decode], we can get the inferred type of the term. *)
   and+ t_ty = decode r in
-  mk_term t_node t_ty t.PreUast.term_loc
+  mk_term t_node t_ty t.IdUast.term_loc
 
 (** Solves an arbitrary constraint assuming types are not allowed to be
     recursive *)
@@ -202,9 +188,9 @@ let process_fun_spec f =
     function we are processing to the scope of [cstr], another that checks if
     the body of the function is well typed and another that checks if the
     function's specification is well typed. *)
-let function_cstr ts (f : Uast.PreUast.function_) (cstr : signature list co) :
-    signature list co =
-  let pty_to_deep = pty_to_deep ts in
+let function_cstr (f : IdUast.function_)
+    (cstr : (s_signature * s_signature list) co) :
+    (s_signature_item_desc * s_signature * s_signature list) co =
   (* Turn the return type into a deep type *)
   let deep_ret = Option.fold ~some:pty_to_deep ~none:deep_bool f.fun_type in
   let@ ret_ty = deep deep_ret in
@@ -236,7 +222,7 @@ let function_cstr ts (f : Uast.PreUast.function_) (cstr : signature list co) :
     match f.fun_def with
     | None -> pure None
     | Some t ->
-        let c = hastype ts t ret_ty in
+        let c = hastype t ret_ty in
         let+ tt =
           if f.fun_rec then c
           else
@@ -251,56 +237,101 @@ let function_cstr ts (f : Uast.PreUast.function_) (cstr : signature list co) :
   let deep_params = List.map (fun (x, dty) -> (x, deep dty)) deep_params in
 
   (* List of typed signatures*)
-  let+ l = c1
-  (* Typed term and function paramters *)
+  let+ l, stack = c1
+  (* Typed term and function parameters *)
   and+ params, tt = build_def deep_params body_c
   (* Typed function specification *)
   and+ fun_spec = process_fun_spec f.fun_spec in
-  Sig_function (mk_function f params tt fun_spec) :: l
+  (Sig_function (mk_function f params tt fun_spec), l, stack)
 
 (** Creates a constraint ensuring the term within an axiom has type [bool]. *)
-let axiom_cstr ts ax =
+let axiom_cstr ax =
   let@ ty = shallow S.ty_bool in
-  let+ t = hastype ts ax.Uast.PreUast.ax_term ty in
+  let+ t = hastype ax.Uast.IdUast.ax_term ty in
   Sig_axiom (mk_axiom ax.ax_name t ax.ax_loc ax.ax_text)
 
 (** Auxiliary function for signatures that do not define any symbols in the top
     level (which is all except [Sig_function]) *)
-let sig_rest ts cstr s =
+let rec sig_rest cstr s =
   let+ s =
-    match s.Uast.PreUast.sdesc with
-    | Uast.PreUast.Sig_axiom ax -> axiom_cstr ts ax
+    match s.IdUast.sdesc with
+    | IdUast.Sig_axiom ax -> axiom_cstr ax
     | _ -> assert false
-  and+ l = cstr in
-  s :: l
+  and+ l, stack = cstr in
+  (s, l, stack)
+
+(** [module_cstr] creates a constraint whose semantic value is a list of
+    signatures whose head is the declaration of [m]. Since the work to make the
+    Gospel specification compatible with Inferno (which does not support
+    modules) has been done at this point (see module [Inferno_prep]), the
+    constraint we create assumes that the definitions in this module are in the
+    same scope as the ones defined in [cstr].*)
+and module_cstr (m : IdUast.s_module_declaration) cstr =
+  let mdname = m.mdname in
+  let mdloc = m.mdloc in
+  let mdattributes = m.mdattributes in
+  let mtype = m.mdtype in
+  let mloc = mtype.mloc in
+  let mattributes = mtype.mattributes in
+
+  let+ mdesc, l, stack =
+    match mtype.mdesc with
+    | IdUast.Mod_signature s ->
+        let cstr =
+          (* Since we need to build the typed submodule, we need to clear the
+             current list of definitions from the semantic value of the
+             constraint so that the call to [signature] returns only the
+             definitions within the submodule. Naturally, we cannot simply drop
+             the list of definitions as we will need these later to build the
+             module we were previously processing, so we add it to the stack and
+             pop it once we are done. *)
+          let+ l, stack = cstr in
+          ([], l :: stack)
+        in
+        let+ l, stack = signature s cstr in
+        (* The call to [List.hd] and [List.tl] reset list of definitions and the
+           stack to the state, respectively, before processing the submodule. *)
+        (Mod_signature l, List.hd stack, List.tl stack)
+    | _ -> assert false
+  in
+  let mdtype = { mdesc; mloc; mattributes } in
+  (Sig_module { mdname; mdloc; mdattributes; mdtype }, l, stack)
 
 (** [signature ts cstr s] Transforms the signature [s] into an typed signature.
     Since signatures are handled from the bottom up, [cstr] represents all the
     constraints we have already built up to this point. The sematic value of
-    [cstr] is the list of signatures that have already been processed. The
-    returned constraint will either be [cstr] unchanged or a [def] constraint
-    where we define either a function or a predicate.
+    [cstr] is the list of signatures that have already been processed coupled
+    with a list of lists of signatures. The latter list contain lists of
+    definitions of parent modules of the module we are currently processing.
+    Since this list does not concern the current call of [signature_item], it is
+    ignored.
 
-    The variable [ts] is a map whose domain are strings and whose codomain are
-    values of type [Ident.t]. It is used to fetch the unique identifier of a
-    type as well as checking if that type exists. We use values of [Ident.t] so
-    that we can differentiate between types with the same name. *)
-let signature ts s cstr =
-  match s.Uast.PreUast.sdesc with
-  | Uast.PreUast.Sig_function f -> function_cstr ts f cstr
-  | _ -> sig_rest ts cstr s
+    The returned constraint will either be [cstr] unchanged or series of [def]
+    constraints where we define either a function or a predicate (or multiple in
+    case of a module). Its semantic value will be the semantic value of
+    constraint of [cstr] where the first list is modified by adding the typed
+    signature to its head. The second list is unchanged. *)
+and signature_item s cstr =
+  let+ sdesc, l, stack =
+    match s.IdUast.sdesc with
+    | IdUast.Sig_function f -> function_cstr f cstr
+    | Sig_module m -> module_cstr m cstr
+    | _ -> sig_rest cstr s
+  in
+  ({ sdesc; sloc = s.sloc } :: l, stack)
+
+and signature l cstr = List.fold_right signature_item l cstr
 
 let signatures l =
-  (* Create an environment with primitive type definitions. *)
-  let ts =
-    List.fold_left (fun env (x, y) -> Ns.add x y env) Ns.empty S.primitive_list
-  in
+  let l = Inferno_prep.signatures l in
   (* Build a constraint for the entire Gospel file and solve it. *)
-  let c = List.fold_right (signature ts) l (pure []) in
+  let c = signature l (pure ([], [])) in
   let loc l = Uast_utils.mk_loc l in
   let error r = W.error ~loc:(loc r) in
   try typecheck (let0 c) with
-  | Solver.Unbound (r, t) -> error r (W.Unbound_variable t.pid_str)
+  | Solver.Unbound _ ->
+      assert
+        false (* Unbound variables are caught in the [Inferno_prep] module *)
   | Solver.Unify (r, ty1, ty2) ->
       let ty1s = Fmt.str "%a" O.print_ty ty1 in
       let ty2s = Fmt.str "%a" O.print_ty ty2 in

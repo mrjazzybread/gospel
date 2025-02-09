@@ -11,7 +11,7 @@
 %{
   open Ppxlib
   open Identifier
-  open Uast.PreUast
+  open Uast.ParseUast
   open Uast_utils
 
   let mk_pid pid l = Preid.create pid ~attrs:[] ~loc:(mk_loc l)
@@ -125,11 +125,11 @@
 
 %left BAR
 
-%start <Uast.PreUast.function_> func
-%start <Uast.PreUast.axiom> axiom
-%start <Uast.PreUast.val_spec> val_spec
-%start <Uast.PreUast.type_spec> type_spec
-%start <Uast.PreUast.fun_spec> func_spec
+%start <Uast.ParseUast.function_> func
+%start <Uast.ParseUast.axiom> axiom
+%start <Uast.ParseUast.val_spec> val_spec
+%start <Uast.ParseUast.type_spec> type_spec
+%start <Uast.ParseUast.fun_spec> func_spec
 
 %%
 

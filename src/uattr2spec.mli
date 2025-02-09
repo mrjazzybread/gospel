@@ -8,6 +8,7 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 
-val signature : filename:string -> Ppxlib.signature -> Uast.PreUast.s_signature
+val signature :
+  filename:string -> Ppxlib.signature -> Uast.ParseUast.s_signature
 (** Parses the specifications contained in the attributes of the input parsetree
     and returns an annotated parsetree with Gospel specifications. *)

@@ -10,7 +10,7 @@
 (********************************************************************)
 
 open Tmodule
-open Uast.PreUast
+open Uast.ParseUast
 
 type parse_env
 (** Parsing environment *)

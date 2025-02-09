@@ -9,7 +9,7 @@
 (**************************************************************************)
 
 open Ppxlib
-open Uast.PreUast
+open Uast.ParseUast
 open Opprintast
 module Option = Stdlib.Option
 open Utils.Fmt
@@ -220,13 +220,13 @@ let rec s_signature_item f x =
       ({ mdtype = { mdesc = Mod_alias alias; mattributes = []; _ }; _ } as pmd)
     ->
       pp f "@[<hov>module@ %s@ =@ %a@]%a"
-        (match pmd.mdname.txt with None -> "_" | Some s -> s)
+        (match pmd.mdname with None -> "_" | Some s -> s.pid_str)
         longident_loc alias
         (item_attributes reset_ctxt)
         pmd.mdattributes
   | Sig_module pmd ->
       pp f "@[<hov>module@ %s@ :@ %a@]%a"
-        (match pmd.mdname.txt with None -> "_" | Some s -> s)
+        (match pmd.mdname with None -> "_" | Some s -> s.pid_str)
         s_module_type pmd.mdtype
         (item_attributes reset_ctxt)
         pmd.mdattributes
@@ -271,13 +271,13 @@ let rec s_signature_item f x =
         | pmd :: tl ->
             if not first then
               pp f "@ @[<hov2>and@ %s:@ %a@]%a"
-                (match pmd.mdname.txt with None -> "_" | Some s -> s)
+                (match pmd.mdname with None -> "_" | Some s -> s.pid_str)
                 s_module_type1 pmd.mdtype
                 (item_attributes reset_ctxt)
                 pmd.mdattributes
             else
               pp f "@[<hov2>module@ rec@ %s:@ %a@]%a"
-                (match pmd.mdname.txt with None -> "_" | Some s -> s)
+                (match pmd.mdname with None -> "_" | Some s -> s.pid_str)
                 s_module_type1 pmd.mdtype
                 (item_attributes reset_ctxt)
                 pmd.mdattributes;

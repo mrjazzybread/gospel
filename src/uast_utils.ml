@@ -7,7 +7,7 @@
 (*  This software is free software, distributed under the MIT license     *)
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
-open Uast.PreUast
+open Uast.ParseUast
 
 let mk_term t l = { term_desc = t; term_loc = l }
 

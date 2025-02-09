@@ -15,22 +15,46 @@
 open Identifier
 
 (** Definition of program variables. *)
-module X = struct
-  type t = Preid.t
+module UniqueId = struct
+  type t = {
+    id_str : string; (* Variable name. Not used internally. *)
+    id_attrs : string list; (* Variable attributes *)
+    id_loc : Location.t;
+    id_tag : int;
+        (* Unique identifier. During typechecking, this is what
+           Inferno uses to check if two variables are the same. *)
+  }
 
-  let to_string s = s.Preid.pid_str
-  let hash v = Hashtbl.hash (to_string v)
-  let compare v1 v2 = Stdlib.compare (to_string v1) (to_string v2)
-  let equal v1 v2 = compare v1 v2 = 0
+  let to_string id = id.id_str
+  let compare x y = Int.compare x.id_tag y.id_tag
+  let equal x y = x.id_tag = y.id_tag
+  let hash x = x.id_tag
+
+  let gen_tag =
+    let r = ref 0 in
+    fun () ->
+      r := !r + 1;
+      !r
+
+  let mk_id id_str id_attrs id_loc =
+    { id_str; id_attrs; id_loc; id_tag = gen_tag () }
+
+  let from_preid p =
+    {
+      id_str = p.Preid.pid_str;
+      id_attrs = p.pid_attrs;
+      id_loc = p.pid_loc;
+      id_tag = gen_tag ();
+    }
 end
 
 (** Types with undefined type variables. *)
 module S = struct
   (** Represents a Gospel type where the type variables are represented by
       values of type ['a]. *)
-  type 'a structure = Tyapp of Ident.t * 'a list
+  type 'a structure = Tyapp of UniqueId.t * 'a list
 
-  let create_id = Ident.create ~loc:Location.none
+  let create_id s = UniqueId.mk_id s [] Location.none
 
   (* Built in Gospel types *)
   let bool_id = create_id "bool"
@@ -77,7 +101,8 @@ module S = struct
     List.iter2 f ts us
 
   let iter2 f (Tyapp (id1, args1)) (Tyapp (id2, args2)) =
-    if not (Ident.equal id1 id2) then raise Iter2 else list_iter2 f args1 args2
+    if not (UniqueId.equal id1 id2) then raise Iter2
+    else list_iter2 f args1 args2
 
   exception InconsistentConjunction = Iter2
 
@@ -108,7 +133,7 @@ module O = struct
 
   type ty =
     | Tyvar of tyvar  (** Type variables (e.g. 'a, 'b). *)
-    | Tyapp of Ident.t * ty list  (** Decoded types.*)
+    | Tyapp of UniqueId.t * ty list  (** Decoded types.*)
 
   (** Maps a type variable to a decoded type*)
   let variable x = Tyvar x
@@ -122,16 +147,16 @@ module O = struct
 
   open Utils.Fmt
 
-  let is_id_arrow = Ident.equal S.arrow_id
+  let is_id_arrow = UniqueId.equal S.arrow_id
 
   let rec print_tv fmt tv = pp fmt "%d" tv
   and print_arrow_ty fmt = list ~sep:arrow print_ty fmt
 
   and print_ty fmt = function
     | Tyvar v -> pp fmt "%a" print_tv v
-    | Tyapp (ts, []) -> Ident.pp fmt ts
+    | Tyapp (ts, []) -> pp fmt "%s" ts.id_str
     | Tyapp (ts, tys) when is_id_arrow ts -> print_arrow_ty fmt tys
-    | Tyapp (ts, [ ty ]) -> pp fmt "%a %a" print_ty ty Ident.pp ts
+    | Tyapp (ts, [ ty ]) -> pp fmt "%a %s" print_ty ty ts.id_str
     | Tyapp (ts, tyl) ->
-        pp fmt "(%a) %a" (list ~sep:comma print_ty) tyl Ident.pp ts
+        pp fmt "(%a) %s" (list ~sep:comma print_ty) tyl ts.id_str
 end

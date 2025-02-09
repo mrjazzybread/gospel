@@ -28,7 +28,6 @@ module type Uast = sig
     | Loptional of id
     | Lnamed of id
     | Lghost of id * pty
-
   (* Patterns *)
 
   type pattern = { pat_desc : pat_desc; pat_loc : Location.t }
@@ -277,7 +276,7 @@ module type Uast = sig
   }
 
   and s_module_declaration = {
-    mdname : string option loc;
+    mdname : id option;
     mdtype : s_module_type;
     mdattributes : attributes;
     (* ... [@@id1] [@@id2] *)
@@ -293,4 +292,5 @@ module type Uast = sig
   }
 end
 
-module PreUast : Uast with type id = Identifier.Preid.t
+module ParseUast : Uast with type id = Identifier.Preid.t
+module IdUast : Uast with type id = Itypes.UniqueId.t

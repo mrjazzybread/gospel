@@ -29,11 +29,11 @@ val parse_gospel :
   filename:string ->
   signature ->
   string ->
-  Uast.PreUast.s_signature
+  Uast.ParseUast.s_signature
 (** [parse_gospel sig_list module_name] parses the GOSPEL attributes and
     integrates them in the corresponding OCaml signatures. *)
 
-val parse_ocaml_gospel : string -> Uast.PreUast.s_signature
+val parse_ocaml_gospel : string -> Uast.ParseUast.s_signature
 (** [parse_ocaml_gospel path] parses the OCaml interface and the GOSPEL
     specification of the file located in [path].
 

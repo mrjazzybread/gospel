@@ -11,7 +11,6 @@
 module type Uast = sig
   (* Types *)
   open Ppxlib
-  module Preid = Identifier.Preid
 
   type id
   type qualid = Qid of id | Qdot of qualid * id

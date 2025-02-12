@@ -8,6 +8,7 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 open Uast.ParseUast
+open Identifier
 
 let mk_term t l = { term_desc = t; term_loc = l }
 

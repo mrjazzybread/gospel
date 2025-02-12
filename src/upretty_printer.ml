@@ -10,6 +10,7 @@
 
 open Ppxlib
 open Uast.ParseUast
+open Identifier
 open Opprintast
 module Option = Stdlib.Option
 open Utils.Fmt

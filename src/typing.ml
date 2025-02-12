@@ -17,6 +17,7 @@ open Ttypes
 open Tmodule
 open Tast_helper
 open Symbols
+open Identifier
 
 (** Utils *)
 

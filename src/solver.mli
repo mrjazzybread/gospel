@@ -10,4 +10,6 @@
 
 open Uast
 
-val signatures : ParseUast.s_signature -> int list * Tast2.signature list
+val signatures :
+  ParseUast.s_signature ->
+  int list * (Tast2.s_signature * Tast2.s_signature list)

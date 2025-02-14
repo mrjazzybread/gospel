@@ -24,8 +24,6 @@ module Solver = Solver.Make (X) (S) (T)
 open Solver
 module W = Warnings
 
-let leaf q = match q with Qid id -> id | Qdot (_, id) -> id
-
 (* The following functions make use of "deep types". These are a
    special encoding provided by Inferno when we already know a type
    before we begin typechecking. This is useful for logical functions
@@ -122,7 +120,7 @@ let rec hastype (t : IdUast.term) (r : variable) =
         in
         Tconst constant
     | Tvar q ->
-        let id = leaf q in
+        let id = Types.leaf q in
         (* The identifier must be a variable of type [r]. We do not
            perform any lookups directly as the bookkeeping for
            variable types is done by Inferno. We ignore the return
@@ -199,7 +197,7 @@ let typecheck c = Solver.solve ~rectypes:false c
 let process_fun_spec f =
   Option.fold ~some:(fun _ -> assert false) ~none:(pure None) f
 
-let ty_of_pty = Types.Tyapp (S.bool_id, [])
+let fun_type = Option.value ~default:(PTtyapp (Qid S.bool_id, []))
 
 (** [function_cstr ts f cstr] Creates a constraint whose semantic value is a
     list of signatures whose head is the declaration of the function described
@@ -261,7 +259,9 @@ let function_cstr (f : IdUast.function_)
   and+ params, tt = build_def deep_params body_c
   (* Typed function specification *)
   and+ fun_spec = process_fun_spec f.fun_spec in
-  let fun_ty = Option.fold ~some:(fun t -> t.t_ty) ~none:ty_of_pty tt in
+  let fun_ty =
+    Option.fold ~some:(fun t -> t.t_ty) ~none:(fun_type f.fun_type) tt
+  in
   (Sig_function (mk_function f params tt fun_ty fun_spec), l, stack)
 
 (** Creates a constraint ensuring the term within an axiom has type [bool]. *)

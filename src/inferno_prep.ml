@@ -29,10 +29,7 @@ module W = Warnings
     context dependent, since Inferno will only look at the unique identifier. A
     consequence of this is that that there should be no unbound variables when
     we build the Inferno constraint, since to tag every variable we must keep
-    track of what variables have been defined. This would be difficult to do in
-    [Checker] since the Inferno constraint has to be built bottom-up, that is,
-    starting from the last Gospel definition and this process is simpler when
-    done top down.
+    track of what variables have been defined.
 
     Infix operators: During parsing, we use the [Tinfix] constructor to mark a
     chain of infix operators. After parsing however, this constructor is
@@ -45,12 +42,11 @@ module W = Warnings
     Duplicate names: There are some contexts in Gospel where we are not allowed
     to introduce the same variable twice into scope (e.g. duplicate function
     arguments). Since Inferno has no way to track this natively, we must handle
-    this manually. Although this could be done in [Checker], it would lead to a
-    strange situation since the Inferno constraint is built bottom up, these
-    errors would also appear from the bottom up. However, normal typechecking
-    errors would appear top down. This would lead to very non-ergonomic
-    specification writing since Gospel errors would pop up in a completely
-    unexpected order. *)
+    this manually.
+
+    Finally, although all of this could be done while building the Inferno
+    constraint, we choose to do this separately to keep the code more organised.
+*)
 
 type namespace = Ident.t Env.t
 (** Maps variable names to their unique identifiers *)
@@ -216,7 +212,7 @@ let rec unique_term defs env t =
     | Tconst c -> Tconst c
     | Tvar q -> Tvar (unique_var env.term_var defs q)
     | Tlet (v, t1, t2) ->
-        let id = Ident.from_preid v in
+        let id = Ident.from_preid ~local:true v in
         let t1 = unique_term env t1 in
         (* Add the identifier to the local environment*)
         let t2 = unique_term (add_term_var v.pid_str id env) t2 in
@@ -230,7 +226,7 @@ let rec unique_term defs env t =
            in [pty] to the local scope and turns [pty] into a tagged
            annotation. *)
         let binder (pid, pty) =
-          let id = Ident.from_preid pid in
+          let id = Ident.from_preid ~local:true pid in
           env := add_term_var pid.pid_str id !env;
           let pty = Option.map (unique_pty defs env) pty in
           (id, pty)

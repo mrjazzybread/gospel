@@ -47,18 +47,33 @@ let deep_arrow arg ret =
 (** [pty_to_deep l t] receives an associative list [l] which maps variable
     identifiers to Inferno variables and builds a deep type for the Gospel type
     [pty] *)
-let rec pty_to_deep pty =
+let rec pty_to_deep l pty =
+  let pty_to_deep = pty_to_deep l in
   match pty with
-  | PTtyvar _ -> assert false
+  | PTtyvar v -> DeepVar (List.assoc v.id_tag l)
   | PTtyapp (id, l) ->
       DeepStructure (S.Tyapp (Types.leaf id, List.map pty_to_deep l))
   | PTarrow (_, arg, ret) -> deep_arrow (pty_to_deep arg) (pty_to_deep ret)
   | PTtuple _ -> assert false
 
+(** [pty_vars pty] receives a [pty] whose type variables have been uniquely
+    tagged and produces a list containing all of the type variables within [pty]
+    with no duplicates. *)
+let pty_vars pty =
+  let module Set = Set.Make (Int) in
+  let rec pty_vars = function
+    | PTtyvar v -> Set.singleton v.id_tag
+    | PTtyapp (_, l) ->
+        List.fold_left (fun s x -> Set.union (pty_vars x) s) Set.empty l
+    | PTarrow (_, arg, ret) -> Set.union (pty_vars arg) (pty_vars ret)
+    | PTtuple _ -> assert false
+  in
+  Set.elements (pty_vars pty)
+
 (** Maps a top level definition's unique identifier to its decoded type and a
     list of integers containing the unique identifiers of the type variables
     within the type. *)
-let fun_types : (int, Types.ty) Hashtbl.t = Hashtbl.create 100
+let fun_types : (int, Types.ty * int list) Hashtbl.t = Hashtbl.create 100
 
 (* The following functions are used to turn Gospel signatures into Inferno
    constraints that, when solved, will produce typed signatures. If the
@@ -161,9 +176,12 @@ let rec hastype (t : IdUast.term) (r : variable) =
              of this term, we lookup its type in the [fun_types] table
              and create a constraint stating that the type [r] must be
              equal to the function's type *)
-          let ty = Hashtbl.find fun_types id.id_tag in
+          let ty, vars = Hashtbl.find fun_types id.id_tag in
+          (* Binds the polymorphic type variables to Inferno type
+             variables.*)
+          let@ params = bind_variables vars in
           (* Creates a deep type for the function type *)
-          let@ f = deep (pty_to_deep ty) in
+          let@ f = deep (pty_to_deep params ty) in
           (* The type of the function must be equal to [r]. *)
           let+ () = f -- r in
           Tvar id
@@ -197,7 +215,11 @@ let rec hastype (t : IdUast.term) (r : variable) =
            and create a binder for it. *)
         let binder_to_deep = function
           | None -> exist
-          | Some ty -> deep (pty_to_deep ty)
+          | Some ty ->
+              let vars = pty_vars ty in
+              fun k ->
+                let@ params = bind_variables vars in
+                deep (pty_to_deep params ty) k
         in
         (* Transform the list of Gospel type annotation into a list of
            Inferno binders *)
@@ -239,17 +261,21 @@ let function_cstr (f : IdUast.function_) : Tast2.function_ co =
       (fun acc (_, _, pty) -> PTarrow (Lunit, pty, acc))
       ret_pty f.fun_params
   in
-  let@ ret_ty = deep (pty_to_deep ret_pty) in
+  (* Get the type variables in the function's type. *)
+  let type_vars = pty_vars arrow_ty in
+  let@ type_vars = bind_variables type_vars in
+
+  let@ ret_ty = deep (pty_to_deep type_vars ret_pty) in
 
   (* Map each type annotation of a parameter to a deep type. *)
   let to_deep (_, arg, pty) =
-    let deep_arg = pty_to_deep pty in
+    let deep_arg = pty_to_deep type_vars pty in
     (arg, deep_arg)
   in
   let deep_params = List.map to_deep f.fun_params in
 
   (* The function type encoded as a deep type *)
-  let deep_fun_type = pty_to_deep arrow_ty in
+  let deep_fun_type = pty_to_deep type_vars arrow_ty in
   let@ fun_ty = deep deep_fun_type in
 
   (* Typecheck the body of the function. Must have the same return
@@ -268,7 +294,6 @@ let function_cstr (f : IdUast.function_) : Tast2.function_ co =
         in
         Some tt
   in
-
   (* Each variable is now associated with a binder. *)
   let deep_params = List.map (fun (x, dty) -> (x, deep dty)) deep_params in
 
@@ -319,7 +344,7 @@ and signature_item s =
     | IdUast.Sig_function f ->
         let+ f = function_cstr f in
         let ty = Tast2.fun_to_arrow f.fun_params f.fun_ret in
-        Hashtbl.add fun_types f.fun_name.id_tag ty;
+        Hashtbl.add fun_types f.fun_name.id_tag (ty, pty_vars ty);
         Sig_function f
     | IdUast.Sig_axiom ax -> axiom_cstr ax
     | Sig_module m ->

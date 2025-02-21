@@ -384,21 +384,25 @@ let rec module_cstr (m : IdUast.s_module_declaration) =
 and signature_item s =
   let+ sdesc =
     match s.IdUast.sdesc with
-    | IdUast.Sig_function f ->
-        let+ f = function_cstr f in
-        let ty = Tast2.fun_to_arrow f.fun_params f.fun_ret in
-        Hashtbl.add fun_types f.fun_name.id_tag ty;
-        Sig_function f
-    | IdUast.Sig_axiom ax -> axiom_cstr ax
     | Sig_module m ->
         (* Returns a typed module. *)
         let m = module_cstr m in
         (* Since we handle modules and namespaces in [Inferno_prep], we don't
            create any Inferno constraints for this branch. *)
         pure (Sig_module m)
+    | Sig_gospel (g, _) -> gospel_sig g
     | _ -> assert false
   in
   { sdesc; sloc = s.sloc }
+
+and gospel_sig = function
+  | IdUast.Sig_function f ->
+      let+ f = function_cstr f in
+      let ty = Tast2.fun_to_arrow f.fun_params f.fun_ret in
+      Hashtbl.add fun_types f.fun_name.id_tag ty;
+      Sig_function f
+  | Sig_axiom ax -> axiom_cstr ax
+  | _ -> assert false
 
 and signature l =
   List.map

@@ -141,7 +141,6 @@ module ParseUast : sig
     fun_def : term option;
     fun_spec : fun_spec option;
     fun_loc : Location.t;
-    fun_text : string;
   }
 
   type axiom = {
@@ -195,6 +194,12 @@ module ParseUast : sig
     | Wmodsubst of Longident.t loc * Longident.t loc
   (* with module X.Y := Z *)
 
+  type gospel_signature =
+    | Sig_function of function_
+    | Sig_axiom of axiom
+    | Sig_ghost_type of s_type_declaration
+    | Sig_ghost_open of open_description
+
   type s_signature_item_desc =
     | Sig_val of s_val_description
     (*
@@ -233,12 +238,9 @@ module ParseUast : sig
     (* [@@@id] *)
     | Sig_extension of extension * attributes
     (* [%%id] *)
-    (* Specific to specification *)
-    | Sig_function of function_
-    | Sig_axiom of axiom
-    | Sig_ghost_type of rec_flag * s_type_declaration list
-    | Sig_ghost_val of s_val_description
-    | Sig_ghost_open of open_description
+    | Sig_gospel of gospel_signature * string
+  (* Top level specification signature. The [string] is the raw text of the
+       attribute. *)
 
   and s_signature_item = { sdesc : s_signature_item_desc; sloc : Location.t }
   and s_signature = s_signature_item list
@@ -418,7 +420,6 @@ module IdUast : sig
     fun_def : term option;
     fun_spec : fun_spec option;
     fun_loc : Location.t;
-    fun_text : string;
   }
 
   type axiom = {
@@ -441,17 +442,13 @@ module IdUast : sig
     vloc : Location.t;
   }
 
+  type type_kind = PTtype_abstract
+
   type s_type_declaration = {
-    tname : string loc;
-    tparams : (core_type * (variance * injectivity)) list;
-    (* ('a1,...'an) t; None represents  _*)
-    tcstrs : (core_type * core_type * Location.t) list;
-    (* ... constraint T1=T1'  ... constraint Tn=Tn' *)
+    tname : id;
+    tparams : id list;
     tkind : type_kind;
     tprivate : private_flag;
-    (* = private ... *)
-    tmanifest : core_type option;
-    (* = T *)
     tattributes : attributes;
     (* ... [@@id1] [@@id2] *)
     tspec : type_spec option;
@@ -476,13 +473,19 @@ module IdUast : sig
     | Wmodsubst of Longident.t loc * Longident.t loc
   (* with module X.Y := Z *)
 
+  type gospel_signature =
+    | Sig_function of function_
+    | Sig_axiom of axiom
+    | Sig_ghost_type of s_type_declaration
+    | Sig_ghost_open of open_description
+
   type s_signature_item_desc =
     | Sig_val of s_val_description
     (*
           val x: T
           external x: T = "s1" ... "sn"
          *)
-    | Sig_type of rec_flag * s_type_declaration list
+    | Sig_type of s_type_declaration list
     (* type t1 = ... and ... and tn = ... *)
     | Sig_typesubst of s_type_declaration list
     (* type t1 := ... and ... and tn := ...  *)
@@ -514,12 +517,9 @@ module IdUast : sig
     (* [@@@id] *)
     | Sig_extension of extension * attributes
     (* [%%id] *)
-    (* Specific to specification *)
-    | Sig_function of function_
-    | Sig_axiom of axiom
-    | Sig_ghost_type of rec_flag * s_type_declaration list
-    | Sig_ghost_val of s_val_description
-    | Sig_ghost_open of open_description
+    | Sig_gospel of gospel_signature * string
+  (* Top level specification signature. The [string] is the raw text of the
+       attribute. *)
 
   and s_signature_item = { sdesc : s_signature_item_desc; sloc : Location.t }
   and s_signature = s_signature_item list

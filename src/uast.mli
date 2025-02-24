@@ -164,6 +164,7 @@ module ParseUast : sig
   }
 
   type type_kind = PTtype_abstract
+  type private_flag = Private | Public
 
   type s_type_declaration = {
     tname : id;

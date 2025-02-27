@@ -10,4 +10,5 @@
 
 open Uast
 
-val signatures : ParseUast.s_signature -> Tast2.s_signature
+val axiom : IdUast.axiom -> Tast2.axiom
+val function_ : IdUast.function_ -> Tast2.function_

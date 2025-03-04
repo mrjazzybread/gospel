@@ -71,7 +71,7 @@ module ParseUast : sig
        same way as [Tapply] *)
     | Tif of term * term * term
     | Tquant of quant * binder list * term
-    | Tlambda of pattern list * term * pty option
+    | Tlambda of binder list * term * pty option
     | Tattr of string * term
     | Tlet of id * term * term
     | Tcase of term * (pattern * term option * term) list
@@ -361,7 +361,7 @@ module IdUast : sig
     | Tapply of term * term
     | Tif of term * term * term
     | Tquant of quant * binder list * term
-    | Tlambda of pattern list * term * pty option
+    | Tlambda of binder list * term * pty option
     | Tattr of string * term
     | Tlet of id * term * term
     | Tcase of term * (pattern * term option * term) list

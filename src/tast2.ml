@@ -27,6 +27,7 @@ type term_node =
   | Tapply of term * term
   | Tquant of Uast.IdUast.quant * tsymbol list * term
   | Tif of term * term * term
+  | Ttuple of term list
 
 and term = { t_node : term_node; t_ty : ty; t_loc : Location.t }
 

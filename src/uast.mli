@@ -163,7 +163,7 @@ module ParseUast : sig
     vloc : Location.t;
   }
 
-  type type_kind = PTtype_abstract
+  type type_kind = PTtype_abstract | PTtype_record of (id * pty) list
   type private_flag = Private | Public
 
   type s_type_declaration = {
@@ -453,7 +453,7 @@ module IdUast : sig
     vloc : Location.t;
   }
 
-  type type_kind = PTtype_abstract
+  type type_kind = PTtype_abstract | PTtype_record of (id * pty) list
   type private_flag = Private | Public
 
   type s_type_declaration = {

@@ -340,14 +340,23 @@ module IdUast : sig
   type param = id * pty
   type quant = Tforall | Texists
 
+  type ty_app = { params : id list; name : id }
+  (** Name of a type coupled with its type variables. *)
+
   type term = { term_desc : term_desc; term_loc : Location.t }
 
   and term_desc =
     | Ttrue
     | Tfalse
     | Tconst of constant
-    | Tvar of qualid
     | Tfield of term * qualid
+    | Tlocal of id
+    | Tvar of qualid * id list * pty
+    (* We have two nodes for term variables, one for local variables and another
+       for top level variables. This is necessary because the Inferno solver can
+       only keep track of types for variables that are local to the given term,
+       meaning we must supply the type of all top level variables that the term
+       uses. *)
     | Tapply of term * term
     | Tif of term * term * term
     | Tquant of quant * binder list * term

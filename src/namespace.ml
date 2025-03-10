@@ -12,7 +12,14 @@ module Env = Map.Make (String)
 open Uast
 open IdUast
 
-type fun_info = { fid : Ident.t }
+type fun_info = {
+  fid : Ident.t;
+  (* The unique identifier for this function. *)
+  fparams : Ident.t list;
+  (* All the type variables used in [fty]. *)
+  fty : IdUast.pty; (* The function's type. *)
+}
+
 type ty_info = { tid : Ident.t; tarity : int }
 
 type mod_info = { mid : Ident.t; mdefs : mod_defs }
@@ -89,13 +96,30 @@ let unique_toplevel_qualid g f defs q =
 
 let type_info = unique_toplevel_qualid (fun x -> x.tid) find_type
 let fun_info = unique_toplevel_qualid (fun x -> x.fid) find_fun
-let fun_qualid env q = fst (fun_info env q)
+
+let fun_qualid env q =
+  let q, info = fun_info env q in
+  (q, info.fparams, info.fty)
+
+(** [get_vars ty] returns the type variables within the type [ty]. *)
+let get_vars ty =
+  let tbl = Hashtbl.create 100 in
+  let rec get_vars = function
+    | PTtyvar id -> Hashtbl.add tbl id.id_tag id
+    | PTtyapp (_, l) -> List.iter get_vars l
+    | PTarrow (arg, ret) ->
+        get_vars arg;
+        get_vars ret
+    | PTtuple l -> List.iter get_vars l
+  in
+  get_vars ty;
+  Hashtbl.to_seq_values tbl |> List.of_seq
 
 (* Helper functions to add top level definitions into the environment. *)
 
-let add_fun fid defs =
+let add_fun fid fty defs =
   let env = defs.fun_env in
-  let info = { fid } in
+  let info = { fid; fty; fparams = get_vars fty } in
   { defs with fun_env = Env.add fid.Ident.id_str info env }
 
 let add_mod mid mdefs defs =
@@ -131,7 +155,7 @@ let empty_env = { defs = empty_defs; scope = { empty_defs with type_env } }
 let scope e = e.scope
 let defs e = e.defs
 let add_def f env = { defs = f env.defs; scope = f env.scope }
-let add_fun env id = add_def (add_fun id) env
+let add_fun env id ty = add_def (add_fun id ty) env
 let add_type env id arity = add_def (add_type id arity) env
 let add_mod env id mdefs = add_def (add_mod id mdefs) env
 let submodule env = { env with defs = empty_defs }

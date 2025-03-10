@@ -367,7 +367,9 @@ module IdUast : sig
     | Tcase of term * (pattern * term option * term) list
     | Tcast of term * pty
     | Ttuple of term list
-    | Trecord of (qualid * term) list
+    | Trecord of (qualid * term * pty) list * ty_app
+    (* For records, we store the type information for the record type as well as
+       the type of each record field. *)
     | Tscope of qualid * term
     | Told of term
 

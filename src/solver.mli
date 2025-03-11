@@ -11,4 +11,4 @@
 open Uast
 
 val axiom : IdUast.axiom -> Tast2.axiom
-val function_ : IdUast.function_ -> Tast2.function_
+val function_ : IdUast.function_ -> Tast2.function_ * IdUast.pty

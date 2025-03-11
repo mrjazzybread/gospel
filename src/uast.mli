@@ -360,7 +360,6 @@ module IdUast : sig
     | Ttrue
     | Tfalse
     | Tconst of constant
-    | Tfield of term * qualid
     | Tlocal of id
     | Tvar of qualid * id list * pty
     (* We have two nodes for term variables, one for local variables and another
@@ -368,6 +367,9 @@ module IdUast : sig
        only keep track of types for variables that are local to the given term,
        meaning we must supply the type of all top level variables that the term
        uses. *)
+    | Tfield of term * ty_app * qualid * pty
+    (* For field applications, we store the type of the record it belongs to as
+       well as the type of the record field. *)
     | Tapply of term * term
     | Tif of term * term * term
     | Tquant of quant * binder list * term

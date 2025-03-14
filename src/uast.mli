@@ -74,7 +74,6 @@ module ParseUast : sig
     | Tlambda of binder list * term * pty option
     | Tattr of string * term
     | Tlet of id * term * term
-    | Tcase of term * (pattern * term option * term) list
     | Tcast of term * pty
     | Ttuple of term list
     | Trecord of (qualid * term) list
@@ -376,7 +375,6 @@ module IdUast : sig
     | Tlambda of binder list * term * pty option
     | Tattr of string * term
     | Tlet of id * term * term
-    | Tcase of term * (pattern * term option * term) list
     | Tcast of term * pty
     | Ttuple of term list
     | Trecord of (qualid * term * pty) list * ty_app

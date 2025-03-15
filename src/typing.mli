@@ -51,4 +51,10 @@
 
 open Uast
 
-val signatures : ParseUast.s_signature -> Tast2.s_signature * Namespace.mod_defs
+val signatures :
+  Namespace.env ->
+  ParseUast.s_signature ->
+  Tast2.s_signature * Namespace.mod_defs
+(** [signature env sigs] type checks the list of top level signatures [sigs] and
+    returns a map containing all the definitions within the module as well as a
+    typed copy of the definitions in [sigs]. *)

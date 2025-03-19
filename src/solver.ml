@@ -193,10 +193,10 @@ let rec hastype (t : IdUast.term) (r : variable) =
     | IdUast.Ttrue ->
         (* For true and false, we state that the expected type must be
           a boolean *)
-        let+ () = r --- S.ty_bool in
+        let+ () = r --- S.ty_prop in
         Ttrue
     | Tfalse ->
-        let+ () = r --- S.ty_bool in
+        let+ () = r --- S.ty_prop in
         Tfalse
     | Tconst constant ->
         (* Depending on the type of constant, we restrict the expected type
@@ -259,7 +259,7 @@ let rec hastype (t : IdUast.term) (r : variable) =
     | Tquant (q, l, t) ->
         (* forall. x y z. t *)
         (* The term [t] must be a formula *)
-        let c = lift hastype t S.ty_bool in
+        let c = lift hastype t S.ty_prop in
         (* Transform the list of Gospel type annotation into a list of
            Inferno binders *)
         let l = List.map (fun (x, b) -> (x, pty_opt_to_deep b)) l in
@@ -268,7 +268,7 @@ let rec hastype (t : IdUast.term) (r : variable) =
     | Tif (g, then_b, else_b) ->
         (* if g then then_b else else_b *)
         (* The guard must have type [bool] *)
-        let+ g = lift hastype g S.ty_bool
+        let+ g = lift hastype g S.ty_prop
         (* Both branches must have the return type [r] *)
         and+ then_b = hastype then_b r
         and+ else_b = hastype else_b r in
@@ -363,7 +363,7 @@ let process_fun_spec f =
     specification is well typed. *)
 let function_cstr (f : IdUast.function_) : (Tast2.function_ * IdUast.pty) co =
   (* Turn the return type into a deep type *)
-  let ret_pty = Option.value ~default:Types.ty_bool f.fun_type in
+  let ret_pty = Option.value ~default:Types.ty_prop f.fun_type in
   let arrow_ty =
     List.fold_right
       (fun (_, pty) acc -> PTarrow (pty, acc))
@@ -417,7 +417,7 @@ let function_cstr (f : IdUast.function_) : (Tast2.function_ * IdUast.pty) co =
 
 (** Creates a constraint ensuring the term within an axiom has type [prop]. *)
 let axiom_cstr ax =
-  let@ ty = shallow S.ty_bool in
+  let@ ty = shallow S.ty_prop in
   let+ t = hastype ax.IdUast.ax_term ty in
   mk_axiom ax.ax_name t ax.ax_loc ax.ax_text
 

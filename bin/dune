@@ -1,7 +1,31 @@
 (ocamllex
  (modules cloc))
 
+(include_subdirs unqualified)
+
+; Creates an executable that type checks the standard library
+
+(executable
+ (name checklib)
+ (libraries gospel)
+ (modules_without_implementation gospelstdlib))
+
+; Type check the gospel standard library.
+
+(rule
+ (targets gospelstdlib.gospel)
+ (deps
+  (:check checklib.exe)
+  (source_tree stdlib))
+ (action
+  (run %{check})))
+
 (executable
  (name cli)
  (public_name gospel)
- (libraries cmdliner dune-build-info gospel))
+ (modules_without_implementation gospelstdlib)
+ (preprocess
+  (pps ppx_blob))
+ (preprocessor_deps
+  (file gospelstdlib.gospel))
+ (libraries cmdliner dune-build-info gospel ppx_blob))

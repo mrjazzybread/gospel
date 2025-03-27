@@ -10,5 +10,8 @@
 
 open Uast
 
-val axiom : IdUast.axiom -> Tast2.axiom
-val function_ : IdUast.function_ -> Tast2.function_ * IdUast.pty
+(* The following functions receive as their first arguments the list of type
+   variables used within the structure they type check. *)
+
+val axiom : Ident.t list -> IdUast.axiom -> Tast2.axiom
+val function_ : Ident.t list -> IdUast.function_ -> Tast2.function_ * IdUast.pty

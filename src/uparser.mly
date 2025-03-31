@@ -84,7 +84,7 @@
 
 %token AXIOM
 %token EPHEMERAL ELSE EXISTS FALSE FORALL FUNCTION FUN
-%token REC
+%token REC AND
 %token INVARIANT
 %token COERCION
 %token IF IN
@@ -98,11 +98,11 @@
 
 (* symbols *)
 
-%token AND AMPAMP ARROW BAR BARBAR COLON COLONCOLON COMMA DOT DOTDOT
+%token CONJ AMPAMP ARROW BAR BARBAR COLON COLONCOLON COMMA DOT DOTDOT
 %token EOF EQUAL
 %token MUTABLE MODEL
 %token LRARROW LEFTBRC LEFTBRCCOLON LEFTPAR LEFTBRCRIGHTBRC
-%token LEFTSQ LTGT OR QUESTION RIGHTBRC COLONRIGHTBRC RIGHTPAR RIGHTSQ SEMICOLON
+%token LEFTSQ LTGT DISJ QUESTION RIGHTBRC COLONRIGHTBRC RIGHTPAR RIGHTSQ SEMICOLON
 %token LEFTSQRIGHTSQ
 %token STAR TILDE UNDERSCORE
 (* priorities *)
@@ -114,8 +114,8 @@
 
 %right ARROW LRARROW
 %nonassoc RIGHTSQ
-%right OR BARBAR
-%right AND AMPAMP
+%right DISJ BARBAR
+%right CONJ AMPAMP
 %nonassoc NOT
 %right EQUAL LTGT OP1
 %right COLONCOLON
@@ -140,7 +140,7 @@ top_:
   { Sig_function f }
 | ax = axiom
   { Sig_axiom ax }
-| tdecl = type_decl
+| tdecl = type_decl(TYPE)
   { Sig_ghost_type tdecl }
 
 decl_params:
@@ -159,12 +159,18 @@ type_def:
 | LEFTBRC l = semicolon_list1(record_field) RIGHTBRC
   { PTtype_record l, None }
 
-type_decl:
-| TYPE tparams=decl_params id=lident def=preceded(EQUAL, type_def)?
-       inv=ts_invariants
+type_decl_rec:
+| (* espilon *)      { [] }
+| l = type_decl(AND) { l }
+
+type_decl(X):
+| X tparams=decl_params id=lident def=preceded(EQUAL, type_def)?
+       inv=ts_invariants l=located_begin(type_decl_rec)
   {
     let kind, alias =
       Option.value ~default:(PTtype_abstract, None) def in
+    let l, end_pos = l in
+    let begin_pos, _ = $loc in
     {
       tname = id;
       tparams = tparams;
@@ -179,8 +185,9 @@ type_decl:
 		  ty_text = "";
 		  ty_loc = mk_loc $loc(inv);
 		};
-      tloc = mk_loc $loc;
-  } }
+      tloc = mk_loc (begin_pos, end_pos);
+  } :: l
+}
 
 val_spec:
 | h=val_spec_header IN s=val_spec_post EOF
@@ -653,9 +660,9 @@ prefix_op:
 | o = OP4   { mk_pid (infix o) $loc }
 | ARROW     { mk_pid (infix "->")  $loc }
 | LRARROW   { mk_pid (infix "<->") $loc }
-| OR        { mk_pid (infix "\\/") $loc }
+| DISJ      { mk_pid (infix "\\/") $loc }
 | BARBAR    { mk_pid (infix "||")  $loc }
-| AND       { mk_pid (infix "/\\") $loc }
+| CONJ      { mk_pid (infix "/\\") $loc }
 | AMPAMP    { mk_pid (infix "&&")  $loc }
 ;
 
@@ -688,8 +695,8 @@ lident_fun_id:
 
 lident_op_id:
 | id = lident_fun_id               { id }
-| LEFTPAR OR RIGHTPAR              { mk_pid (infix "\\/") $loc }
-| LEFTPAR AND RIGHTPAR             { mk_pid (infix "/\\") $loc }
+| LEFTPAR DISJ RIGHTPAR              { mk_pid (infix "\\/") $loc }
+| LEFTPAR CONJ RIGHTPAR             { mk_pid (infix "/\\") $loc }
 ;
 
 lident_op:
@@ -760,6 +767,8 @@ star_list2(X):
 ;
 
 located(X): x = X { x, $endpos }
+
+located_begin(X) : x = X { x, $startpos }
 
 location(X) : X { $loc($1) }
 ;

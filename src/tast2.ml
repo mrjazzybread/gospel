@@ -87,7 +87,7 @@ and s_signature_item_desc =
   | Sig_function of function_
   | Sig_axiom of axiom
   | Sig_module of s_module_declaration
-  | Sig_ghost_type of Uast.IdUast.s_type_declaration
+  | Sig_ghost_type of Uast.IdUast.s_type_declaration list
   | Sig_attribute of Ppxlib.attribute
 
 and s_signature_item = { sdesc : s_signature_item_desc; sloc : Location.t }

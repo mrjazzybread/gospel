@@ -88,6 +88,7 @@
 %token IF IN
 %token OLD NOT RAISES
 %token THEN TRUE MODIFIES EQUIVALENT CHECKS DIVERGES PURE
+%token OPEN
 
 %token AS
 %token LET PREDICATE
@@ -140,6 +141,8 @@ top_:
   { Sig_axiom ax }
 | tdecl = type_decl(TYPE)
   { Sig_ghost_type tdecl }
+| OPEN q=uqualid
+  { Sig_ghost_open q }
 
 decl_params:
 | (* epsilon *)

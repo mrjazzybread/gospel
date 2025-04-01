@@ -126,7 +126,6 @@ module ParseUast : sig
     fun_req : term list;
     fun_ens : term list;
     fun_variant : term list;
-    fun_coer : bool;
     fun_text : string;
     fun_loc : Location.t;
   }
@@ -138,7 +137,7 @@ module ParseUast : sig
     fun_type : pty option;
     fun_params : param list;
     fun_def : term option;
-    fun_spec : fun_spec option;
+    fun_spec : fun_spec;
     fun_loc : Location.t;
   }
 
@@ -429,7 +428,6 @@ module IdUast : sig
     fun_req : term list;
     fun_ens : term list;
     fun_variant : term list;
-    fun_coer : bool;
     fun_text : string;
     fun_loc : Location.t;
   }
@@ -441,7 +439,7 @@ module IdUast : sig
     fun_type : pty option;
     fun_params : param list;
     fun_def : term option;
-    fun_spec : fun_spec option;
+    fun_spec : fun_spec;
     fun_loc : Location.t;
   }
 

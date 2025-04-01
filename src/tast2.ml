@@ -63,7 +63,7 @@ type function_ = {
   fun_params : tsymbol list;  (** Arguments *)
   fun_ret : ty;
   fun_def : term option;  (** Definition *)
-  fun_spec : fun_spec option;  (** Specification *)
+  fun_spec : fun_spec;  (** Specification *)
   fun_loc : Location.t;  (** Location *)
 }
 
@@ -94,6 +94,9 @@ and s_signature_item = { sdesc : s_signature_item_desc; sloc : Location.t }
 and s_signature = s_signature_item list
 
 (* Helper functions *)
+
+let mk_fun_spec fun_req fun_ens fun_variant fun_text fun_loc =
+  { fun_req; fun_ens; fun_variant; fun_text; fun_loc }
 
 let mk_function f fun_params fun_def fun_ret fun_spec =
   {

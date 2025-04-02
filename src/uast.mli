@@ -107,16 +107,8 @@ module ParseUast : sig
     sp_loc : Location.t;
   }
 
-  type field = {
-    f_loc : Location.t;
-    f_preid : id;
-    f_pty : pty;
-    f_mutable : bool;
-  }
-
   type type_spec = {
     ty_ephemeral : bool;
-    ty_field : field list;
     ty_invariant : (id * term list) option;
     ty_text : string;
     ty_loc : Location.t;
@@ -409,16 +401,8 @@ module IdUast : sig
     sp_loc : Location.t;
   }
 
-  type field = {
-    f_loc : Location.t;
-    f_preid : id;
-    f_pty : pty;
-    f_mutable : bool;
-  }
-
   type type_spec = {
     ty_ephemeral : bool;
-    ty_field : field list;
     ty_invariant : (id * term list) option;
     ty_text : string;
     ty_loc : Location.t;
@@ -464,13 +448,12 @@ module IdUast : sig
   }
 
   type type_kind = PTtype_abstract | PTtype_record of (id * pty) list
-  type private_flag = Private | Public
 
   type s_type_declaration = {
     tname : id;
     tparams : id list;
     tkind : type_kind;
-    tprivate : private_flag;
+    tprivate : ParseUast.private_flag;
     tmanifest : pty option;
     tattributes : attributes;
     (* ... [@@id1] [@@id2] *)

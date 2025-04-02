@@ -33,6 +33,7 @@ type term_node =
   | Tfield of term * Uast.IdUast.qualid
   | Tattr of string * term
   | Tcast of term * Uast.IdUast.pty
+  | Tscope of Uast.IdUast.qualid * term
 
 and term = { t_node : term_node; t_ty : ty; t_loc : Location.t }
 

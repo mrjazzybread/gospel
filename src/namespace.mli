@@ -94,6 +94,11 @@ val gospel_open : env -> ParseUast.qualid -> IdUast.qualid * env
 (** [gospel_open defs id] adds the definitions in module [id] into the scope
     [defs]. *)
 
+val local_open : mod_defs -> ParseUast.qualid -> IdUast.qualid * mod_defs
+(** [local_open defs id] is similar to [gospel_open] but is applied to a local
+    scope within a term and returns a new local scope with all the definitions
+    in module [id]. *)
+
 val empty_env : env
 (** The empty environment. The only names in scope are primitive Gospel types.
     This should be the initial environment when processing the Gospel standard

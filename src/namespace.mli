@@ -44,15 +44,16 @@ type record_info = {
 
 (* Functions to update the environment by adding a top level definition *)
 val add_fun : env -> Ident.t -> IdUast.pty -> env
-val add_type : env -> Ident.t -> Ident.t list -> IdUast.pty option -> env
+val add_gospel_type : env -> Ident.t -> Ident.t list -> IdUast.pty option -> env
+val add_ocaml_type : env -> Ident.t -> Ident.t list -> IdUast.pty option -> env
 
 val add_record :
-  env -> Ident.t -> Ident.t list -> (Ident.t * IdUast.pty) list -> env
+  env -> Ident.t -> Ident.t list -> IdUast.label_declaration list -> env
 
 val add_mod : env -> Ident.t -> mod_defs -> env
 
 val resolve_alias :
-  mod_defs -> ParseUast.qualid -> IdUast.pty list -> IdUast.pty
+  ocaml:bool -> mod_defs -> ParseUast.qualid -> IdUast.pty list -> IdUast.pty
 (** If the type [q] in an alias such as
 
     [type (tv_1, tv_2, ...) t = alias]

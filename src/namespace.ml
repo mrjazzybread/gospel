@@ -398,7 +398,6 @@ let add_gospel_type tid tparams talias defs =
   { defs with type_env = Env.add tid.Ident.id_str info tenv }
 
 let add_record rid rparams rfields defs =
-  let rfields = List.map (fun l -> (l.pld_name, l.pld_type)) rfields in
   let info = { rid; rparams; rfields } in
   (* Maps each record field name to the a field info object *)
   let f defs (rfid, rfty) =

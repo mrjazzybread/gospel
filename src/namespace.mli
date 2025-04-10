@@ -48,7 +48,7 @@ val add_gospel_type : env -> Ident.t -> Ident.t list -> IdUast.pty option -> env
 val add_ocaml_type : env -> Ident.t -> Ident.t list -> IdUast.pty option -> env
 
 val add_record :
-  env -> Ident.t -> Ident.t list -> IdUast.label_declaration list -> env
+  env -> Ident.t -> Ident.t list -> (Ident.t * IdUast.pty) list -> env
 
 val add_mod : env -> Ident.t -> mod_defs -> env
 

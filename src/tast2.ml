@@ -72,14 +72,15 @@ type function_ = {
 type type_spec = {
   ty_mutable : bool;
   ty_invariant : (IdUast.id * term list) option;
+  ty_model : IdUast.model;
   ty_text : string;
   ty_loc : Location.t;
 }
 
-let mk_type_spec ty_mutable ty_invariant ty_text ty_loc =
-  { ty_mutable; ty_invariant; ty_text; ty_loc }
+let mk_type_spec ty_mutable ty_invariant ty_model ty_text ty_loc =
+  { ty_mutable; ty_invariant; ty_model; ty_text; ty_loc }
 
-let empty_tspec = mk_type_spec false None "" Location.none
+let empty_tspec = mk_type_spec false None No_model "" Location.none
 
 type s_type_declaration = {
   tname : IdUast.id;

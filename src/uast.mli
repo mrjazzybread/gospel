@@ -107,9 +107,12 @@ module ParseUast : sig
     sp_loc : Location.t;
   }
 
+  type model = No_model | Implicit of pty | Fields of (id * pty) list
+
   type type_spec = {
     ty_mutable : bool;
     ty_invariant : (id * term list) option;
+    ty_model : model;
     ty_text : string;
     ty_loc : Location.t;
   }
@@ -410,13 +413,6 @@ module IdUast : sig
     sp_loc : Location.t;
   }
 
-  type type_spec = {
-    ty_mutable : bool;
-    ty_invariant : (id * term list) option;
-    ty_text : string;
-    ty_loc : Location.t;
-  }
-
   type fun_spec = {
     fun_req : term list;
     fun_ens : term list;
@@ -464,6 +460,15 @@ module IdUast : sig
   }
 
   type type_kind = PTtype_abstract | PTtype_record of label_declaration list
+  type model = No_model | Implicit of pty | Fields of (id * pty) list
+
+  type type_spec = {
+    ty_mutable : bool;
+    ty_invariant : (id * term list) option;
+    ty_model : model;
+    ty_text : string;
+    ty_loc : Location.t;
+  }
 
   type s_type_declaration = {
     tname : id;

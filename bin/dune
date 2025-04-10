@@ -3,17 +3,19 @@
 
 (include_subdirs unqualified)
 
-; Creates an executable that type checks the standard library
+; Creates an executable that type checks the Gospel and OCaml standard
+; library and creates a marshalled representation of their
+; definitions.
 
 (executable
  (name checklib)
  (libraries gospel)
- (modules_without_implementation gospelstdlib))
+ (modules_without_implementation gospelstdlib ocamlprimitives))
 
-; Type check the gospel standard library.
+; Type check the Gospel and OCaml standard library.
 
 (rule
- (targets gospelstdlib.gospel)
+ (targets gospelstdlib.gospel ocamlprimitives.gospel)
  (deps
   (:check checklib.exe)
   (source_tree stdlib))
@@ -23,9 +25,10 @@
 (executable
  (name cli)
  (public_name gospel)
- (modules_without_implementation gospelstdlib)
+ (modules_without_implementation gospelstdlib ocamlprimitives)
  (preprocess
   (pps ppx_blob))
  (preprocessor_deps
-  (file gospelstdlib.gospel))
+  (file gospelstdlib.gospel)
+  (file ocamlprimitives.gospel))
  (libraries cmdliner dune-build-info gospel ppx_blob))

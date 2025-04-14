@@ -120,6 +120,7 @@ and s_signature_item_desc =
   | Sig_module of s_module_declaration
   | Sig_ghost_type of s_type_declaration list
   | Sig_ghost_open of Uast.IdUast.qualid
+  | Sig_exception of Uast.IdUast.exception_decl
   | Sig_attribute of Ppxlib.attribute
 
 and s_signature_item = { sdesc : s_signature_item_desc; sloc : Location.t }

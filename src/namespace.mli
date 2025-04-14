@@ -50,6 +50,13 @@ val add_ocaml_type : env -> Ident.t -> Ident.t list -> IdUast.pty option -> env
 val add_record :
   env -> Ident.t -> Ident.t list -> (Ident.t * IdUast.pty) list -> env
 
+val add_exn : env -> Ident.t -> IdUast.pty list -> env
+(** [add_exn env id args] adds an exception named [id] to [env] that receives
+    arguments of type [args].
+
+    Note: If [alias] is [Some e], [args] should be the same argument list as
+    [e]. *)
+
 val add_mod : env -> Ident.t -> mod_defs -> env
 
 val resolve_alias :
@@ -90,6 +97,11 @@ val get_field_info :
     - The type of the record field [q].
     - The identifier for the record type the label [id] belong to.
     - The type parameters for the record type. *)
+
+val get_exn_info :
+  mod_defs -> ParseUast.qualid -> IdUast.qualid * IdUast.pty list
+(** [get_exn_info defs id] receives an exception identifier [id] and the types
+    of its arguments. *)
 
 val gospel_open : env -> ParseUast.qualid -> IdUast.qualid * env
 (** [gospel_open defs id] adds the definitions in module [id] into the scope

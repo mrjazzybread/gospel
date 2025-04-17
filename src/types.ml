@@ -211,6 +211,6 @@ let cycle loc t =
       W.error ~loc (W.Cycle (v.id_str, tys))
   | _ -> assert false (* See comment for [mu] function *)
 
-let ocaml_no_model id ty =
+let ocaml_no_model loc ty =
   let tys = Fmt.str "%a" print_ty ty in
-  W.error ~loc:id.Preid.pid_loc (W.No_model (id.pid_str, tys))
+  W.error ~loc (W.No_model tys)

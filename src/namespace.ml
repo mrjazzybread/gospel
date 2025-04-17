@@ -76,6 +76,15 @@ type record_info = {
 
 type field_info = { rfid : Ident.t; rfty : IdUast.pty; rfrecord : record_info }
 
+type lens_info = {
+  lid : Ident.t; (* Name *)
+  locaml : Ident.t; (* Name of the OCaml type that this lens targets *)
+  lmodel : IdUast.pty option;
+      (* Gospel model. If [None], then this lens is only used to claim ownership
+         of the OCaml value since it does not expose a logical
+         representation. *)
+}
+
 type exn_info = {
   eid : Ident.t;
   eargs : IdUast.pty list;
@@ -108,6 +117,7 @@ and mod_defs = {
 
      Invariant: the cardinality of [record_env] is smaller or equal than
      the cardinality of [type_env]. *)
+  lens_env : lens_info Env.t;
   (* Environments for OCaml definitions *)
   ocaml_type_env : ty_info Env.t;
   (* OCaml type definitions. *)
@@ -122,6 +132,7 @@ let empty_defs =
     type_env = Env.empty;
     field_env = Env.empty;
     record_env = Record_env.empty;
+    lens_env = Env.empty;
     ocaml_type_env = Env.empty;
     exn_env = Env.empty;
     mod_env = Env.empty;
@@ -142,6 +153,7 @@ let lookup f (defs : mod_defs) pid =
 let find_fun = fun d -> d.fun_env
 let find_type ~ocaml = fun d -> if ocaml then d.ocaml_type_env else d.type_env
 let find_exn = fun d -> d.exn_env
+let find_lens = fun d -> d.lens_env
 let find_mod = fun d -> d.mod_env
 let find_fields = fun d -> d.field_env
 
@@ -207,6 +219,16 @@ let type_info ~ocaml =
     (fun x -> x.tid)
     (find_type ~ocaml)
     (fun id -> W.Unbound_type id)
+
+let get_lens_info env q =
+  let q, info =
+    unique_toplevel_qualid
+      (fun x -> x.lid)
+      find_lens
+      (fun id -> W.Unbound_lens id)
+      env q
+  in
+  (q, info.locaml, info.lmodel)
 
 let exn_info =
   unique_toplevel_qualid
@@ -410,10 +432,19 @@ let rec to_alias = function
   | PTarrow (arg, res) -> PTarrow (to_alias arg, to_alias res)
   | PTtuple l -> PTtuple (List.map to_alias l)
 
-let add_ocaml_type tid tparams talias defs =
+let add_ocaml_type tid tparams talias tmodel defs =
   let tenv = defs.ocaml_type_env in
   let info = { tid; tparams; talias = Option.map to_alias talias } in
-  { defs with ocaml_type_env = Env.add tid.Ident.id_str info tenv }
+  (* Update the lens environment with a lens that claims ownership if [tid]
+     and allows access to its model [tmodel]. *)
+  let lid = Ident.mk_id tid.id_str Location.none in
+  let lens_info = { lid; locaml = tid; lmodel = tmodel } in
+  let lenv = defs.lens_env in
+  {
+    defs with
+    ocaml_type_env = Env.add tid.Ident.id_str info tenv;
+    lens_env = Env.add lid.Ident.id_str lens_info lenv;
+  }
 
 let add_gospel_type tid tparams talias defs =
   let tenv = defs.type_env in
@@ -459,6 +490,7 @@ let defs_union ~ocaml m1 m2 =
     type_env = union m1.type_env m2.type_env;
     field_env = union m1.field_env m2.field_env;
     record_env = runion m1.record_env m2.record_env;
+    lens_env = union m1.lens_env m2.lens_env;
     ocaml_type_env = ounion m1.ocaml_type_env m2.ocaml_type_env;
     exn_env = ounion m1.exn_env m2.exn_env;
     mod_env = union m1.mod_env m2.mod_env;
@@ -536,8 +568,8 @@ let add_fun env id ty = add_def (add_fun id ty) env
 let add_gospel_type env id params alias =
   add_def (add_gospel_type id params alias) env
 
-let add_ocaml_type env id params alias =
-  add_def (add_ocaml_type id params alias) env
+let add_ocaml_type env id params alias model =
+  add_def (add_ocaml_type id params alias model) env
 
 let add_record env id params fields = add_def (add_record id params fields) env
 let add_exn env id args = add_def (add_exn id args) env

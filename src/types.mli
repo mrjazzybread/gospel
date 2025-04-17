@@ -51,6 +51,6 @@ val incompatible_types : Lexing.position * Lexing.position -> ty -> ty -> 'a
 val cycle : Lexing.position * Lexing.position -> ty -> 'a
 (** [cycle loc t] emits an error for the cyclic type [t]. *)
 
-val ocaml_no_model : Preid.t -> ty -> 'a
+val ocaml_no_model : Location.t -> ty -> 'a
 (** [ocaml_no_model loc id ty] emits an error stating that [id] is an OCaml
     variable of type [ty] that has no valid Gospel representation. *)

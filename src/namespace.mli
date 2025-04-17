@@ -45,7 +45,20 @@ type record_info = {
 (* Functions to update the environment by adding a top level definition *)
 val add_fun : env -> Ident.t -> IdUast.pty -> env
 val add_gospel_type : env -> Ident.t -> Ident.t list -> IdUast.pty option -> env
-val add_ocaml_type : env -> Ident.t -> Ident.t list -> IdUast.pty option -> env
+
+val add_ocaml_type :
+  env ->
+  Ident.t ->
+  Ident.t list ->
+  IdUast.pty option ->
+  IdUast.pty option ->
+  env
+(** [add_ocaml_type env id params alias model] Adds the OCaml type [id] to the
+    environment [env]. We associate with it the names of its type variables
+    [params] and its type expansion [alias], if it exists. Additionally, we
+    create a Gospel lens that claims ownership of values of type [id]. If
+    [model] is not [None], then the created lens also allows values of type [id]
+    to be used as values of type [model]. *)
 
 val add_record :
   env -> Ident.t -> Ident.t list -> (Ident.t * IdUast.pty) list -> env
@@ -97,6 +110,13 @@ val get_field_info :
     - The type of the record field [q].
     - The identifier for the record type the label [id] belong to.
     - The type parameters for the record type. *)
+
+val get_lens_info :
+  mod_defs -> ParseUast.qualid -> IdUast.qualid * Ident.t * IdUast.pty option
+(** [get_lens_info defs env q] Receives an identifier for a lens and returns:
+    - The resolved identifier for [q].
+    - The identifier for the OCaml type that this lens targets.
+    - The type of the model. *)
 
 val get_exn_info :
   mod_defs -> ParseUast.qualid -> IdUast.qualid * IdUast.pty list

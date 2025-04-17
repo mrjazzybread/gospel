@@ -22,14 +22,12 @@
         "as", AS;
 	"and", AND;
         "axiom", AXIOM;
-        "checks", CHECKS;
         "consumes", CONSUMES;
         "diverges", DIVERGES;
         "else", ELSE;
         "exists", EXISTS;
         "ensures", ENSURES;
-     	"equivalent", EQUIVALENT;
-        "false", FALSE;
+	"false", FALSE;
         "forall", FORALL;
         "fun", FUN;
         "function", FUNCTION;
@@ -44,8 +42,8 @@
         "old", OLD;
 	"open", OPEN;
         "predicate", PREDICATE;
+	"produces", PRODUCES;
         "pure", PURE;
-        "raises", RAISES;
         "rec", REC;
         "requires", REQUIRES;
         "then", THEN;

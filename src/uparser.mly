@@ -30,14 +30,12 @@
   let empty_vspec = {
     sp_header = None;
     sp_pre = [];
-    sp_checks = [];
     sp_post = [];
-    sp_xpost = [];
     sp_writes = [];
-    sp_consumes= [];
+    sp_consumes = [];
+    sp_produces = [];
     sp_diverge = false;
     sp_pure = false;
-    sp_equiv = [];
     sp_text = "";
     sp_loc = Location.none;
   }
@@ -57,8 +55,6 @@
   let combine_spec s1 s2 =
     {
       s1 with sp_post = s2.sp_post;
-              sp_xpost = s2.sp_xpost;
-	      sp_equiv = s2.sp_equiv
     }
 %}
 
@@ -77,7 +73,7 @@
 
 (* Spec Tokens *)
 
-%token REQUIRES ENSURES CONSUMES VARIANT
+%token REQUIRES ENSURES CONSUMES PRODUCES VARIANT
 
 (* keywords *)
 
@@ -86,8 +82,8 @@
 %token REC AND
 %token INVARIANT
 %token IF IN
-%token OLD NOT RAISES
-%token THEN TRUE MODIFIES EQUIVALENT CHECKS DIVERGES PURE
+%token OLD NOT
+%token THEN TRUE MODIFIES DIVERGES PURE
 %token OPEN
 
 %token AS
@@ -284,7 +280,7 @@ ts_invariant:
 ;
 
 val_spec_own:
-| l=separated_nonempty_list(COMMA, term_dot)
+| l=separated_nonempty_list(COMMA, qualid)
    { l }
 
 val_spec_pre:
@@ -292,10 +288,10 @@ val_spec_pre:
   { { bd with sp_writes = wr @ bd.sp_writes } }
 | CONSUMES cs=val_spec_own bd=val_spec_pre_empty
   { { bd with sp_consumes = cs @ bd.sp_consumes } }
+| PRODUCES pr=val_spec_own bd=val_spec_pre_empty
+  { { bd with sp_produces = pr @ bd.sp_produces } }
 | REQUIRES t=term bd=val_spec_pre_empty
   { { bd with sp_pre = t :: bd.sp_pre } }
-| CHECKS t=term bd=val_spec_pre_empty
-  { { bd with sp_checks = t :: bd.sp_checks } }
 | PURE bd=val_spec_pre_empty
   { { bd with sp_pure = true } }
 | DIVERGES bd=val_spec_pre_empty
@@ -319,11 +315,6 @@ val_spec_header:
 val_spec_post:
 | ENSURES t=term bd=val_spec_post_empty
   { { bd with sp_post = t :: bd.sp_post} }
-| RAISES r=bar_list1(raises) bd=val_spec_post_empty
-  { let xp = mk_loc $loc(r), r in
-    { bd with sp_xpost = xp :: bd.sp_xpost } }
-| EQUIVALENT e=STRING bd=val_spec_post_empty
-  { { bd with sp_equiv = e :: bd.sp_equiv } }
 
 val_spec_post_empty:
 | (* epsilon *) { empty_vspec }
@@ -354,17 +345,6 @@ ret_name:
   { l }
 | l=comma_list(ret_value) EQUAL { l }
 | UNDERSCORE EQUAL { [] };
-
-raises:
-| q=uqualid ARROW t=term
-  { q, Some (mk_pat (Ptuple []) $loc(q), t) }
-| q=uqualid p=pat_arg ARROW t=term
-  { q, Some (p, t) }
-| q=uqualid p=pat_arg
-  { q, Some (p, mk_term Ttrue $loc(p)) }
-| q=uqualid
-  { q, None}
-;
 
 params:
 | p = param  { p }

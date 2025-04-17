@@ -95,14 +95,12 @@ module ParseUast : sig
   type val_spec = {
     sp_header : spec_header option;
     sp_pre : term list;
-    sp_checks : term list;
     sp_post : term list;
-    sp_xpost : xpost list;
-    sp_writes : term list;
-    sp_consumes : term list;
+    sp_writes : qualid list;
+    sp_consumes : qualid list;
+    sp_produces : qualid list;
     sp_diverge : bool;
     sp_pure : bool;
-    sp_equiv : string list;
     sp_text : string;
     sp_loc : Location.t;
   }
@@ -406,16 +404,14 @@ module IdUast : sig
   }
 
   type val_spec = {
-    sp_header : spec_header;
+    sp_header : spec_header option;
     sp_pre : term list;
-    sp_checks : term list;
     sp_post : term list;
-    sp_xpost : xpost list;
-    sp_writes : term list;
-    sp_consumes : term list;
+    sp_writes : qualid list;
+    sp_consumes : qualid list;
+    sp_produces : qualid list;
     sp_diverge : bool;
     sp_pure : bool;
-    sp_equiv : string list;
     sp_text : string;
     sp_loc : Location.t;
   }

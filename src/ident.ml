@@ -43,7 +43,7 @@ module Tag : ID = struct
   (** Invariant : two identifiers belong to the same [project] , they cannot
       have the same integer identifier. *)
 
-  let project_name = ref ""
+  let project_name = ref "##PRIMITIVES##"
   let equal x y = x.id = y.id && x.project = y.project
   let hash x = x.id
   let set_project_name nm = project_name := nm

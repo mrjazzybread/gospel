@@ -31,7 +31,8 @@
     sp_header = None;
     sp_pre = [];
     sp_post = [];
-    sp_writes = [];
+    sp_modifies = [];
+    sp_preserves = [];
     sp_consumes = [];
     sp_produces = [];
     sp_diverge = false;
@@ -55,6 +56,7 @@
   let combine_spec s1 s2 =
     {
       s1 with sp_post = s2.sp_post;
+	      sp_produces = s2.sp_produces;
     }
 %}
 
@@ -96,9 +98,9 @@
 %token CONJ AMPAMP ARROW BAR BARBAR COLON COLONCOLON COMMA DOT DOTDOT
 %token EOF EQUAL
 %token LRARROW LEFTBRC LEFTBRCCOLON LEFTPAR LEFTBRCRIGHTBRC
-%token LEFTSQ LTGT DISJ QUESTION RIGHTBRC COLONRIGHTBRC RIGHTPAR RIGHTSQ SEMICOLON
+%token LEFTSQ LTGT DISJ RIGHTBRC COLONRIGHTBRC RIGHTPAR RIGHTSQ SEMICOLON
 %token LEFTSQRIGHTSQ
-%token STAR TILDE UNDERSCORE
+%token STAR UNDERSCORE
 (* priorities *)
 
 %nonassoc IN
@@ -285,11 +287,9 @@ val_spec_own:
 
 val_spec_pre:
 | MODIFIES wr=val_spec_own bd=val_spec_pre_empty
-  { { bd with sp_writes = wr @ bd.sp_writes } }
+  { { bd with sp_modifies = wr @ bd.sp_modifies } }
 | CONSUMES cs=val_spec_own bd=val_spec_pre_empty
   { { bd with sp_consumes = cs @ bd.sp_consumes } }
-| PRODUCES pr=val_spec_own bd=val_spec_pre_empty
-  { { bd with sp_produces = pr @ bd.sp_produces } }
 | REQUIRES t=term bd=val_spec_pre_empty
   { { bd with sp_pre = t :: bd.sp_pre } }
 | PURE bd=val_spec_pre_empty
@@ -305,9 +305,9 @@ val_spec_pre_empty:
   { bd }
 
 val_spec_header:
-| LET ret=ret_name nm=lident_rich args=fun_arg+
+| LET ret=ret_name EQUAL nm=lident_rich args=fun_arg+
   { { sp_hd_nm = nm; sp_hd_ret = ret; sp_hd_args = args } }
-| LET ret=ret_name arg1=fun_arg nm=op_symbol arg2=fun_arg
+| LET ret=ret_name EQUAL arg1=fun_arg nm=op_symbol arg2=fun_arg
   { let sp_hd_nm = Preid.create ~loc:(mk_loc $loc(nm)) nm in
     { sp_hd_nm; sp_hd_ret = ret; sp_hd_args = [ arg1; arg2 ] } }
 ;
@@ -315,6 +315,8 @@ val_spec_header:
 val_spec_post:
 | ENSURES t=term bd=val_spec_post_empty
   { { bd with sp_post = t :: bd.sp_post} }
+| PRODUCES pr=val_spec_own bd=val_spec_post_empty
+  { { bd with sp_produces = pr @ bd.sp_produces } }
 
 val_spec_post_empty:
 | (* epsilon *) { empty_vspec }
@@ -322,29 +324,27 @@ val_spec_post_empty:
 
 fun_arg:
 | LEFTPAR RIGHTPAR
-  { Lunit }
+  { Lunit (mk_loc $loc) }
 | id = lident
-  { Lnone id }
-| TILDE id = lident
-  { Lnamed id }
-| QUESTION id = lident
-  { Loptional id }
+  { Lvar id }
 | LEFTSQ id=lident COLON ty=typ RIGHTSQ
   { Lghost (id, ty) }
 ;
 
 ret_value:
 | id = lident
-  { Lnone id }
+  { Lvar id }
 | LEFTSQ id=lident COLON ty=typ RIGHTSQ
   { Lghost (id, ty) }
 ;
 
 ret_name:
-| LEFTPAR l=comma_list(ret_value) RIGHTPAR EQUAL
+| LEFTPAR RIGHTPAR
+  { [ Lunit (mk_loc $loc) ] }
+| LEFTPAR l=comma_list(ret_value) RIGHTPAR
   { l }
-| l=comma_list(ret_value) EQUAL { l }
-| UNDERSCORE EQUAL { [] };
+| l=comma_list(ret_value) { l }
+| UNDERSCORE { [ Lwild ] };
 
 params:
 | p = param  { p }

@@ -23,10 +23,9 @@ module ParseUast : sig
     | PTarrow of pty * pty
 
   type labelled_arg =
-    | Lunit
-    | Lnone of id
-    | Loptional of id
-    | Lnamed of id
+    | Lwild
+    | Lunit of Location.t
+    | Lvar of id
     | Lghost of id * pty
 
   (* Patterns *)
@@ -82,8 +81,6 @@ module ParseUast : sig
 
   (* Specification *)
 
-  type xpost = Location.t * (qualid * (pattern * term) option) list
-
   type spec_header = {
     sp_hd_nm : id;
     (* header name *)
@@ -96,7 +93,8 @@ module ParseUast : sig
     sp_header : spec_header option;
     sp_pre : term list;
     sp_post : term list;
-    sp_writes : qualid list;
+    sp_modifies : qualid list;
+    sp_preserves : qualid list;
     sp_consumes : qualid list;
     sp_produces : qualid list;
     sp_diverge : bool;
@@ -144,12 +142,12 @@ module ParseUast : sig
   (* Modified OCaml constructs with specification attached *)
 
   type s_val_description = {
-    vname : string loc;
-    vtype : core_type;
+    vname : id;
+    vtype : pty;
     vprim : string list;
     vattributes : attributes;
     (* ... [@@id1] [@@id2] *)
-    vspec : val_spec option;
+    vspec : val_spec;
     (* specification *)
     vloc : Location.t;
   }
@@ -225,12 +223,6 @@ module ParseUast : sig
     (* module X : MT *)
     | Sig_recmodule of s_module_declaration list
     (* module rec X1 : MT1 and ... and Xn : MTn *)
-    | Sig_modtype of s_module_type_declaration
-    (* module type S = MT
-     module type S *)
-    | Sig_modtypesubst of s_module_type_declaration
-    (* module type S :=  ...  *)
-    (* these were not modified *)
     | Sig_modsubst of module_substitution
     (* module X := M *)
     | Sig_exception of exception_decl
@@ -253,29 +245,7 @@ module ParseUast : sig
 
   and s_signature_item = { sdesc : s_signature_item_desc; sloc : Location.t }
   and s_signature = s_signature_item list
-
-  and s_module_type_desc =
-    | Mod_ident of Longident.t loc
-    (* S *)
-    | Mod_signature of s_signature
-    (* sig ... end *)
-    | Mod_functor of s_functor_parameter * s_module_type
-    (* functor(X : MT1) -> MT2 *)
-    | Mod_with of s_module_type * s_with_constraint list
-    (* MT with ... *)
-    | Mod_typeof of module_expr
-    (* module type of ME *)
-    | Mod_extension of extension
-    (* [%id] *)
-    | Mod_alias of Longident.t loc
-  (* (module M) *)
-
-  and s_functor_parameter =
-    | Unit
-    (* () *)
-    | Named of string option loc * s_module_type
-  (* (X : MT)          Some X, MT
-   (_ : MT)          None, MT *)
+  and s_module_type_desc = Mod_signature of s_signature
 
   and s_module_type = {
     mdesc : s_module_type_desc;
@@ -289,14 +259,6 @@ module ParseUast : sig
     mdattributes : attributes;
     (* ... [@@id1] [@@id2] *)
     mdloc : Location.t;
-  }
-
-  and s_module_type_declaration = {
-    mtdname : string loc;
-    mtdtype : s_module_type option;
-    mtdattributes : attributes;
-    (* ... [@@id1] [@@id2] *)
-    mtdloc : Location.t;
   }
 end
 
@@ -317,7 +279,11 @@ module IdUast : sig
     | PTtuple of pty list
     | PTarrow of pty * pty
 
-  and app_info = { app_qid : qualid; app_alias : pty option }
+  and app_info = {
+    app_qid : qualid;
+    app_alias : pty option;
+    app_model : pty option;
+  }
   (** For every type application the user writes, we also keep track of the
       alias for that type. We need the type alias for the type checking phase
       and we need the original annotation for the so that we preserve what the
@@ -325,14 +291,10 @@ module IdUast : sig
       application does not have a type alias.
 
       Invariant : If a type application has the type alias [t], all type
-      applications used within [t] will not have any aliases. *)
+      applications used within [t] will not have any aliases.
 
-  type labelled_arg =
-    | Lunit
-    | Lnone of id
-    | Loptional of id
-    | Lnamed of id
-    | Lghost of id * pty
+      Invariant: If a type application has the model [t], all type application
+      used within [t] will not have any models. *)
 
   (* Patterns *)
 
@@ -393,23 +355,30 @@ module IdUast : sig
 
   (* Specification *)
 
-  type xpost = Location.t * (qualid * (pattern * term) option) list
+  type sp_var =
+    | Unnamed
+    | Ghost of id * pty (* Ghost variable *)
+    | OCaml of {
+        var_name : id; (* Variable name *)
+        ty_ocaml : pty; (* OCaml type of the variable. *)
+        ty_gospel : pty option; (* Gospel type of the variable. *)
+        prod : bool;
+        (* Flag indicating if the function receives ownership of the value. *)
+        cons : bool;
+        (* Flag indicating if the function returns ownership of the value. *)
+        ro : bool;
+            (* Read only flag. If [false], the variable is modified
+           by the function.
 
-  type spec_header = {
-    sp_hd_nm : id;
-    (* header name *)
-    sp_hd_ret : labelled_arg list;
-    (* Can only be LNone or LGhost *)
-    sp_hd_args : labelled_arg list; (* header arguments' names *)
-  }
+           Remark: If this [sp_var] value refers to a return
+           value, [ro] is [true]. *)
+      }  (** Represents the argument or return value for an OCaml function. *)
 
   type val_spec = {
-    sp_header : spec_header option;
+    sp_args : sp_var list;
+    sp_rets : sp_var list;
     sp_pre : term list;
     sp_post : term list;
-    sp_writes : qualid list;
-    sp_consumes : qualid list;
-    sp_produces : qualid list;
     sp_diverge : bool;
     sp_pure : bool;
     sp_text : string;
@@ -445,12 +414,12 @@ module IdUast : sig
   (* Modified OCaml constructs with specification attached *)
 
   type s_val_description = {
-    vname : string loc;
-    vtype : core_type;
+    vname : id;
+    vtype : pty;
     vprim : string list;
     vattributes : attributes;
     (* ... [@@id1] [@@id2] *)
-    vspec : val_spec option;
+    vspec : val_spec;
     (* specification *)
     vloc : Location.t;
   }
@@ -486,23 +455,6 @@ module IdUast : sig
     tloc : Location.t;
   }
 
-  type s_with_constraint =
-    | Wtype of Longident.t loc * s_type_declaration
-    (* with type X.t = ...
-
-     Note: the last component of the longident must match
-     the name of the type_declaration. *)
-    | Wmodule of Longident.t loc * Longident.t loc
-    (* with module X.Y = Z *)
-    | Wtypesubst of Longident.t loc * s_type_declaration
-    (* with type X.t := ..., same format as [Pwith_type] *)
-    | Wmodtypesubst of longident_loc * module_type
-    (* with module type X.Y := sig end *)
-    | Wmodtype of longident_loc * module_type
-    (* with module type X.Y = Z *)
-    | Wmodsubst of Longident.t loc * Longident.t loc
-  (* with module X.Y := Z *)
-
   type gospel_signature =
     | Sig_function of function_
     | Sig_axiom of axiom
@@ -530,26 +482,8 @@ module IdUast : sig
     (* type t1 += ... *)
     | Sig_module of s_module_declaration
     (* module X : MT *)
-    | Sig_recmodule of s_module_declaration list
-    (* module rec X1 : MT1 and ... and Xn : MTn *)
-    | Sig_modtype of s_module_type_declaration
-    (* module type S = MT
-     module type S *)
-    | Sig_modtypesubst of s_module_type_declaration
-    (* module type S :=  ...  *)
-    (* these were not modified *)
-    | Sig_modsubst of module_substitution
-    (* module X := M *)
     | Sig_exception of exception_decl
     (* exception C of T *)
-    | Sig_open of open_description
-    (* open X *)
-    | Sig_include of include_description
-    (* include MT *)
-    | Sig_class of class_description list
-    (* class c1 : ... and ... and cn : ... *)
-    | Sig_class_type of class_type_declaration list
-    (* class type ct1 = ... and ... and ctn = ... *)
     | Sig_attribute of attribute
     (* [@@@id] *)
     | Sig_extension of extension * attributes
@@ -560,29 +494,7 @@ module IdUast : sig
 
   and s_signature_item = { sdesc : s_signature_item_desc; sloc : Location.t }
   and s_signature = s_signature_item list
-
-  and s_module_type_desc =
-    | Mod_ident of Longident.t loc
-    (* S *)
-    | Mod_signature of s_signature
-    (* sig ... end *)
-    | Mod_functor of s_functor_parameter * s_module_type
-    (* functor(X : MT1) -> MT2 *)
-    | Mod_with of s_module_type * s_with_constraint list
-    (* MT with ... *)
-    | Mod_typeof of module_expr
-    (* module type of ME *)
-    | Mod_extension of extension
-    (* [%id] *)
-    | Mod_alias of Longident.t loc
-  (* (module M) *)
-
-  and s_functor_parameter =
-    | Unit
-    (* () *)
-    | Named of string option loc * s_module_type
-  (* (X : MT)          Some X, MT
-   (_ : MT)          None, MT *)
+  and s_module_type_desc = Mod_signature of s_signature
 
   and s_module_type = {
     mdesc : s_module_type_desc;

@@ -180,10 +180,6 @@ rule token = parse
       { COMMA }
   | ";"
       { SEMICOLON }
-  | "~"
-      { TILDE }
-  | "?"
-      { QUESTION }
   | "."
       { DOT }
   | ":"

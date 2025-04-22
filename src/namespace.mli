@@ -72,17 +72,32 @@ val add_exn : env -> Ident.t -> IdUast.pty list -> env
 
 val add_mod : env -> Ident.t -> mod_defs -> env
 
-val resolve_alias :
-  ocaml:bool -> mod_defs -> ParseUast.qualid -> IdUast.pty list -> IdUast.pty
-(** If the type [q] in an alias such as
+val resolve_application :
+  ocaml:bool ->
+  mod_defs ->
+  ParseUast.qualid ->
+  IdUast.pty list ->
+  IdUast.app_info
+(** If the type name [q] in an alias such as
 
-    [type (tv_1, tv_2, ...) t = alias]
+    [type (tv_1, tv_2, ...) q = alias]
 
-    [resolve_alias env q l] returns the type expression [alias] where each
-    occurrence of [tv_i] has been replaced with [List.nth l i]. If [q] is not an
-    alias, return [q] applied to [l]. This function will raise a Gospel
-    exception if the size of list [l] is not equal to the amount of type
-    parameters this type receives. *)
+    [resolve_application ~ocaml env q l], where [l] are the type parameters of
+    [q]. returns a type application where the [app_alias] field is the
+    expression [Some alias] where each occurrence of [tv_i] has been replaced
+    with [List.nth l i]. If [q] is not an alias the [app_alias] field is [None].
+
+    Similarly, if [q] and each type parameter in [l] has a logical
+    representation [model], [app_model] is set to [model] where every occurrence
+    [tv_i] has been replaced with the logical representation of [List.nth l i].
+    Otherwise, [None].
+
+    The [ocaml] flag is used to indicate which namespace should be searched.
+
+    This function will raise a Gospel exception if the size of list [l] is not
+    equal to the amount of type parameters this type receives.
+
+    Postcondition: If [ocaml] is [false], [app_model] will always be [None]. *)
 
 val fun_qualid :
   mod_defs -> ParseUast.qualid -> IdUast.qualid * Ident.t list * IdUast.pty
@@ -111,13 +126,6 @@ val get_field_info :
     - The identifier for the record type the label [id] belong to.
     - The type parameters for the record type. *)
 
-val get_lens_info :
-  mod_defs -> ParseUast.qualid -> IdUast.qualid * Ident.t * IdUast.pty option
-(** [get_lens_info defs env q] Receives an identifier for a lens and returns:
-    - The resolved identifier for [q].
-    - The identifier for the OCaml type that this lens targets.
-    - The type of the model. *)
-
 val get_exn_info :
   mod_defs -> ParseUast.qualid -> IdUast.qualid * IdUast.pty list
 (** [get_exn_info defs id] receives an exception identifier [id] and the types
@@ -136,6 +144,9 @@ val empty_env : env
 (** The empty environment. The only names in scope are primitive Gospel types.
     This should be the initial environment when processing the Gospel standard
     library. *)
+
+val unit_id : Ident.t
+(** The unique identifier for the unit type. *)
 
 val init_env : ?ocamlprimitives:mod_defs -> mod_defs -> env
 (** [init_env stdlib] receives the definitions in the Gospel standard library

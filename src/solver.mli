@@ -16,5 +16,18 @@ open Uast
 val axiom : Ident.t list -> IdUast.axiom -> Tast2.axiom
 val function_ : Ident.t list -> IdUast.function_ -> Tast2.function_ * IdUast.pty
 
+val spec :
+  Ident.t list ->
+  (* Type variables *)
+  IdUast.sp_var list ->
+  (* Arguments*)
+  IdUast.sp_var list ->
+  (* Return values *)
+  IdUast.term list ->
+  (* Pre conditions *)
+  IdUast.term list ->
+  (* Post conditions *)
+  Tast2.term list * Tast2.term list
+
 val invariant :
   Ident.t list -> Ident.t -> IdUast.pty -> IdUast.term -> Tast2.term

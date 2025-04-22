@@ -35,6 +35,7 @@ type term_node =
   | Tattr of string * term
   | Tcast of term * Uast.IdUast.pty
   | Tscope of Uast.IdUast.qualid * term
+  | Told of term
 
 and term = { t_node : term_node; t_ty : ty; t_loc : Location.t }
 
@@ -98,6 +99,28 @@ type s_type_declaration = {
 let mk_tdecl tname tparams tkind tprivate tmanifest tattributes tspec tloc =
   { tname; tparams; tkind; tprivate; tmanifest; tattributes; tspec; tloc }
 
+type val_spec = {
+  sp_args : IdUast.sp_var list;
+  sp_rets : IdUast.sp_var list;
+  sp_pre : term list;
+  sp_post : term list;
+  sp_diverge : bool;
+  sp_pure : bool;
+  sp_text : string;
+  sp_loc : Location.t;
+}
+
+type s_val_description = {
+  vname : Ident.t;
+  vtype : ty;
+  vprim : string list;
+  vattributes : Ppxlib.attributes;
+  (* ... [@@id1] [@@id2] *)
+  vspec : val_spec;
+  (* specification *)
+  vloc : Location.t;
+}
+
 type s_module_type_desc = Mod_signature of s_signature
 
 and s_module_declaration = {
@@ -115,6 +138,7 @@ and s_module_type = {
 }
 
 and s_signature_item_desc =
+  | Sig_value of s_val_description
   | Sig_function of function_
   | Sig_axiom of axiom
   | Sig_module of s_module_declaration

@@ -63,6 +63,188 @@
   (:checker %{project_root}/test/utils/testchecker.exe)
        _gospel)
  (action
+  (with-outputs-to duplicate_header_args1.mli.output
+   (run %{checker} %{dep:duplicate_header_args1.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff duplicate_header_args1.mli duplicate_header_args1.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to duplicate_header_args2.mli.output
+   (run %{checker} %{dep:duplicate_header_args2.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff duplicate_header_args2.mli duplicate_header_args2.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to duplicate_header_args3.mli.output
+   (run %{checker} %{dep:duplicate_header_args3.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff duplicate_header_args3.mli duplicate_header_args3.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to duplicate_header_args4.mli.output
+   (run %{checker} %{dep:duplicate_header_args4.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff duplicate_header_args4.mli duplicate_header_args4.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to duplicate_header_rets1.mli.output
+   (run %{checker} %{dep:duplicate_header_rets1.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff duplicate_header_rets1.mli duplicate_header_rets1.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to duplicate_header_rets2.mli.output
+   (run %{checker} %{dep:duplicate_header_rets2.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff duplicate_header_rets2.mli duplicate_header_rets2.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to duplicate_header_rets3.mli.output
+   (run %{checker} %{dep:duplicate_header_rets3.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff duplicate_header_rets3.mli duplicate_header_rets3.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to duplicate_header_rets4.mli.output
+   (run %{checker} %{dep:duplicate_header_rets4.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff duplicate_header_rets4.mli duplicate_header_rets4.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to duplicate_header_vars1.mli.output
+   (run %{checker} %{dep:duplicate_header_vars1.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff duplicate_header_vars1.mli duplicate_header_vars1.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to duplicate_header_vars2.mli.output
+   (run %{checker} %{dep:duplicate_header_vars2.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff duplicate_header_vars2.mli duplicate_header_vars2.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to duplicate_header_vars3.mli.output
+   (run %{checker} %{dep:duplicate_header_vars3.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff duplicate_header_vars3.mli duplicate_header_vars3.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to duplicate_header_vars4.mli.output
+   (run %{checker} %{dep:duplicate_header_vars4.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff duplicate_header_vars4.mli duplicate_header_vars4.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to duplicate_header_vars5.mli.output
+   (run %{checker} %{dep:duplicate_header_vars5.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff duplicate_header_vars5.mli duplicate_header_vars5.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
   (with-outputs-to duplicate_label1.mli.output
    (run %{checker} %{dep:duplicate_label1.mli}))))
 
@@ -224,6 +406,20 @@
  (alias runtest)
  (action
   (diff duplicate_pred_args4.mli duplicate_pred_args4.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to duplicate_produces1.mli.output
+   (run %{checker} %{dep:duplicate_produces1.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff duplicate_produces1.mli duplicate_produces1.mli.output)))
 
 (rule
  (deps

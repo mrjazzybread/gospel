@@ -111,6 +111,7 @@ let type_declaration ~ocaml ns t =
 let rec signature_item_desc ns = function
   | Tast.Sig_type l -> List.concat_map (type_declaration ns ~ocaml:true) l
   | Sig_ghost_type l -> List.concat_map (type_declaration ns ~ocaml:false) l
+  | Sig_function f -> [ Function f ]
   | _ -> []
 
 and signature_item env s =

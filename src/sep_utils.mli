@@ -35,3 +35,9 @@ val change_id : (string -> string) -> Ident.t -> Ident.t
 val rep_pred : string -> string
 (** Receives the name of a type and generates the name of its representation
     predicate *)
+
+val inline_def : Sast.triple -> Sast.triple
+(** [inline_def t] inlines, when possible, the existential variables in the
+    postcondition of the triple [t]. This is done when the postcondition is a
+    term with the following shape: [exists m'. P(e1, m') * ... * m' = e2 * ...]
+    which is then simplified into [P(e1, e2)] *)

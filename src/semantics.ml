@@ -210,7 +210,7 @@ let val_des des spec ns =
   let triple_post = (updated_vars @ ret_vars, triple_post) in
   (* Gets the program value for the argument. *)
   let to_prog_arg = fun arg -> arg.arg_val in
-  Triple
+  let def =
     {
       triple_name = des.vname;
       triple_args = List.map to_prog_arg args;
@@ -219,6 +219,8 @@ let val_des des spec ns =
       triple_poly = des.vtvars;
       triple_post;
     }
+  in
+  Triple (Sep_utils.inline_def def)
 
 (** Transforms a single Gospel top level declaration into potentially several
     Separation Logic definitions *)

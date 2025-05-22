@@ -174,7 +174,7 @@ let val_des des spec ns =
       triple_post;
     }
   in
-  Triple def
+  Triple (Sep_utils.inline_def def)
 
 (** Transforms a single Gospel top level declaration into potentially several
     Separation Logic definitions *)

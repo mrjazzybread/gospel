@@ -232,6 +232,16 @@ let signature_item_desc ns = function
       match v.vspec with
       | Some spec -> [ Val v; val_des v spec ns ]
       | None -> [ Val v ])
+  | Sig_axiom axiom ->
+      let axiom =
+        {
+          sax_name = axiom.ax_name;
+          sax_tvars = axiom.ax_tvars;
+          sax_loc = axiom.ax_loc;
+          sax_term = [ Logical axiom.ax_term ];
+        }
+      in
+      [ Axiom axiom ]
   | _ -> []
 
 let signature_item env s =

@@ -224,7 +224,7 @@ let val_des des spec ns =
 
 (** Transforms a single Gospel top level declaration into potentially several
     Separation Logic definitions *)
-let signature_item_desc ns = function
+let rec signature_item_desc ns = function
   | Tast.Sig_type l -> List.concat_map (type_declaration ns ~ocaml:true) l
   | Sig_ghost_type l -> List.concat_map (type_declaration ns ~ocaml:false) l
   | Sig_function f -> [ Function f ]
@@ -242,9 +242,16 @@ let signature_item_desc ns = function
         }
       in
       [ Axiom axiom ]
+  | Sig_module m -> (
+      match m.mdtype.mdesc with
+      | Mod_signature s ->
+          let nm = m.mdname in
+          let f s = signature_item ns s in
+          let defs = List.concat_map f s in
+          [ Module (nm, defs) ])
   | _ -> []
 
-let signature_item env s =
+and signature_item env s =
   let sigs = signature_item_desc env s.sdesc in
   let sigs = List.map (fun sep -> { d_node = sep; d_loc = s.sloc }) sigs in
   sigs

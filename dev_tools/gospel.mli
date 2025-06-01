@@ -29,3 +29,7 @@ val tast : verbose:bool -> string list -> Tast.s_signature file list
     - Any of the [.mli] files do not parse or type check.
     - Any of the [.gospel] files are not compatible with the current version of
       Gospel. *)
+
+val sep : verbose:bool -> string list -> Sast.definitions file list
+(** [sep ~verbose files] is the same as the [tast] function, but instead
+    produces the typed semantics of the received Gospel files. *)

@@ -120,3 +120,9 @@ let tast ~verbose files =
 
   let env = Namespace.init_env ~ocamlprimitives stdlib in
   check ~verbose [] env files
+
+let sep ~verbose files =
+  let tast = tast files in
+  List.map
+    (fun x -> { x with fdefs = Semantics.process_sigs x.fdefs })
+    (tast ~verbose)

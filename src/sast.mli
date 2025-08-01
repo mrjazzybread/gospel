@@ -9,9 +9,9 @@
 (**************************************************************************)
 
 (** Defines a Separation Logic language that used to define the semantics of
-    Gospel*)
+    Gospel *)
 
-type psymbol = { ps_name : Ident.t; ps_args : Id_uast.pty list }
+type psymbol = { ps_name : Ident.t; ps_args : Id_uast.pty list; ps_sep : bool }
 
 type sep_terms = sep_term list
 (** Conjunction of Separation Logic terms *)
@@ -40,14 +40,9 @@ type triple_val =
 type triple = {
   triple_name : Ident.t;  (** Name of the function. *)
   triple_poly : Ident.t list;  (** The function's type arguments. *)
-  triple_args : Tast.tsymbol option list;  (** The function's arguments. *)
-  triple_vars : Tast.tsymbol list;
-      (** All the universally quantified variables in the specification.
-          Includes all the variables within [triple_args]. *)
-  triple_rets : Tast.tsymbol option list;
-      (** The return values for the function. *)
+  triple_args : triple_val list;  (** The function's arguments. *)
+  triple_rets : triple_val list;  (** The return values for the function. *)
   triple_pre : sep_terms;
-  triple_type : Id_uast.pty;
   triple_post : Tast.tsymbol list * sep_terms;
       (** The postcondtion terms and the existentially quantified variables. *)
 }
@@ -90,6 +85,7 @@ type definition_node =
   | Pred of rep_pred
   | Type of type_decl
   | Triple of triple
+  | Val of Tast.s_val_description
   | Axiom of axiom
   | Function of Tast.function_
   | Module of Ident.t * definition list

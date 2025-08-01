@@ -23,9 +23,10 @@ val get_pred : namespace -> Id_uast.pty -> Sast.psymbol option
       If [s] is a type whose logical model is isomorphic to its OCaml
       representation or [s] is not in scope. *)
 
-val map_pred : namespace -> Ident.Tag.t -> Ident.t -> Id_uast.pty list -> unit
-(** [map_pred m tag s l] maps [tag] to a representation predicate named [s] that
-    takes arguments of type [l]. *)
+val map_pred :
+  namespace -> Ident.Tag.t -> Ident.t -> bool -> Id_uast.pty list -> unit
+(** [map_pred m tag s is_mutable l] maps [tag] to a representation predicate
+    named [s] that takes arguments of type [l]. *)
 
 val change_id : (string -> string) -> Ident.t -> Ident.t
 (** Returns a fresh identifier where the [id_str] field of [change_id f id] is

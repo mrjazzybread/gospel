@@ -24,8 +24,8 @@ let get_pred ns ty =
       Env.find_opt ns id.id_tag
   | _ -> None
 
-let map_pred ns tid ps_name ps_args =
-  let ps = { ps_name; ps_args } in
+let map_pred ns tid ps_name is_mutable ps_args =
+  let ps = { ps_name; ps_args; ps_sep = is_mutable } in
   Env.add ns tid ps
 
 let change_id map id = Ident.mk_id (map id.id_str) ~loc:id.id_loc

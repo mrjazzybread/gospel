@@ -122,7 +122,10 @@ let tast ~verbose files =
   check ~verbose [] env files
 
 let sep ~verbose files =
-  let tast = tast files in
+  let tast = tast files ~verbose:false in
   List.map
-    (fun x -> { x with fdefs = Semantics.process_sigs x.fdefs })
-    (tast ~verbose)
+    (fun x ->
+      let sdef = Semantics.process_sigs x.fdefs in
+      if verbose then Sast_printer.definitions fmt sdef;
+      { x with fdefs = sdef })
+    tast

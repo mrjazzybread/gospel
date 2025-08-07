@@ -44,6 +44,12 @@ let tc =
   let term = Term.(const Check.run $ verbose $ intfs) in
   Cmd.v info term
 
+let sep =
+  let doc = "Gospel Separation Logic Semantics" in
+  let info = Cmd.info "sep" ~doc in
+  let term = Term.(const Sep.run $ intfs) in
+  Cmd.v info term
+
 let pps =
   let doc = "Gospel preprocessor." in
   let info = Cmd.info "pps" ~doc in
@@ -65,5 +71,5 @@ let () =
       | Some v -> Build_info.V1.Version.to_string v)
   in
   let info = Cmd.info "gospel" ~doc ~version in
-  let commands = Cmd.group info [ tc; wc; pps ] in
+  let commands = Cmd.group info [ tc; wc; sep; pps ] in
   Stdlib.exit (Cmd.eval commands)

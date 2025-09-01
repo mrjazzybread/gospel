@@ -102,6 +102,7 @@
 %token LEFTSQ LTGT DISJ RIGHTBRC COLONRIGHTBRC RIGHTPAR RIGHTSQ SEMICOLON
 %token LEFTSQRIGHTSQ
 %token STAR UNDERSCORE
+%token EMPTY
 (* priorities *)
 
 %nonassoc IN
@@ -500,11 +501,7 @@ term_dot_:
 term_block_:
 | LEFTPAR t=term RIGHTPAR                           { t.term_desc }
 | LEFTPAR RIGHTPAR                                  { Ttuple [] }
-| LEFTSQRIGHTSQ
-    { Tvar (Qid (mk_pid "[]"  $loc)) }
 | LEFTBRC r = field_list1(term) RIGHTBRC            { Trecord r }
-| LEFTBRCRIGHTBRC
-    { Tvar (Qid (mk_pid ~fixity:Mixfix ( "{}") $loc)) }
 | LEFTBRCCOLON t=term COLONRIGHTBRC
     { let id = mk_pid ~fixity:Mixfix ("{:_:}") $loc in
       mk_op_apply id [t] }
@@ -641,6 +638,8 @@ prefix_op:
 
 lident:
 | id = LIDENT        { mk_pid id $loc }
+| EMPTY              { mk_pid "∅" $loc }
+| LEFTSQRIGHTSQ      { mk_pid "[]" $loc }
 ;
 
 uident:

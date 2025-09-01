@@ -194,24 +194,32 @@ rule token = parse
       { RIGHTPAR }
   | "->"
       { ARROW }
-  | "<->"
+  | "<->" | "↔"
       { LRARROW }
   | "&&"
       { AMPAMP }
   | "||"
       { BARBAR }
-  | "/\\"
+  | "/\\" | "∧"
       { CONJ }
-  | "\\/"
+  | "\\/" | "∨"
       { DISJ }
+  | "∅"
+      { EMPTY }
+  | "λ"
+      { FUN }
   | ".."
       { DOTDOT }
   | "|"
       { BAR }
   | "="
       { EQUAL }
-  | "<>"
+  | "<>" | "≠"
       { LTGT }
+  | "∀"
+      { FORALL }
+  | "∃"
+      { EXISTS }
   | "True"
       { TRUEPROP }
   | "False"
@@ -247,6 +255,10 @@ rule token = parse
       { OPPREF s }
   | op_char_1234* op_char_1 op_char_1234* as s
       { OP1 s }
+  | "≤"
+      { OP1 "<=" }
+  | "≥"
+      { OP1 ">=" }
   | op_char_234*  op_char_2 op_char_234*  as s
       { OP2 s }
   | op_char_34*   op_char_3 op_char_34*  as s
@@ -261,6 +273,8 @@ rule token = parse
       { LET3 s }
   | "let" op_char_4+ as s
       { LET4 s }
+  | "∈" as s | "∉" as s | "∪" as s | "∩" as s | "⋅" as s | "⊂" as s | "≠" as s | "∖" as s
+      { OP4 s }
   | "\""
       { STRING (string (Buffer.create 128) lexbuf) }
   | eof

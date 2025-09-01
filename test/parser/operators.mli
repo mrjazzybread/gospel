@@ -52,3 +52,5 @@ end
 (*@ axiom let_some :
       forall o1 o2.
       ( let* ) o1 (fun x -> x) = ( let* ) o2 (fun x -> x) *)
+
+(*@ function set : 'a set = { v | True } *)

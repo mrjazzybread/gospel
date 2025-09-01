@@ -8,15 +8,14 @@ Require Import Coq.ZArith.BinIntDef.
 
 Delimit Scope Z_scope with Z.
 
-Require gospelstdlib_mli.
-Module Stdlib.
+Require gospelstdlib_mli_tlc.
 
-  Module Gospelstdlib : gospelstdlib_mli.Stdlib.
+Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
 
     Definition sequence A := list A.
 
     Definition bag A := A -> nat.
-    
+
     Definition set A := A -> Prop.
 
     Definition map A B := A -> B.
@@ -40,7 +39,7 @@ Module Stdlib.
     Parameter max_int : Z.
     Parameter min_int : Z.
     Definition app A {Ih:Inhab A} := @app A.
-    
+
     Definition seq_get
       {A} {Ih:Inhab A} (s : sequence A) (n : int) : A :=
       s[n].
@@ -64,16 +63,16 @@ Module Stdlib.
       unfold app in * ;
       unfold seq_get in *.
 
-    
+
     Parameter of_list :
       forall a : Type,
       forall {aIh : Inhab a},
         list a -> sequence a.
-    
+
     Definition seq_sub {A} {Ih : Inhab A} (s : sequence A) (i1 : Z) (i2 : Z) : sequence A :=
       LibListZ.take (i2 - i1) (LibListZ.drop i1 s).
-    
-    
+
+
     Definition seq_sub_l  (A : Type) {Ih : Inhab A} (s : sequence A) (
         i : Coq.Numbers.BinNums.Z
       ) : sequence A:=
@@ -87,7 +86,6 @@ Module Stdlib.
     Definition map_set  (A : Type) (B : Type) {Ih : Inhab A} {Ih : Inhab B} (f : A -> B) (x : A) (y : B) : A -> B:=
       fun arg : A =>
         if classicT (Coq.Init.Logic.eq arg x) then y else f x.
-
 
     Definition monoid {A} `{Inhab A} (f : A -> A -> A) (n : A) : Prop :=
       neutral_l f n /\ neutral_r f n /\ assoc f.
@@ -116,7 +114,7 @@ Module Stdlib.
       - intros [H1 [H2 H3]]. split.
         + intros x. rewrite H1. rewrite H2. auto.
         + auto.
-      - intros [H1 H2]. 
+      - intros [H1 H2].
         repeat split; intros x; specialize H1 with x as [H3 H4];
         try (rewrite H3); auto.
     Qed.
@@ -163,7 +161,7 @@ Module Stdlib.
         unfold in_range.
         tauto.
       Qed.
-            
+
       Definition length {A} {Ih : Inhab A} (s : sequence A) : Z :=
         LibListZ.length s.
 
@@ -178,7 +176,7 @@ Module Stdlib.
         unfold length.
         math.
       Qed.
-      
+
       Lemma append_length :
         forall A17 : Type,
         forall {Ih : Inhab A17},
@@ -193,7 +191,7 @@ Module Stdlib.
         rew_list.
         math.
       Qed.
-      
+
       Lemma append_elems_left :
         forall A26 : Type,
         forall {Ih : Inhab A26},
@@ -212,7 +210,7 @@ Module Stdlib.
         + auto.
         + math.
       Qed.
-      
+
       Lemma append_elems_right :
         forall a36 : Type,
         forall {a36Ih : Inhab a36},
@@ -245,7 +243,7 @@ Module Stdlib.
       Proof.
         auto.
       Qed.
-        
+
       Lemma subseq_r :
         forall {a44 : Type},
         forall {Ih_a44 : Inhab a44},
@@ -255,7 +253,7 @@ Module Stdlib.
       Proof.
         auto.
       Qed.
-      
+
       Lemma subseq :
         forall {a50 : Type},
         forall {_Ga50 : Inhab a50},
@@ -278,9 +276,9 @@ Module Stdlib.
         - rewrite read_drop; try (split; math).
           f_equal.
           math.
-        - rewrite LibListZ.length_drop; math.        
+        - rewrite LibListZ.length_drop; math.
       Qed.
-        
+
       Lemma subseq_len :
         forall {a60 : Type},
         forall {Ih_a60 : Inhab a60},
@@ -299,7 +297,7 @@ Module Stdlib.
         rewrite LibListZ.length_take; try math.
         rewrite LibListZ.length_drop; try math.
       Qed.
-        
+
       Fixpoint init_aux {A} (n : nat) (f : Z -> A) : sequence A :=
         match n with
         |O => nil
@@ -327,7 +325,7 @@ Module Stdlib.
         + simpl. rew_list.
           rewrite Ih. math.
       Qed.
-      
+
       Lemma init_length :
         forall A49 : Type,
         forall {Ih : Inhab A49},
@@ -392,7 +390,7 @@ Module Stdlib.
       Definition singleton (A : Type) {Ih : Inhab A} (x : A) : sequence A:=
         init (1)%Z (fun _ : Coq.Numbers.BinNums.Z => x).
 
-      
+
       Lemma singleton_def :
         forall {a82 : Type},
         forall {Ih_a82 : Inhab a82},
@@ -409,7 +407,7 @@ Module Stdlib.
         rewrite <- H1.
         auto.
       Qed.
-      
+
       Definition cons (A : Type) {Ih : Inhab A} (x : A) (s : sequence A) : sequence A:=
         x :: s.
 
@@ -425,7 +423,7 @@ Module Stdlib.
         rewrite If_r; try math.
         simpl. rew_list. auto.
       Qed.
-      
+
       Definition snoc (A : Type) {Ih : Inhab A}(s : sequence A) (x : A) : sequence A:=
         app s (singleton x).
 
@@ -438,7 +436,7 @@ Module Stdlib.
       Proof.
         auto.
       Qed.
-      
+
       Definition hd (A : Type) {Ih : Inhab A} (s : sequence A) : A:= seq_get s (0)%Z.
 
       Lemma hd_def :
@@ -449,7 +447,7 @@ Module Stdlib.
       Proof.
         auto.
       Qed.
-      
+
       Definition tl (A : Type){Ih : Inhab A} (s : sequence A) : sequence A:=
         seq_sub_l s (1)%Z.
 
@@ -476,7 +474,7 @@ Module Stdlib.
       Proof.
         auto.
       Qed.
-      
+
       Definition multiplicity {A}{Ih : Inhab A} (e : A) (s : sequence A) : Z :=
         LibListZ.count (fun x => x = e) s.
 
@@ -624,9 +622,9 @@ Module Stdlib.
         repeat (rewrite If_r; try math).
         unfold map.
         apply LibListZ.read_map. unfold length in *.
-        rew_index. split; auto.        
+        rew_index. split; auto.
       Qed.
-      
+
       Definition filter {A} {Ih : Inhab A} := @LibList.filter A.
 
       Lemma filter_elems :
@@ -641,21 +639,21 @@ Module Stdlib.
         unfold gt in *.
         unfold filter in *.
         induction s as [|e t IHt]; intros x H1 H2.
-        - inversion H1. 
+        - inversion H1.
         - rew_listx.
           inversion H1; subst; auto.
       Qed.
 
 
       Definition filter_map
-        {A} {B} {IhA : Inhab A} {IhB : Inhab B} 
+        {A} {B} {IhA : Inhab A} {IhB : Inhab B}
         (f : A -> option B) (s : sequence A) : sequence B :=
-        let g := 
-          fun x => 
-            match f x with 
+        let g :=
+          fun x =>
+            match f x with
             |Some x => x |None => arbitrary end in
         LibList.map g (LibList.filter (fun x => f x <> None) s).
-        
+
       Lemma filter_map_elems :
         forall {a707 : Type},
         forall {a708 : Type},
@@ -670,12 +668,12 @@ Module Stdlib.
         intros A B IhA IhB f s y.
         unfold filter_map.
         split; intros H1.
-        - destruct H1 as [x [H1 H2]]. 
+        - destruct H1 as [x [H1 H2]].
           apply mem_map' with x.
           + apply mem_filter; auto.
             rewrite H1. discriminate.
           + rewrite H1. auto.
-        - apply LibList.mem_Nth 
+        - apply LibList.mem_Nth
             with B (LibList.map (*very awkward :|*)
                       (fun x : A =>
                          match f x with
@@ -692,7 +690,7 @@ Module Stdlib.
           rewrite mem_filter_eq in H2.
           destruct H2 as [H2 H3].
           split; auto.
-          destruct (f x). 
+          destruct (f x).
           + rewrite H1. auto.
           + contradiction.
       Qed.
@@ -708,7 +706,7 @@ Module Stdlib.
       Proof.
         auto.
       Qed.
-      
+
       Fixpoint set_aux {A} (s : sequence A) (n : nat) (x : A) : sequence A :=
         match s, n with
         |nil, _ => arbitrary
@@ -734,7 +732,7 @@ Module Stdlib.
           destruct i; rew_listx; auto.
           rewrite Ih; math.
       Qed.
-        
+
       Lemma set_aux_elem :
         forall A {IhA : Inhab A} s (i : Z) (x : A),
           0 <= i < Z.to_nat (LibListZ.length s) ->
@@ -750,12 +748,12 @@ Module Stdlib.
             { math. }
             rewrite read_cons_pos; try math.
             rewrite A1.
-            rew_list in H2.          
+            rew_list in H2.
             rewrite Ih.
             * auto.
             * math.
       Qed.
-      
+
       Lemma set_elem :
         forall A121 : Type,
         forall {Ih : Inhab A121},
@@ -958,7 +956,7 @@ Module Stdlib.
         rew_listx.
         auto.
       Qed.
-      
+
       Lemma extensionality :
         forall A171 : Type,
         forall {Ih : Inhab A171},
@@ -974,7 +972,7 @@ Module Stdlib.
         unfold in_range.
         intros A IhA s1 s2 H1 H2.
         unfold le in *. unfold lt in *. unfold length in *.
-        unfold seq_get in *.        
+        unfold seq_get in *.
         apply eq_of_extens_range with IhA.
         auto.
         intros n. specialize H2 with n.
@@ -996,7 +994,7 @@ Module Stdlib.
         tauto.
       Qed.
 
-      Definition permut_sub {A} `{Inhab A} 
+      Definition permut_sub {A} `{Inhab A}
         (s1 : sequence A) (s2 : sequence A) (i : Z) (j : Z) :=
         permut (seq_sub s1 i j) (seq_sub s2 i j) /\
           eq (seq_sub_r s1 i) (seq_sub_r s2 i) /\
@@ -1037,7 +1035,7 @@ Module Stdlib.
         unfold multiplicity.
         math.
       Qed.
-        
+
       Definition empty {A} {aIh : Inhab A} := fun (_ : A) => 0%nat.
 
       Lemma empty_mult :
@@ -1048,10 +1046,10 @@ Module Stdlib.
       Proof.
         auto.
       Qed.
-      
+
       Definition init {A} `{Inhab A} (f : A -> Z) : bag A :=
         fun x => Z.to_nat(f x).
-      
+
       Lemma init_axiom :
         forall a182 : Type,
         forall {a182Ih : Inhab a182},
@@ -1063,7 +1061,7 @@ Module Stdlib.
         unfold multiplicity, init.
         math.
       Qed.
-      
+
       Definition add {A} `{Inhab A} (x : A) b : bag A :=
         fun y => If y = x then (1 + b y)%nat else b y.
 
@@ -1082,7 +1080,7 @@ Module Stdlib.
         rewrite If_l; auto.
         math.
       Qed.
-        
+
       Lemma add_mult_neg_x :
         forall a196 : Type,
         forall {a196Ih : Inhab a196},
@@ -1107,7 +1105,7 @@ Module Stdlib.
       Proof.
         auto.
       Qed.
-      
+
       Definition mem  (a : Type) { aIh : Inhab a } (x : a) (b : bag a) : Prop:=
         gt (multiplicity x b) (0)%Z.
 
@@ -1120,7 +1118,7 @@ Module Stdlib.
       Proof.
         tauto.
       Qed.
-      
+
       Definition remove {A} `{Inhab A} (x : A) b : bag A :=
         fun y => If y = x then Nat.pred (b y) else b y.
 
@@ -1139,7 +1137,7 @@ Module Stdlib.
         rewrite If_l; auto.
         math.
       Qed.
-      
+
       Lemma remove_mult_neg_x :
         forall a213 : Type,
         forall {a213Ih : Inhab a213},
@@ -1153,7 +1151,7 @@ Module Stdlib.
         unfold multiplicity, remove.
         rewrite If_r; auto.
       Qed.
-        
+
       Definition union {A} `{Inhab A} (b1 : bag A) b2 :=
         fun x => Nat.max (b1 x) (b2 x).
 
@@ -1171,10 +1169,10 @@ Module Stdlib.
         unfold union, multiplicity.
         math.
       Qed.
-        
+
       Definition sum {A} `{Inhab A} (b1 : bag A) b2 :=
-        fun x => (b1 x + b2 x)%nat.        
-        
+        fun x => (b1 x + b2 x)%nat.
+
       Lemma sum_all :
         forall a229 : Type,
         forall {a229Ih : Inhab a229},
@@ -1205,7 +1203,7 @@ Module Stdlib.
         unfold min, multiplicity, inter.
         math.
       Qed.
-      
+
       Definition diff {A} `{Inhab A} (b1 : bag A) b2 :=
         fun x => (b1 x - b2 x)%nat.
 
@@ -1222,7 +1220,7 @@ Module Stdlib.
         unfold multiplicity, max, minus, diff.
         math.
       Qed.
-        
+
       Definition disjoint  (a : Type) { aIh : Inhab a } (b : bag a) (
           b' : bag a
         ) : Prop:=
@@ -1242,7 +1240,7 @@ Module Stdlib.
       Proof.
         tauto.
       Qed.
-      
+
       Definition subset  (a : Type) { aIh : Inhab a } (b : bag a) (b' : bag a) : Prop:=
         forall x : a,
           le (multiplicity x b) (multiplicity x b').
@@ -1260,7 +1258,7 @@ Module Stdlib.
       Proof.
         tauto.
       Qed.
-      
+
       Definition filter {A} `{Inhab A} p (b : bag A) :=
         fun x => If p x then b x else 0%nat.
 
@@ -1277,7 +1275,7 @@ Module Stdlib.
         unfold multiplicity, filter.
         rewrite If_l; auto.
       Qed.
-             
+
       Lemma filter_mem_neg :
         forall a266 : Type,
         forall {a266Ih : Inhab a266},
@@ -1291,15 +1289,15 @@ Module Stdlib.
         unfold multiplicity, filter.
         rewrite If_r; auto.
       Qed.
-      
+
       Definition cover {A} (b : bag A) l :=
         forall x, b x = LibList.count (fun y => y = x) l.
 
       Import LibEpsilon.
-      
+
       Definition cardinal {A} `{Inhab A} (b : bag A) : Z :=
          epsilon (fun n : nat => exists l, cover b l /\ n = LibList.length l).
-      
+
       Definition finite  (A : Type) { aIh : Inhab A } (b : bag A) : Prop:=
           exists l, forall x,
             mem x b -> Sequence.mem x l.
@@ -1318,8 +1316,8 @@ Module Stdlib.
             ).
         tauto.
       Qed.
-        
-      
+
+
       Parameter card_nonneg :
         forall a273 : Type,
         forall {a273Ih : Inhab a273},
@@ -1328,15 +1326,15 @@ Module Stdlib.
 
       Parameter card_empty :
         forall a276 : Type,
-        forall {a276Ih : Inhab a276},      
+        forall {a276Ih : Inhab a276},
           Coq.Init.Logic.eq (cardinal (@empty a276 a276Ih)) (0)%Z.
-        
+
       Parameter card_singleton :
         forall a280 : Type,
         forall {a280Ih : Inhab a280},
         forall x : a280,
           Coq.Init.Logic.eq (cardinal (singleton x)) (1)%Z.
-          
+
       Parameter card_union :
         forall a289 : Type,
         forall {a289Ih : Inhab a289},
@@ -1347,7 +1345,7 @@ Module Stdlib.
           Coq.Init.Logic.eq (cardinal (union b1 b2)) (
               plus (cardinal b1) (cardinal b2)
             ).
-      
+
       Parameter card_add :
         forall a296 : Type,
         forall {a296Ih : Inhab a296},
@@ -1383,7 +1381,7 @@ Module Stdlib.
         math.
       Qed.
 
-      
+
       Parameter fold :
         forall {a : Type},
         forall {b : Type},
@@ -1397,7 +1395,7 @@ Module Stdlib.
 
     Module _Set.
       Definition t := set.
-      
+
       Import TLC.LibSet.
 
       Definition mem {A} {Ih : Inhab A} (x : A) (s : set A) : Prop := is_in x s.
@@ -1411,9 +1409,9 @@ Module Stdlib.
       Lemma add_mem :
         forall A {Ih : Inhab A} s (x : A), mem x (add x s).
         intros. unfold mem. unfold add. rewrite set_in_union_eq.
-        right. rewrite in_single_eq. auto. 
+        right. rewrite in_single_eq. auto.
       Qed.
-      
+
       Lemma add_mem_neq :
         forall a323 : Type,
         forall {a323Ih : Inhab a323},
@@ -1450,7 +1448,7 @@ Module Stdlib.
         unfold not. intros [H1 H2].
         destruct H2. rewrite set_in_single_eq. auto.
       Qed.
-      
+
       Lemma remove_mem_neq :
         forall a336 : Type,
         forall {a336Ih : Inhab a336},
@@ -1547,7 +1545,7 @@ Module Stdlib.
       Proof.
         tauto.
       Qed.
-      
+
       Definition diff {A} {Ih : Inhab A} (s1 : set A) (s2 : set A) : set A :=
         LibContainer.remove s1 s2.
 
@@ -1585,7 +1583,7 @@ Module Stdlib.
         forall x : a,
           mem x s -> mem x s'.
 
-      
+
       Lemma subset_def :
         forall {a464 : Type},
         forall {Ih_a464 : Inhab a464},
@@ -1615,13 +1613,13 @@ Module Stdlib.
             ).
       Proof.
         intros A IhA B IhB f s x.
-        unfold mem, map in *. split; auto. 
+        unfold mem, map in *. split; auto.
       Qed.
-      
+
       Definition partition {A} `{Inhab A} p (s : set A) :=
         (set_st (fun x => p x /\ x \in s),
           set_st (fun x => ~p x /\ x \in s)).
-      
+
       Lemma partition_l_mem :
         forall {a486 : Type},
         forall {Ih_a486 : Inhab a486},
@@ -1662,7 +1660,7 @@ Module Stdlib.
         rew_set.
         auto.
       Qed.
-      
+
       Definition cardinal {A} {Ih : Inhab A} (s : set A) : Z := Z.of_nat (card s).
 
       Definition finite  (a : Type) { aIh : Inhab a } (s : set a) : Prop :=
@@ -1770,7 +1768,7 @@ Module Stdlib.
         - rewrite If_r; auto. rewrite card_disjoint_union_single; auto.
           math.
       Qed.
-      
+
       Definition of_seq {A} {Ih : Inhab A} (s: sequence A) : set A :=
         fun x => LibList.mem x s.
 
@@ -1801,7 +1799,7 @@ Module Stdlib.
       Definition to_seq {A} `{Inhab A} (s : set A) : sequence A :=
         LibSet.to_list s.
 
-      Lemma count_no_dup : 
+      Lemma count_no_dup :
         forall A (x : A) l,
           noduplicates l ->
           count (=x) l = 1 <-> LibList.mem x l.
@@ -1850,9 +1848,9 @@ Module Stdlib.
       Qed.
 
       Import LibMonoid.
-      Definition fold {A} {B} `{Inhab A} `{Inhab B} (f : A -> B) 
+      Definition fold {A} {B} `{Inhab A} `{Inhab B} (f : A -> B)
                       (m : B -> B -> B) (s : set A) (acc : B) : B :=
-        let monoid := 
+        let monoid :=
           {|
             monoid_oper := m;
             monoid_neutral := acc;
@@ -1943,11 +1941,11 @@ Module Stdlib.
     Proof.
       tauto.
     Qed.
-    
+
     Module Array.
 
       Parameter array : Type -> Type.
-      
+
       Parameter get :
         forall {a : Type},
         forall {_Ga : Inhab a},
@@ -2038,5 +2036,5 @@ Module Stdlib.
     Module Sys.
       Parameter word_size : int.
     End Sys.
-  End Gospelstdlib.
+
 End Stdlib.

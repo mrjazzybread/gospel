@@ -22,7 +22,8 @@
     - [type float]
     - [type prop]
     - [type bool]
-    - [type integer] *)
+    - [type integer]
+    - [type set] *)
 
 (*@ predicate (=) (x : 'a) (y : 'a) *)
 (*@ predicate (<>) (x : 'a) (y : 'a) *)
@@ -48,9 +49,6 @@
 
 (*@ type 'a bag *)
 (** The type for multisets. *)
-
-(*@ type 'a set *)
-(** The type for sets. *)
 
 (*@ type 'a option *)
 

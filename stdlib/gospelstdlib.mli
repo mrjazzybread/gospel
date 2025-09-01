@@ -39,7 +39,6 @@
 (** Logical symbols *)
 
 (*@ predicate (->) (p : prop) (q : prop) *)
-
 (*@ predicate (<->) (p : prop) (q : prop) *)
 
 (** Boolean operators *)
@@ -109,18 +108,18 @@
 (*@ predicate monoid (f : 'a -> 'a -> 'a) (neutral : 'a) *)
 
 (*@ axiom monoid_def :
-      forall f neutral.
-      monoid f neutral <->
-        (forall x. (f neutral x = f x neutral = x)) /\
-        (forall x y z. f x (f y z) = f (f x y) z) *)
+      ∀ f neutral.
+      monoid f neutral ↔
+        (∀ x. (f neutral x = f x neutral = x)) ∧
+        (∀ x y z. f x (f y z) = f (f x y) z) *)
 
 (*@ predicate comm_monoid (f : 'a -> 'a -> 'a) (neutral : 'a) *)
 
 (*@ axiom comm_monoid_def :
-      forall f neutral.
-      comm_monoid f neutral <->
-        monoid f neutral /\
-        (forall x y. f x y = f y x) *)
+      ∀ f neutral.
+      comm_monoid f neutral ↔
+        monoid f neutral ∧
+        (∀ x y. f x y = f y x) *)
 
 module Sequence : sig
   (*@ type 'a t = 'a sequence *)
@@ -132,56 +131,60 @@ module Sequence : sig
   (*@ predicate in_range (s : 'a t) (i : integer) *)
 
   (*@ axiom in_range_def :
-        forall s i.
-        in_range s i <-> 0 <= i < length s *)
+        ∀ s i.
+        in_range s i ↔ 0 ≤ i < length s *)
 
   (*@ axiom length_nonneg :
-        forall s.
-        0 <= length s *)
+        ∀ s.
+        0 ≤ length s *)
 
   (*@ axiom subseq_l :
-        forall s i.
+        ∀ s i.
         in_range s i ->
         s[i ..] = s[i .. length s] *)
 
   (*@ axiom subseq_r :
-        forall s i.
+        ∀ s i.
         in_range s i ->
         s[..i] = s[0 .. i] *)
 
   (*@ axiom subseq :
-        forall s i i1 i2.
-        0 <= i1 <= i < i2 <= length s ->
+        ∀ s i i1 i2.
+        0 ≤ i1 ≤ i < i2 ≤ length s ->
         s[i] = (s[i1 .. i2])[i-i1] *)
 
   (*@ axiom subseq_len :
-        forall s i1 i2.
-        0 <= i1 <= i2 < length s ->
+        ∀ s i1 i2.
+        0 ≤ i1 ≤ i2 < length s ->
         length (s[i1 .. i2]) = i2 - i1 *)
 
-  (*@ function empty : 'a t *)
-  (** [empty] is the empty sequence. *)
+  (*@ function [] : 'a t *)
+  (** [[]] is the empty sequence. *)
 
-  (*@ axiom empty_length : length empty = 0 *)
+  (*@ function empty : 'a t*)
+
+  (*@ axiom empty_def : [] = empty *)
+
+  (*@ axiom empty_length : length [] = 0 *)
 
   (*@ function init (n: integer) (f: integer -> 'a) : 'a t *)
   (** [init n f] is the sequence containing [f 0], [f 1], [...] , [f (n - 1)].
   *)
 
   (*@ axiom init_length :
-        forall n f.
-        n >= 0 ->
+        ∀ n f.
+        n ≥ 0 ->
         length (init n f) = n *)
 
   (*@ axiom init_elems :
-        forall n f i.
-        0 <= i < n -> (init n f)[i] = f i *)
+        ∀ n f i.
+        0 ≤ i < n -> (init n f)[i] = f i *)
 
   (*@ function singleton (x: 'a) : 'a t *)
   (** [singleton] is the sequence containing [x]. *)
 
   (*@ axiom singleton_def :
-        forall x f.
+        ∀ x f.
         f 0 = x ->
         singleton x = init 1 f *)
 
@@ -190,7 +193,7 @@ module Sequence : sig
   *)
 
   (*@ axiom cons_def :
-        forall x s.
+        ∀ x s.
         cons x s = (singleton x) ++ s *)
 
   (*@ function snoc (s: 'a t) (x: 'a): 'a t *)
@@ -198,7 +201,7 @@ module Sequence : sig
   *)
 
   (*@ axiom snoc_def :
-        forall s x.
+        ∀ s x.
         snoc s x = s ++ (singleton x) *)
 
   (*@ function hd (s: 'a t) : 'a *)
@@ -206,7 +209,7 @@ module Sequence : sig
       [s]. *)
 
   (*@ axiom hd_def :
-        forall s.
+        ∀ s.
         hd s = s[0] *)
 
   (*@ function tl (s: 'a t) : 'a t *)
@@ -214,86 +217,99 @@ module Sequence : sig
       elements of [s], starting at position 2. *)
 
   (*@ axiom tl_def :
-        forall s.
+        ∀ s.
         tl s = s[1 ..] *)
 
   (*@ function append (s1 : 'a t) (s2 : 'a t) : 'a t *)
   (** [append s s'] is [s ++ s']. *)
 
   (*@ axiom append_def :
-        forall s1 s2.
+        ∀ s1 s2.
         append s1 s2 = s1 ++ s2 *)
 
   (*@ axiom append_length :
-        forall s s'.
+        ∀ s s'.
         length (s++s') = length s + length s' *)
 
   (*@ axiom append_elems_left :
-        forall s s' i.
+        ∀ s s' i.
         in_range s i ->
         (s ++ s')[i] = s[i] *)
 
   (*@ axiom append_elems_right :
-        forall s s' i.
-        length s <= i < length s + length s' ->
+        ∀ s s' i.
+        length s ≤ i < length s + length s' ->
         (s ++ s')[i] = s'[i - length s] *)
 
-  (*@ function multiplicity (x : 'a) (s: 'a t) : integer *)
-  (** [multiplicity x s] counts the number of occurrences of [x] in [s] *)
+  (*@ function (⋅) (x : 'a) (s: 'a t) : integer *)
+  (** [x ⋅ s] counts the number of occurrences of [x] in [s] *)
 
   (*@ axiom mult_empty :
-        forall x.
-        multiplicity x empty = 0 *)
+        ∀ x.
+        x ⋅ [] = 0 *)
 
   (*@ axiom mult_cons :
-        forall s x.
-        1 + multiplicity x s = multiplicity x (cons x s) *)
+        ∀ s x.
+        1 + x ⋅ s = x ⋅ (cons x s) *)
 
   (*@ axiom mult_cons_neutral :
-        forall s x1 x2.
-        x1 <> x2 ->
-        multiplicity x1 s = multiplicity x1 (cons x2 s) *)
+        ∀ s x1 x2.
+        x1 ≠ x2 ->
+        x1 ⋅ s = x1 ⋅ (cons x2 s) *)
 
   (*@ axiom mult_length :
-        forall x s.
-        0 <= multiplicity x s <= length s *)
+        ∀ x s.
+        0 ≤ x ⋅ s ≤ length s *)
 
-  (*@ predicate mem (x: 'a) (s: 'a t) *)
-  (** [mem s x] holds iff [x] is in [s]. *)
+  (*@ predicate (∈) (x: 'a) (s: 'a t) *)
+  (** [x ∈ s] holds iff [x] is in [s]. *)
+
+  (*@ predicate mem (x : 'a) (s : 'a t) *)
+  (** [mem x s] is [x ∈ s] *)
+
+  (*@ axiom mem_fun_def :
+        ∀ x s.
+        x ∈ s ↔ mem x s *)
 
   (*@ axiom mem_def :
-        forall s x.
-        mem x s <-> multiplicity x s > 0 *)
+        ∀ s : 'a sequence. ∀ x : 'a.
+        x ∈ s ↔ x ⋅ s > 0 *)
 
-  (*@ predicate _forall (p : 'a -> prop) (s : 'a sequence) *)
+  (*@ predicate (∉) (x : 'a) (s : 'a t) *)
+
+  (*@ axiom nmem_def :
+        ∀ s x.
+        x ∉ s ↔ not x ∈ s *)
+
+  (*@ predicate Forall (p : 'a -> prop) (s : 'a sequence) *)
   (** [_forall p s] holds iff all elements in [s] satisfy predicate [p] *)
 
   (*@ axiom forall_def :
-        forall p s.
-        _forall p s <->
-        (forall x. mem x s -> p x)
+        ∀ p s.
+        Forall p s ↔
+        (∀ x. x ∈ s -> p x)
   *)
 
-  (*@ predicate _exists (p : 'a -> prop) (s : 'a sequence) *)
+  (*@ predicate Exists (p : 'a -> prop) (s : 'a sequence) *)
   (** [_exists p s] holds iff there exists some element in [s] that satisfies
       the predicate [p] *)
 
   (*@ axiom _exists_def :
-        forall p s.
-        _exists p s <->
-          (exists x. mem x s /\ p x) *)
+        ∀ p s.
+        Exists p s ↔
+          (∃ x. x ∈ s ∧ p x) *)
 
   (*@ function map (f: 'a -> 'b) (s: 'a t) : 'b t *)
   (** [map f s] is a sequence whose elements are the elements of [s],
       transformed by [f]. *)
 
   (*@ axiom map_elems :
-        forall i f s.
+        ∀ i f s.
         in_range s i ->
         (map f s)[i] = f (s[i]) *)
 
   (*@ axiom map_length :
-        forall f s.
+        ∀ f s.
         length (map f s) = length s *)
 
   (*@ function filter (f: 'a -> prop) (s: 'a t) : 'a t *)
@@ -301,24 +317,24 @@ module Sequence : sig
       satisfy [f]. *)
 
   (*@ axiom filter_elems :
-        forall f s x.
-        mem x s -> f x ->
-        mem x (filter f s) *)
+        ∀ f s x.
+        x ∈ s -> f x ->
+        x ∈ (filter f s) *)
 
   (*@ function filter_map (f: 'a -> 'b option) (s: 'a t) : 'b t *)
   (** [filter_map f s] is a sequence whose elements are the elements of [s],
       transformed by [f]. An element [x] is dropped whenever [f x] is [None]. *)
 
   (*@ axiom filter_map_elems :
-        forall f s y.
-        (exists x. f x = Some y /\ mem x s) <->
-        mem y (filter_map f s) *)
+        ∀ f s y.
+        (∃ x. f x = Some y ∧ x ∈ s) ↔
+        y ∈ (filter_map f s) *)
 
   (*@ function get (s: 'a t) (i: integer) : 'a *)
   (** [get s i] is [s[i]]. *)
 
   (*@ axiom get_def :
-        forall s i.
+        ∀ s i.
         get s i = s[i] *)
 
   (*@ function set (s: 'a t) (i: integer) (x: 'a): 'a t *)
@@ -326,13 +342,13 @@ module Sequence : sig
       difference is that the element at index [i] equal [x] *)
 
   (*@ axiom set_elem :
-        forall s i x.
+        ∀ s i x.
         in_range s i ->
         (set s i x)[i] = x *)
 
   (*@ axiom set_elem_other :
-        forall s i1 i2 x.
-        i1 <> i2 ->
+        ∀ s i1 i2 x.
+        i1 ≠ i2 ->
         in_range s i1 ->
         in_range s i2 ->
         (set s i1 x)[i2] = s[i2] *)
@@ -342,18 +358,18 @@ module Sequence : sig
       order. *)
 
   (*@ axiom rev_length :
-        forall s.
+        ∀ s.
         length s = length (rev s) *)
 
   (*@ axiom rev_elems :
-        forall i s.
+        ∀ i s.
         in_range s i ->
         (rev s)[i] = s[length s - 1 - i] *)
 
   (*@ axiom extensionality :
-        forall s1 s2.
+        ∀ s1 s2.
         length s1 = length s2 ->
-        (forall i. in_range s1 i -> s1[i] = s2[i]) ->
+        (∀ i. in_range s1 i -> s1[i] = s2[i]) ->
         s1 = s2 *)
 
   (*@ function fold_left (f: 'a -> 'b -> 'a) (acc: 'a) (s: 'b t) : 'a *)
@@ -361,11 +377,11 @@ module Sequence : sig
       [n] is the length of [s]. *)
 
   (*@ axiom fold_left_empty :
-        forall f acc.
-        fold_left f acc empty = acc *)
+        ∀ f acc.
+        fold_left f acc [] = acc *)
 
   (*@ axiom fold_left_cons :
-        forall f acc x l.
+        ∀ f acc x l.
         fold_left f acc (cons x l) = fold_left f (f acc x) l *)
 
   (*@ function fold_right (f: 'a -> 'b -> 'b) (s: 'a t) (acc: 'b) : 'b *)
@@ -373,11 +389,11 @@ module Sequence : sig
       is the length of [s]. *)
 
   (*@ axiom fold_right_empty :
-        forall acc f.
-        fold_right f empty acc = acc *)
+        ∀ acc f.
+        fold_right f [] acc = acc *)
 
   (*@ axiom fold_right_cons :
-        forall acc f x l.
+        ∀ acc f x l.
         fold_right f (cons x l) acc = f x (fold_right f l acc) *)
 
   (*@ predicate permut (s1 : 'a t) (s2 : 'a t) *)
@@ -385,16 +401,16 @@ module Sequence : sig
       same number of occurrences *)
 
   (*@ axiom permut_mem :
-        forall s1 s2.
+        ∀ s1 s2.
         permut s1 s2 ->
-        (forall x. mem x s1 <-> mem x s2) *)
+        (∀ x. x ∈ s1 ↔ x ∈ s2) *)
 
   (*@ predicate permut_sub (s1 : 'a t) (s2 : 'a t) (i : integer) (j : integer) *)
   (** [permut_sub a b lo hi] is true iff the segment [[lo..hi]] is a permutation
       of the segment [[lo..hi]] and values outside of the interval are equal. *)
 
   (*@ axiom permut_sub_def :
-        forall s1 s2 i j.
+        ∀ s1 s2 i j.
         permut s1[i..j] s2[i..j] ->
         s1[..i] = s2[..i] ->
         s1[j..] = s2[j..] ->
@@ -408,130 +424,146 @@ module Bag : sig
   (*@ type 'a t = 'a bag *)
   (** An alias for ['a bag]. *)
 
-  (*@ function multiplicity (x: 'a) (b: 'a t): integer *)
+  (*@ function (⋅) (x: 'a) (b: 'a t): integer *)
   (** [multiplicity x b] is the number of occurrences of [x] in [s]. *)
 
   (*@ axiom well_formed :
-        forall b x.
-        multiplicity x b >= 0 *)
+        ∀ b x.
+        x ⋅ b ≥ 0 *)
 
-  (*@ function empty : 'a t *)
-  (** [empty] is the empty bag. *)
+  (*@ function ∅ : 'a t *)
+  (** [∅] is the empty bag. *)
+
+  (*@ function empty : 'a t*)
+
+  (*@ axiom empty_def : ∅ = empty *)
 
   (*@ axiom empty_mult :
-        forall x.
-        multiplicity x empty = 0 *)
+        ∀ x.
+        x ⋅ ∅ = 0 *)
 
   (*@ function init (f : 'a -> integer) : 'a t *)
   (** [init f] creates a bag where every element [x] has multiplicity
       [max 0 (f x)]. *)
 
   (*@ axiom init_axiom :
-        forall f x.
-        max 0 (f x) = multiplicity x (init f) *)
+        ∀ f x.
+        max 0 (f x) = x ⋅ (init f) *)
 
-  (*@ predicate mem (x: 'a) (b: 'a t) *)
+  (*@ predicate (∈) (x: 'a) (b: 'a t) *)
   (** [mem x b] holds iff [b] contains [x] at least once. *)
 
+  (*@ predicate mem (x : 'a) (s : 'a t) *)
+  (** [mem x s] is [x ∈ s] *)
+
+  (*@ axiom mem_fun_def :
+        ∀ x s.
+        x ∈ s ↔ mem x s *)
+
+  (*@ predicate (∉) (x : 'a) (s : 'a t) *)
+
+  (*@ axiom nmem_def :
+        ∀ s x.
+        x ∉ s ↔ not x ∈ s *)
+
   (*@ axiom mem_def :
-        forall x b.
-        mem x b <-> multiplicity x b > 0 *)
+        ∀ x b.
+        x ∈ b ↔ x ⋅ b > 0 *)
 
   (*@ function add (x: 'a) (b: 'a t) : 'a t *)
   (** [add x b] is [b] when an occurence of [x] was added. *)
 
   (*@ axiom add_mult_x :
-        forall b x.
-        multiplicity x (add x b) = 1 + multiplicity x b *)
+        ∀ b x.
+        x ⋅ (add x b) = 1 + x ⋅ b *)
 
   (*@ axiom add_mult_neg_x :
-        forall x y b. x <> y ->
-        multiplicity y (add x b) = (multiplicity y b) *)
+        ∀ x y b.
+        x ≠ y ->
+        y ⋅ (add x b) = (y ⋅ b) *)
 
   (*@ function singleton (x: 'a) : 'a t *)
   (** [singleton x] is a bag containing one occurence of [x]. *)
 
   (*@ axiom singleton_def :
-        forall x.
-        singleton x = add x empty *)
+        ∀ x.
+        singleton x = add x ∅ *)
 
   (*@ function remove (x: 'a) (b: 'a t) : 'a t *)
   (** [remove x b] is [b] where an occurence of [x] was removed. *)
 
   (*@ axiom remove_mult_x :
-        forall b x.
-        multiplicity x (remove x b) = max 0 (multiplicity x b - 1) *)
+        ∀ b x.
+        x ⋅ (remove x b) = max 0 (x ⋅ b - 1) *)
 
   (*@ axiom remove_mult_neg_x :
-        forall x y b.
-        x <> y ->
-        multiplicity y (remove x b) = multiplicity y b *)
+        ∀ x y b.
+        x ≠ y ->
+        y ⋅ (remove x b) = y ⋅ b *)
 
-  (*@ function union (b b': 'a t) : 'a t *)
+  (*@ function (∪) (b b': 'a t) : 'a t *)
   (** [union b b'] is a bag [br] where for all element [x],
       [occurences x br = max (occurences x b) (occurences x b')]. *)
 
   (*@ axiom union_all :
-        forall b b' x.
-        max (multiplicity x b) (multiplicity x b') =
-          multiplicity x (union b b') *)
+        ∀ b b' x.
+        max (x ⋅ b) (x ⋅ b') =
+          x ⋅ (b ∪ b') *)
 
   (*@ function sum (b b': 'a t) : 'a t *)
   (** [sum b b'] is a bag [br] where for all element [x],
       [occurences x br = (occurences x b) + (occurences x b')]. *)
 
   (*@ axiom sum_all :
-        forall b b' x.
-        multiplicity x b + multiplicity x b' =
-          multiplicity x (sum b b') *)
+        ∀ b b' x.
+        x ⋅ b + x ⋅ b' = x ⋅ (sum b b') *)
 
-  (*@ function inter (b b': 'a t) : 'a t *)
+  (*@ function (∩) (b b': 'a t) : 'a t *)
   (** [inter b b'] is a bag [br] where for all element [x],
       [occurences x br = min (occurences x b) (occurences x b')]. *)
 
   (*@ axiom inter_all :
-        forall b b' x.
-        min (multiplicity x b) (multiplicity x b') =
-        multiplicity x (inter b b') *)
+        ∀ b b' x.
+        min (x ⋅ b) (x ⋅ b') =
+        x ⋅ (b ∩ b') *)
 
   (*@ predicate disjoint (b b': 'a t) *)
   (** [disjoint b b'] holds iff [b] and [b'] have no element in common. *)
 
   (*@ axiom disjoint_def :
-        forall b b'.
-        disjoint b b' <->
-          (forall x. mem x b -> not (mem x b'))*)
+        ∀ b b'.
+        disjoint b b' ↔
+          (∀ x. x ∈ b -> (x ∉ b'))*)
 
   (*@ function diff (b b': 'a t) : 'a t *)
   (** [diff b b'] is a bag [br] where for all element [x],
       [occurences x br = max 0 (occurences x b - occurences x b')]. *)
 
   (*@ axiom diff_all :
-        forall b b' x.
-        max 0 (multiplicity x b - multiplicity x b') =
-          multiplicity x (diff b b') *)
+        ∀ b b' x.
+        max 0 (x ⋅ b - x ⋅ b') =
+          x ⋅ (diff b b') *)
 
-  (*@ predicate subset (b b': 'a t) *)
-  (** [subset b b'] holds iff for all element [x],
-      [multiplicity x b <= multiplicity x b']. *)
+  (*@ predicate (⊂) (b b': 'a t) *)
+  (** [subset b b'] holds iff for all element [x], [x ⋅ b ≤ x ⋅ b']. *)
 
   (*@ axiom subset_def :
-       forall b b'.
-       subset b b' <->
-         (forall x. multiplicity x b <= multiplicity x b') *)
+       ∀ b b'.
+       b ⊂ b' ↔
+         (∀ x. x ⋅ b ≤ x ⋅ b') *)
 
   (*@ function filter (f: 'a -> prop) (b: 'a t) : 'a t *)
   (** [filter f b] is the bag of all elements in [b] that satisfy [f]. *)
 
   (*@ axiom filter_mem :
-        forall b x f.
+        ∀ b x f.
         f x ->
-        multiplicity x (filter f b) = multiplicity x b *)
+        x ⋅ (filter f b) = x ⋅ b *)
 
   (*@ axiom filter_mem_neg :
-        forall b x f.
+        ∀ b x f.
         not (f x) ->
-        multiplicity x (filter f b) = 0 *)
+        x ⋅ (filter f b) = 0 *)
 
   (*@ function cardinal (b: 'a t) : integer *)
   (** [cardinal b] is the total number of elements in [b], all occurrences being
@@ -541,152 +573,174 @@ module Bag : sig
   (** [finite b] holds when there are a finite number of elements in bag [b] *)
 
   (*@ axiom finite_def :
-        forall b.
-        finite b <->
-          (exists s. forall x.
-           mem x b ->
-           Sequence.mem x s) *)
+        ∀ b.
+        finite b ↔
+          (∃ s. ∀ x.
+           x ∈ b ->
+           Sequence.(∈) x s) *)
 
   (*@ axiom card_nonneg :
-        forall b.
-        cardinal b >= 0 *)
+        ∀ b.
+        cardinal b ≥ 0 *)
 
-  (*@ axiom card_empty : cardinal empty = 0 *)
+  (*@ axiom card_empty : cardinal ∅ = 0 *)
 
   (*@ axiom card_singleton :
-        forall x.
+        ∀ x.
         cardinal (singleton x) = 1 *)
 
   (*@ axiom card_union :
-        forall b1 b2.
+        ∀ b1 b2.
         finite b1 ->
         finite b2 ->
-        cardinal (union b1 b2) = cardinal b1 + cardinal b2 *)
+        cardinal (b1 ∪ b2) = cardinal b1 + cardinal b2 *)
 
   (*@ axiom card_add :
-       forall x b.
+       ∀ x b.
        finite b ->
        cardinal (add x b) = cardinal b + 1 *)
 
   (*@ axiom card_map :
-       forall f b.
+       ∀ f b.
        finite b ->
-       cardinal (filter f b) <= cardinal b *)
+       cardinal (filter f b) ≤ cardinal b *)
 
   (*@ function of_seq (s: 'a Sequence.t) : 'a t *)
   (** [of_seq s] returns a bag where the multiplicity of each element is the
       same as in [s] *)
 
   (*@ axiom of_seq_multiplicity :
-        forall s x.
-        Sequence.multiplicity x s = multiplicity x (of_seq s) *)
+        ∀ s x.
+        Sequence.(⋅) x s = x ⋅ (of_seq s) *)
 end
 
 module Set : sig
   (*@ type 'a t = 'a set *)
   (** An alias for ['a set]. *)
 
-  (*@ function empty : 'a t *)
-  (** [empty] is [∅]. *)
+  (*@ function ∅ : 'a t *)
+  (** [∅] is the empty set. *)
 
-  (*@ predicate mem (x: 'a) (s: 'a t) *)
-  (** [mem x s] is [x ∈ s]. *)
+  (*@ function empty : 'a t*)
+
+  (*@ axiom empty_def : ∅ = empty *)
+
+  (*@ predicate (∈) (x: 'a) (s: 'a t) *)
+  (** [x ∈ s] means [x] is in [s]. *)
+
+  (*@ predicate (∉) (x: 'a) (s: 'a t) *)
+  (** [x ∉ s] means [x] is not in [s]. *)
+
+  (*@ predicate mem (x : 'a) (s : 'a t) *)
+  (** [mem x s] is [x ∈ s] *)
+
+  (*@ axiom mem_fun_def :
+        ∀ x s.
+        x ∈ s ↔ mem x s *)
+
+  (*@ axiom nmem_def :
+        ∀ s x.
+        x ∈ s ↔ x ∉ s *)
 
   (*@ axiom empty_mem :
-      forall x.
-      not (mem x empty) *)
+      ∀ x.
+      (x ∉ ∅) *)
 
   (*@ function add (x: 'a) (s: 'a t) : 'a t *)
   (** [add x s] is [s ∪ {x}]. *)
 
   (*@ axiom add_mem :
-        forall s x.
-        mem x (add x s) *)
+        ∀ s x.
+        x ∈ (add x s) *)
 
   (*@ axiom add_mem_neq :
-        forall s x y.
-        x <> y ->
-        (mem x s <-> mem x (add y s)) *)
+        ∀ s x y.
+        x ≠ y ->
+        (x ∈ s ↔ x ∈ (add y s)) *)
 
   (*@ function singleton (x: 'a) : 'a t *)
   (** [singleton x] is [{x}]. *)
+
+  (*@ axiom singleton_def :
+        ∀ x.
+        singleton x = add x ∅ *)
 
   (*@ function remove (x: 'a) (s: 'a t) : 'a t *)
   (** [remove x s] is [s ∖ {x}]. *)
 
   (*@ axiom remove_mem :
-        forall s x.
-        not (mem x (remove x s)) *)
+        ∀ s x.
+        (x ∉ (remove x s)) *)
 
   (*@ axiom remove_mem_neq :
-        forall s x y.
-        x <> y ->
-        (mem x s <-> mem x (remove y s)) *)
+        ∀ s x y.
+        x ≠ y ->
+        (x ∈ s ↔ x ∈ (remove y s)) *)
 
-  (*@ function union (s s': 'a t) : 'a t *)
+  (*@ function (∪) (s s': 'a t) : 'a t *)
   (** [union s s'] is [s ∪ s']. *)
 
   (*@ axiom union_mem :
-        forall s s' x.
-        (mem x s \/ mem x s') ->
-        mem x (union s s') *)
+        ∀ s s' x.
+        (x ∈ s ∨ x ∈ s') ->
+        x ∈ (s ∪ s') *)
 
   (*@ axiom union_mem_neg :
-      forall s s' x.
-      not (mem x s) ->
-      not (mem x s') ->
-      not (mem x (union s s')) *)
+      ∀ s s' x.
+      (x ∉ s) ->
+      (x ∉ s') ->
+      (x ∉ (s ∪ s')) *)
 
-  (*@ function inter (s s': 'a t) : 'a t *)
+  (*@ function (∩) (s s': 'a t) : 'a t *)
   (** [inter s s'] is [s ∩ s']. *)
 
   (*@ axiom inter_mem :
-        forall s s' x.
-        mem x s ->
-        mem x s' ->
-        mem x (inter s s') *)
+        ∀ s s' x.
+        x ∈ s ->
+        x ∈ s' ->
+        x ∈ (s ∩ s') *)
 
   (*@ axiom inter_mem_neq :
-        forall s s' x.
-        not (mem x s \/ mem x s') ->
-        not mem x (inter s s') *)
+        ∀ s s' x.
+        not (x ∈ s ∨ x ∈ s') ->
+        x ∈ (s ∩ s') *)
 
   (*@ predicate disjoint (s s': 'a t) *)
   (** [disjoint s s'] is [s ∩ s' = ∅]. *)
 
   (*@ axiom disjoint_def :
-        forall s s'.
-        disjoint s s' <-> inter s s' = empty *)
+        ∀ s s'.
+        disjoint s s' ↔ s ∩ s' = ∅ *)
 
-  (*@ function diff (s s': 'a t) : 'a t *)
+  (*@ function (∖) (s s': 'a t) : 'a t *)
   (** [diff s s'] is [s ∖ s']. *)
 
   (*@ axiom diff_mem :
-        forall s s' x.
-        mem x s' ->
-        not (mem x (diff s s')) *)
+        ∀ s s' x.
+        x ∈ s' ->
+        (x ∉ (s ∖ s')) *)
 
   (*@ axiom diff_mem_fst :
-        forall s s' x.
-        not (mem x s') ->
-        (mem x s <-> mem x (diff s s')) *)
+        ∀ s s' x.
+        (x ∉ s') ->
+        (x ∈ s ↔ x ∈ (s ∖ s')) *)
 
-  (*@ predicate subset (s s': 'a t) *)
+  (*@ predicate (⊂) (s s': 'a t) *)
   (** [subset s s'] is [s ⊂ s']. *)
 
   (*@ axiom subset_def :
-        forall s s'.
-        subset s s' <->
-          (forall x. mem x s -> mem x s') *)
+        ∀ s s'.
+        s ⊂ s' ↔
+          (∀ x. x ∈ s -> x ∈ s') *)
 
   (*@ function map (f: 'a -> 'b) (s: 'a t) : 'b t *)
   (** [map f s] is a fresh set which elements are [f x1 ... f xN], where
       [x1 ... xN] are the elements of [s]. *)
 
   (*@ axiom set_map :
-        forall f s x.
-        mem x (map f s) <->
-          (exists y. f y = x /\ mem y s) *)
+        ∀ f s x.
+        x ∈ (map f s) ↔
+          (∃ y. f y = x ∧ y ∈ s) *)
 
   (*@ function partition (f: 'a -> prop) (s: 'a t) : ('a t * 'a t) *)
   (** [partition f s] is the pair of sets [(s1, s2)], where [s1] is the set of
@@ -694,18 +748,18 @@ module Set : sig
       set of all the elements of [s] that do not satisfy [f]. *)
 
   (*@ axiom partition_l_mem :
-        forall f s x p1 p2.
-        mem x s ->
+        ∀ f s x p1 p2.
+        x ∈ s ->
         f x ->
         partition f s = (p1, p2) ->
-        mem x p1 *)
+        x ∈ p1 *)
 
   (*@ axiom partition_r_mem :
-        forall f s x p1 p2.
-        mem x s ->
+        ∀ f s x p1 p2.
+        x ∈ s ->
         not f x ->
         partition f s = (p1, p2) ->
-        mem x p2 *)
+        x ∈ p2 *)
 
   (*@ function cardinal (s: 'a t) : integer *)
   (** [cardinal s] is the number of elements in [s]. *)
@@ -713,51 +767,51 @@ module Set : sig
   (*@ predicate finite (s : 'a t) *)
 
   (*@ axiom finite_def :
-        forall s.
-        finite s <->
-          (exists seq. forall x.
-           mem x s ->
-           Sequence.mem x seq) *)
+        ∀ s.
+        finite s ↔
+          (∃ seq. ∀ x.
+           x ∈ s ->
+           Sequence.(∈) x seq) *)
 
   (*@ axiom cardinal_nonneg :
-        forall s.
-        cardinal s >= 0 *)
+        ∀ s.
+        cardinal s ≥ 0 *)
 
-  (*@ axiom cardinal_empty : cardinal empty = 0 *)
+  (*@ axiom cardinal_empty : cardinal ∅ = 0 *)
 
   (*@ axiom cardinal_remove_mem :
-        forall s x.
+        ∀ s x.
         finite s ->
-        mem x s ->
+        x ∈ s ->
          cardinal (remove x s) = cardinal s - 1 *)
 
   (*@ axiom cardinal_remove_not_mem :
-        forall s x.
+        ∀ s x.
         finite s ->
-        not (mem x s) ->
+        (x ∉ s) ->
           cardinal (remove x s) = cardinal s *)
 
   (*@ axiom cardinal_add :
-        forall s x. finite s ->
-        not (mem x s) ->
+        ∀ s x. finite s ->
+        (x ∉ s) ->
           cardinal (add x s) = cardinal s *)
 
   (*@ function of_seq (s: 'a Sequence.t) : 'a t *)
   (** [of_seq] returns a set where each element also belongs to [s] *)
 
   (*@ axiom of_seq_mem :
-        forall s.
-        (forall x. mem x (of_seq s) <-> Sequence.mem x s) *)
+        ∀ s.
+        (∀ x. x ∈ (of_seq s) ↔ Sequence.(∈) x s) *)
 
   (*@ function to_seq (s: 'a t) : 'a Sequence.t *)
   (** [of_seq] returns a sequence where each element also belongs to [s]. The
       order in which they appear is unspecified. *)
 
   (*@ axiom to_seq_mem :
-        forall s.
+        ∀ s.
         finite s ->
-        (forall x. mem x s <->
-          Sequence.multiplicity x (to_seq s) = 1) *)
+        (∀ x. x ∈ s ↔
+          Sequence.(⋅) x (to_seq s) = 1) *)
 
   (*@ function fold (f : 'a -> 'b) (m : 'b -> 'b -> 'b) (s : 'a t) (acc : 'b) : 'b *)
   (** [fold f m s acc] is equal to [m (... (m (m acc (f x)) (f y)) ...) (f z)],
@@ -765,12 +819,12 @@ module Set : sig
       are passed to [m] is unspecified *)
 
   (*@ axiom fold_def :
-        forall f : ('a -> 'b).
-        forall m s acc.
+        ∀ f : ('a -> 'b).
+        ∀ m s acc.
         finite s ->
         comm_monoid m acc ->
         fold f m s acc =
-          Sequence.fold_right (fun x acc -> m (f x) acc) (to_seq s) acc *)
+          Sequence.fold_right (λ x acc -> m (f x) acc) (to_seq s) acc *)
 end
 
 (*@ function ( [->] ) (f: 'a -> 'b) (x:'a) (y: 'b) : 'a -> 'b *)
@@ -778,17 +832,17 @@ end
     values have the same mapping as [f] *)
 
 (*@ axiom map_set_def :
-      forall f : ('a -> 'b).
-      forall x : 'a.
-      forall y : 'b.
+      ∀ f : ('a -> 'b).
+      ∀ x : 'a.
+      ∀ y : 'b.
       f[x -> y] x = y *)
 
 (*@ axiom map_set_def_neq :
-      forall f : ('a -> 'b).
-      forall x : 'a.
-      forall y : 'b.
-      forall z : 'a.
-      x <> z ->
+      ∀ f : ('a -> 'b).
+      ∀ x : 'a.
+      ∀ y : 'b.
+      ∀ z : 'a.
+      x ≠ z ->
         f[x -> y] z = f z *)
 
 module Map : sig
@@ -798,11 +852,10 @@ module Map : sig
   (*@ type ('a, 'b) t = ('a, 'b) map *)
 
   (*@ function domain (default : 'b) (m : ('a, 'b) t) : 'a Set.t *)
-  (** [domain default m] returns the set of values [x] where [m x <> default].
-  *)
+  (** [domain default m] returns the set of values [x] where [m x ≠ default]. *)
 
   (*@ axiom domain_mem :
-        forall x m default.
-        m x <> default ->
-        Set.mem x (domain default m) *)
+        ∀ x m default.
+        m x ≠ default ->
+        Set.(∈) x (domain default m) *)
 end

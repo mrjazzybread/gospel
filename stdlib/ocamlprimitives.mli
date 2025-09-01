@@ -32,7 +32,7 @@ type 'a array
 (*@ mutable
     model elems : 'a sequence
     model length : integer
-    with arr invariant 0 <= arr.length <= Sequence.length arr.elems *)
+    with arr invariant 0 ≤ arr.length ≤ Sequence.length arr.elems *)
 
 type string
 (*@ model : char sequence *)

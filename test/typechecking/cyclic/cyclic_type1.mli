@@ -8,7 +8,7 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 
-(*@ axiom ax : forall s. Sequence.cons s s = Sequence.empty *)
+(*@ axiom ax : forall s. Sequence.cons s s = Sequence.[] *)
 (* {gospel_expected|
 [1] Internal error: no filename location for the following error
     Error: This expression has type 'a

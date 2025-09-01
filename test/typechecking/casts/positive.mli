@@ -8,7 +8,7 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 
-(*@ function test1 : 'a sequence = Sequence.empty : 'a sequence *)
+(*@ function test1 : 'a sequence = Sequence.[] : 'a sequence *)
 
 (*@ axiom test2 : forall x : 'a sequence. x = x : prop  *)
 
@@ -20,5 +20,5 @@
       (((((f : ('a -> 'b -> 'c)) (x : 'a)) : ('b -> 'c)) (y : 'b)) : 'c) = (z : 'c) *)
 
 (*@ function test4 : integer =
-      let x = Sequence.empty : 'a sequence in
+      let x = Sequence.[] : 'a sequence in
        0 *)

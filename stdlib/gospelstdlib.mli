@@ -161,10 +161,6 @@ module Sequence : sig
   (*@ function [] : 'a t *)
   (** [[]] is the empty sequence. *)
 
-  (*@ function empty : 'a t*)
-
-  (*@ axiom empty_def : [] = empty *)
-
   (*@ axiom empty_length : length [] = 0 *)
 
   (*@ function init (n: integer) (f: integer -> 'a) : 'a t *)
@@ -294,7 +290,7 @@ module Sequence : sig
   (** [_exists p s] holds iff there exists some element in [s] that satisfies
       the predicate [p] *)
 
-  (*@ axiom _exists_def :
+  (*@ axiom exists_def :
         ∀ p s.
         Exists p s ↔
           (∃ x. x ∈ s ∧ p x) *)
@@ -434,10 +430,6 @@ module Bag : sig
   (*@ function ∅ : 'a t *)
   (** [∅] is the empty bag. *)
 
-  (*@ function empty : 'a t*)
-
-  (*@ axiom empty_def : ∅ = empty *)
-
   (*@ axiom empty_mult :
         ∀ x.
         x ⋅ ∅ = 0 *)
@@ -482,12 +474,18 @@ module Bag : sig
         x ≠ y ->
         y ⋅ (add x b) = (y ⋅ b) *)
 
+  (*@ function ({:_:}) (x : 'a) : 'a t *)
+  (** [{x}] is the singleton bag containing one occurrence of [x]. *)
+
   (*@ function singleton (x: 'a) : 'a t *)
-  (** [singleton x] is a bag containing one occurence of [x]. *)
+  (** [singleton x] is [{:x:}]. *)
+
+  (*@ axiom singleton_fun_def :
+        ∀ x. {:x:} = singleton x *)
 
   (*@ axiom singleton_def :
         ∀ x.
-        singleton x = add x ∅ *)
+        {:x:} = add x ∅ *)
 
   (*@ function remove (x: 'a) (b: 'a t) : 'a t *)
   (** [remove x b] is [b] where an occurence of [x] was removed. *)
@@ -587,7 +585,7 @@ module Bag : sig
 
   (*@ axiom card_singleton :
         ∀ x.
-        cardinal (singleton x) = 1 *)
+        cardinal {:x:} = 1 *)
 
   (*@ axiom card_union :
         ∀ b1 b2.
@@ -621,10 +619,6 @@ module Set : sig
   (*@ function ∅ : 'a t *)
   (** [∅] is the empty set. *)
 
-  (*@ function empty : 'a t*)
-
-  (*@ axiom empty_def : ∅ = empty *)
-
   (*@ predicate (∈) (x: 'a) (s: 'a t) *)
   (** [x ∈ s] means [x] is in [s]. *)
 
@@ -640,7 +634,7 @@ module Set : sig
 
   (*@ axiom nmem_def :
         ∀ s x.
-        x ∈ s ↔ x ∉ s *)
+        not x ∈ s ↔ x ∉ s *)
 
   (*@ axiom empty_mem :
       ∀ x.
@@ -658,12 +652,18 @@ module Set : sig
         x ≠ y ->
         (x ∈ s ↔ x ∈ (add y s)) *)
 
+  (*@ function ({:_:}) (x : 'a) : 'a t *)
+  (** [{x}] is the singleton set containing [x]. *)
+
   (*@ function singleton (x: 'a) : 'a t *)
-  (** [singleton x] is [{x}]. *)
+  (** [singleton x] is [{:x:}]. *)
+
+  (*@ axiom singleton_fun_def :
+        ∀ x. {:x:} = singleton x *)
 
   (*@ axiom singleton_def :
         ∀ x.
-        singleton x = add x ∅ *)
+        {:x:} = add x ∅ *)
 
   (*@ function remove (x: 'a) (s: 'a t) : 'a t *)
   (** [remove x s] is [s ∖ {x}]. *)
@@ -703,7 +703,7 @@ module Set : sig
   (*@ axiom inter_mem_neq :
         ∀ s s' x.
         not (x ∈ s ∨ x ∈ s') ->
-        x ∈ (s ∩ s') *)
+        x ∉ (s ∩ s') *)
 
   (*@ predicate disjoint (s s': 'a t) *)
   (** [disjoint s s'] is [s ∩ s' = ∅]. *)
@@ -794,6 +794,11 @@ module Set : sig
   (*@ axiom cardinal_add :
         ∀ s x. finite s ->
         (x ∉ s) ->
+          cardinal (add x s) = cardinal s + 1 *)
+
+  (*@ axiom cardinal_add_mem :
+        ∀ s x. finite s ->
+        (x ∈ s) ->
           cardinal (add x s) = cardinal s *)
 
   (*@ function of_seq (s: 'a Sequence.t) : 'a t *)

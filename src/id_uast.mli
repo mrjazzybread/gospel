@@ -67,6 +67,7 @@ and term_desc =
        well as the type of the record field. *)
   | Tapply of term * term
   | Tif of term * term * term
+  | Tset of id * term
   | Tquant of Parse_uast.quant * binder list * term
   | Tlambda of binder list * term * pty option
   | Tattr of string * term

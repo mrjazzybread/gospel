@@ -1,12 +1,12 @@
 Set Implicit Arguments.
 
-From TLC Require Import LibString LibList LibCore LibListZ LibEpsilon LibSet.
+From TLC Require Import LibString LibList LibCore LibListZ LibEpsilon LibSet LibOrder.
 
-Require Import Coq.ZArith.BinInt TLC.LibLogic TLC.LibRelation TLC.LibInt TLC.LibContainer.
+Require Import Stdlib.ZArith.BinInt TLC.LibLogic TLC.LibRelation TLC.LibInt TLC.LibContainer.
 
-Require Import Coq.ZArith.BinIntDef.
+Require Import Stdlib.ZArith.BinIntDef.
 
-Delimit Scope Z_scope with Z.
+Local Open Scope comp_scope.
 
 Require gospelstdlib_mli_tlc.
 
@@ -16,7 +16,13 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
 
     Definition bag A := A -> nat.
 
-    Definition set A := A -> Prop.
+    Definition set A := set A.
+
+    Definition option := option.
+
+    Definition Some A `{Inhab A} (x : A) := Some x.
+
+    Definition None A `{Inhab A} := @None A.
 
     Definition map A B := A -> B.
 
@@ -64,57 +70,56 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
       unfold seq_get in *.
 
 
-    Parameter of_list :
-      forall a : Type,
-      forall {aIh : Inhab a},
-        list a -> sequence a.
-
     Definition seq_sub {A} {Ih : Inhab A} (s : sequence A) (i1 : Z) (i2 : Z) : sequence A :=
       LibListZ.take (i2 - i1) (LibListZ.drop i1 s).
 
 
     Definition seq_sub_l  (A : Type) {Ih : Inhab A} (s : sequence A) (
-        i : Coq.Numbers.BinNums.Z
+        i : Z
       ) : sequence A:=
       seq_sub s i (length s).
 
     Definition seq_sub_r  (A : Type) {Ih : Inhab A} (s : sequence A) (
-        i : Coq.Numbers.BinNums.Z
+        i : Z
       ) : sequence A:=
       seq_sub s (0)%Z i.
 
     Definition map_set  (A : Type) (B : Type) {Ih : Inhab A} {Ih : Inhab B} (f : A -> B) (x : A) (y : B) : A -> B:=
       fun arg : A =>
-        if classicT (Coq.Init.Logic.eq arg x) then y else f x.
+        if classicT (arg = x) then y else f arg.
 
     Definition monoid {A} `{Inhab A} (f : A -> A -> A) (n : A) : Prop :=
       neutral_l f n /\ neutral_r f n /\ assoc f.
 
     Lemma monoid_def :
-      forall {a59 : Type},
-      forall {Ih_a59 : Inhab a59},
-      forall f : a59 -> a59 -> a59,
-      forall neutral : a59,
-        Coq.Init.Logic.iff (monoid f neutral) (
-            Coq.Init.Logic.and (
-                forall x : a59,
-                  Coq.Init.Logic.and (eq (f neutral x) (f x neutral)) (eq (f x neutral) x)
-              ) (
-                forall x : a59,
-                forall y : a59,
-                forall z : a59,
-                  eq (f x (f y z)) (f (f x y) z)
-              )
-          ).
+          forall {A : Type},
+  forall {Ih_A : Inhab A},
+  forall f : A -> A -> A,
+  forall neutral : A,
+  (
+    (monoid f neutral) <-> (
+      (
+        (
+          forall x : A,
+          ((((f neutral x) = (f x neutral))) /\ (((f x neutral) = x)))
+        ) /\ (
+          forall x : A,
+          forall y : A,
+          forall z : A,
+          ((f x (f y z)) = (f (f x y) z))
+        )
+      )
+    )
+  ).
     Proof.
       intros A Ih f neutral.
       unfold monoid.
       unfold neutral_l, neutral_r, assoc.
       split.
-      - intros [H1 [H2 H3]]. split.
-        + intros x. rewrite H1. rewrite H2. auto.
+      - intros [H1 [H2 H3]]. split; intros x.
+        + rewrite H1. rewrite H2. auto.
         + auto.
-      - intros [H1 H2].
+      - intros (H1 & H2).
         repeat split; intros x; specialize H1 with x as [H3 H4];
         try (rewrite H3); auto.
     Qed.
@@ -127,8 +132,8 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
       forall {Ih_a70 : Inhab a70},
       forall f : a70 -> a70 -> a70,
       forall neutral : a70,
-        Coq.Init.Logic.iff (comm_monoid f neutral) (
-            Coq.Init.Logic.and (monoid f neutral) (
+        Corelib.Init.Logic.iff (comm_monoid f neutral) (
+            Corelib.Init.Logic.and (monoid f neutral) (
                 forall x : a70,
                 forall y : a70,
                   eq (f x y) (f y x)
@@ -142,28 +147,20 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
 
     Module Sequence.
 
-      Parameter t : Type -> Type.
+      Definition t A := sequence A.
 
-      Definition in_range  (A : Type) {Ih : Inhab A} (s : sequence A) (
-          i : Coq.Numbers.BinNums.Z
-        ) : Prop:=
-        Coq.Init.Logic.and (le (0)%Z i) (lt i (length s)).
+      Definition length {A} `{Inhab A} (s : t A) := LibListZ.length s.
+
+      Definition in_range  (A : Type) `{Inhab A} (s : sequence A) i : Prop:=
+        0 <= i < length s.
 
       Lemma in_range_def :
-        forall {a4 : Type},
-        forall {Ih_a4 : Inhab a4},
-        forall s : sequence a4,
-        forall i : Coq.Numbers.BinNums.Z,
-          Coq.Init.Logic.iff (in_range s i) (
-              Coq.Init.Logic.and (le (0)%Z i) (lt i (length s))
-            ).
+        forall (A : Type) (Ih_A : Inhab A) (s : sequence A) (i : int),
+          Sequence.in_range s i <-> 0 <= i < Sequence.length s.
       Proof.
         unfold in_range.
         tauto.
       Qed.
-
-      Definition length {A} {Ih : Inhab A} (s : sequence A) : Z :=
-        LibListZ.length s.
 
       Lemma length_nonneg :
         forall A11 : Type,
@@ -182,7 +179,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {Ih : Inhab A17},
         forall s : sequence A17,
         forall s' : sequence A17,
-          Coq.Init.Logic.eq (length (app s s')) (plus (length s) (length s')).
+          Corelib.Init.Logic.eq (length (app s s')) (plus (length s) (length s')).
       Proof.
         intros.
         unfold_all.
@@ -197,9 +194,9 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {Ih : Inhab A26},
         forall s : sequence A26,
         forall s' : sequence A26,
-        forall i : Coq.Numbers.BinNums.Z,
+        forall i : Z,
           in_range s i ->
-          Coq.Init.Logic.eq (seq_get (app s s') i) (seq_get s i).
+          Corelib.Init.Logic.eq (seq_get (app s s') i) (seq_get s i).
       Proof.
         unfold in_range.
         intros.
@@ -212,17 +209,9 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
       Qed.
 
       Lemma append_elems_right :
-        forall a36 : Type,
-        forall {a36Ih : Inhab a36},
-        forall s : sequence a36,
-        forall s' : sequence a36,
-        forall i : Coq.Numbers.BinNums.Z,
-          Coq.Init.Logic.and (le (length s) i) (
-              lt i (plus (length s) (length s'))
-            ) ->
-          Coq.Init.Logic.eq (seq_get (app s s') i) (
-              seq_get s' (minus i (length s))
-            ).
+        forall (A : Type) (Ih_A : Inhab A) (s s' : sequence A) (i : int),
+          Sequence.length s <= i < Sequence.length s + Sequence.length s' ->
+          seq_get (app s s') i = seq_get s' (i - Sequence.length s).
       Proof.
         unfold length.
         intros.
@@ -237,9 +226,9 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {a40 : Type},
         forall {_Ga40 : Inhab a40},
         forall s : sequence a40,
-        forall i : Coq.Numbers.BinNums.Z,
+        forall i : Z,
           in_range s i ->
-          Coq.Init.Logic.eq (seq_sub_l s i) (seq_sub s i (length s)).
+          Corelib.Init.Logic.eq (seq_sub_l s i) (seq_sub s i (length s)).
       Proof.
         auto.
       Qed.
@@ -248,25 +237,16 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {a44 : Type},
         forall {Ih_a44 : Inhab a44},
         forall s : sequence a44,
-        forall i : Coq.Numbers.BinNums.Z,
-          in_range s i -> Coq.Init.Logic.eq (seq_sub_r s i) (seq_sub s (0)%Z i).
+        forall i : Z,
+          in_range s i -> Corelib.Init.Logic.eq (seq_sub_r s i) (seq_sub s (0)%Z i).
       Proof.
         auto.
       Qed.
 
       Lemma subseq :
-        forall {a50 : Type},
-        forall {_Ga50 : Inhab a50},
-        forall s : sequence a50,
-        forall i : Coq.Numbers.BinNums.Z,
-        forall i1 : Coq.Numbers.BinNums.Z,
-        forall i2 : Coq.Numbers.BinNums.Z,
-          Coq.Init.Logic.and (le (0)%Z i1) (
-              Coq.Init.Logic.and (le i1 i) (
-                  Coq.Init.Logic.and (lt i i2) (le i2 (length s))
-                )
-            ) ->
-          Coq.Init.Logic.eq (seq_get s i) (seq_get (seq_sub s i1 i2) (minus i i1)).
+        forall (A : Type) (Ih_A : Inhab A) (s : sequence A) (i i1 i2 : int),
+          0 <= i1 /\ i1 <= i /\ i < i2 <= Sequence.length s ->
+          seq_get s i = seq_get (seq_sub s i1 i2) (i - i1).
       Proof.
         unfold_all.
         unfold length.
@@ -280,15 +260,9 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
       Qed.
 
       Lemma subseq_len :
-        forall {a60 : Type},
-        forall {Ih_a60 : Inhab a60},
-        forall s : sequence a60,
-        forall i1 : Coq.Numbers.BinNums.Z,
-        forall i2 : Coq.Numbers.BinNums.Z,
-          Coq.Init.Logic.and (le (0)%Z i1) (
-              Coq.Init.Logic.and (le i1 i2) (lt i2 (length s))
-            ) ->
-          Coq.Init.Logic.eq (length (seq_sub s i1 i2)) (minus i2 i1).
+        forall (A : Type) (Ih_A : Inhab A) (s : sequence A) (i1 i2 : int),
+          0 <= i1 /\ i1 <= i2 < Sequence.length s ->
+          Sequence.length (seq_sub s i1 i2) = i2 - i1.
       Proof.
         unfold length.
         unfold_all.
@@ -327,14 +301,11 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
       Qed.
 
       Lemma init_length :
-        forall A49 : Type,
-        forall {Ih : Inhab A49},
-        forall n : Coq.Numbers.BinNums.Z,
-        forall f : Coq.Numbers.BinNums.Z -> A49,
-          ge n 0 -> Coq.Init.Logic.eq (length (init n f)) n.
+        forall (A : Type) (Ih_A : Inhab A) (n : int) (f : int -> A),
+ n >= 0 -> Sequence.length (Sequence.init n f) = n.
       Proof.
         intros A Ih n f H.
-        unfold init. unfold ge in *.
+        unfold init.
         rewrite If_r.
         - unfold length. rewrite init_aux_length. math.
         - math.
@@ -362,13 +333,8 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
       Qed.
 
       Lemma init_elems :
-        forall A57 : Type,
-        forall {Ih : Inhab A57},
-        forall n : Coq.Numbers.BinNums.Z,
-        forall f : Coq.Numbers.BinNums.Z -> A57,
-        forall i : Coq.Numbers.BinNums.Z,
-          Coq.Init.Logic.and (le (0)%Z i) (lt i n) ->
-          Coq.Init.Logic.eq (seq_get (init n f) i) (f i).
+        forall (A : Type) (Ih_A : Inhab A) (n : int) (f : int -> A) (i : int),
+          0 <= i < n -> seq_get (Sequence.init n f) i = f i.
       Proof.
         intros A Inh n f i [H1 H2].
         unfold seq_get.
@@ -381,23 +347,23 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
 
       Definition empty {A} {Ih : Inhab A} := @nil A.
       Lemma empty_length :
-        forall A {Ih : Inhab A}, Coq.Init.Logic.eq (length (@empty A Ih)) (0)%Z.
+        forall A {Ih : Inhab A}, Corelib.Init.Logic.eq (length (@empty A Ih)) (0)%Z.
       Proof.
         intro A.
         unfold length. rew_list. auto.
       Qed.
 
       Definition singleton (A : Type) {Ih : Inhab A} (x : A) : sequence A:=
-        init (1)%Z (fun _ : Coq.Numbers.BinNums.Z => x).
+        init (1)%Z (fun _ : Z => x).
 
 
       Lemma singleton_def :
         forall {a82 : Type},
         forall {Ih_a82 : Inhab a82},
         forall x : a82,
-        forall f : Coq.Numbers.BinNums.Z -> a82,
-          Coq.Init.Logic.eq (f (0)%Z) x ->
-          Coq.Init.Logic.eq (singleton x) (init (1)%Z f).
+        forall f : Z -> a82,
+          Corelib.Init.Logic.eq (f (0)%Z) x ->
+          Corelib.Init.Logic.eq (singleton x) (init (1)%Z f).
       Proof.
         intros A IhA x f H1.
         unfold singleton, init.
@@ -416,7 +382,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {Ih_a88 : Inhab a88},
         forall x : a88,
         forall s : sequence a88,
-          Coq.Init.Logic.eq (cons x s) (app (singleton x) s).
+          Corelib.Init.Logic.eq (cons x s) (app (singleton x) s).
       Proof.
         intros A Ih x s.
         unfold app, cons, singleton, init.
@@ -432,7 +398,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {Ih_a94 : Inhab a94},
         forall s : sequence a94,
         forall x : a94,
-          Coq.Init.Logic.eq (snoc s x) (app s (singleton x)).
+          Corelib.Init.Logic.eq (snoc s x) (app s (singleton x)).
       Proof.
         auto.
       Qed.
@@ -443,7 +409,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {a99 : Type},
         forall {Ih_a99 : Inhab a99},
         forall s : sequence a99,
-          Coq.Init.Logic.eq (hd s) (seq_get s (0)%Z).
+          Corelib.Init.Logic.eq (hd s) (seq_get s (0)%Z).
       Proof.
         auto.
       Qed.
@@ -456,7 +422,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {a102 : Type},
         forall {Ih_a102 : Inhab a102},
         forall s : sequence a102,
-          Coq.Init.Logic.eq (tl s) (seq_sub_l s (1)%Z).
+          Corelib.Init.Logic.eq (tl s) (seq_sub_l s (1)%Z).
       Proof.
         auto.
       Qed.
@@ -470,7 +436,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {Ih_a107 : Inhab a107},
         forall s1 : sequence a107,
         forall s2 : sequence a107,
-          Coq.Init.Logic.eq (append s1 s2) (app s1 s2).
+          Corelib.Init.Logic.eq (append s1 s2) (app s1 s2).
       Proof.
         auto.
       Qed.
@@ -482,7 +448,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall A73 : Type,
         forall {Ih : Inhab A73},
         forall x : A73,
-          Coq.Init.Logic.eq (multiplicity x (@empty A73 Ih)) (0)%Z.
+          Corelib.Init.Logic.eq (multiplicity x (@empty A73 Ih)) (0)%Z.
       Proof.
         intros A Ih x.
         unfold multiplicity.
@@ -495,7 +461,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {Ih : Inhab A79},
         forall s : sequence A79,
         forall x : A79,
-          Coq.Init.Logic.eq (plus (1)%Z (multiplicity x s)) (
+          Corelib.Init.Logic.eq (plus (1)%Z (multiplicity x s)) (
               multiplicity x (cons x s)
             ).
       Proof.
@@ -510,8 +476,8 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
 
       Lemma mult_cons_neutral :
         forall A {Ih : Inhab A} s (x1 : A) x2,
-          Coq.Init.Logic.not (Coq.Init.Logic.eq x1 x2) ->
-          Coq.Init.Logic.eq (multiplicity x1 s) (multiplicity x1 (cons x2 s)).
+          Corelib.Init.Logic.not (Corelib.Init.Logic.eq x1 x2) ->
+          Corelib.Init.Logic.eq (multiplicity x1 s) (multiplicity x1 (cons x2 s)).
       Proof.
         intros A Ih s x1 x2 H1.
         unfold multiplicity.
@@ -527,7 +493,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {Ih: Inhab A92},
         forall x : A92,
         forall s : sequence A92,
-          Coq.Init.Logic.and (le (0)%Z (multiplicity x s)) (
+          Corelib.Init.Logic.and (le (0)%Z (multiplicity x s)) (
               le (multiplicity x s) (length s)
             ).
       Proof.
@@ -547,17 +513,27 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
 
       Definition mem  (A : Type) {Ih : Inhab A} (x : A) (s : sequence A) : Prop:= LibList.mem x s.
 
+      Definition belongs {A} `{Inhab A} (x : A) s :=
+        mem x s.
+
+      Lemma mem_fun_def :
+        forall {A : Type},
+        forall {Ih_A : Inhab A},
+        forall x : A,
+        forall s : sequence A,
+          ((belongs x s) <-> (mem x s)).
+      Proof.
+        tauto.
+      Qed.
+
       Lemma mem_def :
-        forall {a134 : Type},
-        forall {Ih_a134 : Inhab a134},
-        forall s : sequence a134,
-        forall x : a134,
-          Coq.Init.Logic.iff (mem x s) (gt (multiplicity x s) (0)%Z).
+        forall (A : Type) (Ih_A : Inhab A) (s : sequence A) (x : A),
+          Sequence.belongs x s <-> (Sequence.multiplicity x s > 0).
       Proof.
         intros A IhA s x.
         unfold_all.
         unfold multiplicity.
-        unfold mem.
+        unfold belongs, mem.
         split; intros H1.
         + change (LibListZ.count (= x) s > 0%nat).
           rewrite <- LibListZ.Exists_eq_count_pos.
@@ -570,36 +546,47 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
           subst. auto.
       Qed.
 
+      Definition neg_belongs {A} `{Inhab A} (x : A) s :=
+        not (belongs x s).
 
-      Definition _forall {A} `{Inhab A} (P : A -> Prop) (s : sequence A) :=
+      Lemma nmem_def :
+        forall {A : Type},
+        forall {Ih_A : Inhab A},
+        forall s : sequence A,
+        forall x : A,
+          (not (belongs x s) <-> (neg_belongs x s)).
+      Proof.
+        unfold neg_belongs.
+        tauto.
+      Qed.
+
+      Definition Forall {A} `{Inhab A} (P : A -> Prop) (s : sequence A) :=
         Forall P s.
 
       Lemma forall_def :
-        forall {a176 : Type},
-        forall {Ih_a176 : Inhab a176},
-        forall p : a176 -> bool,
-        forall s : sequence a176,
-          Coq.Init.Logic.iff (_forall p s) (forall x : a176, mem x s -> p x).
+        forall {A : Type},
+        forall {Ih_A : Inhab A},
+        forall p : A -> Prop,
+        forall s : sequence A,
+          (Forall p s <-> forall x : A, mem x s -> p x).
       Proof.
         intros A Ih p s.
-        unfold mem, _forall.
+        unfold mem, Forall.
         rewrite Forall_eq_forall_mem. tauto.
       Qed.
 
-      Definition _exists {A} `{Inhab A} (P : A -> Prop) (s : sequence A) :=
+      Definition Exists {A} `{Inhab A} (P : A -> Prop) (s : sequence A) :=
         Exists P s.
 
-      Lemma _exists_def :
-        forall {a182 : Type},
-        forall {Ih_a182 : Inhab a182},
-        forall p : a182 -> bool,
-        forall s : sequence a182,
-          Coq.Init.Logic.iff (_exists p s) (
-              Coq.Init.Logic.ex (fun x : a182 => Coq.Init.Logic.and (mem x s) (p x))
-            ).
+      Lemma exists_def :
+        forall {A : Type},
+        forall {Ih_A : Inhab A},
+        forall p : A -> Prop,
+        forall s : sequence A,
+          (Exists p s <-> exists x : A, (mem x s /\ p x)).
       Proof.
         intros A Ih p s.
-        unfold _exists, mem.
+        unfold Exists, mem.
         rewrite Exists_eq_exists_mem.
         tauto.
       Qed.
@@ -611,7 +598,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall A102 : Type,
         forall {Ih : Inhab A100},
         forall {Ih : Inhab A102},
-        forall i : Coq.Numbers.BinNums.Z,
+        forall i : Z,
         forall f : A100 -> A102,
         forall s : sequence A100,
           in_range s i -> eq (seq_get (map f s) i) (f (seq_get s i)).
@@ -625,14 +612,30 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         rew_index. split; auto.
       Qed.
 
+      Lemma map_length :
+        forall {B : Type},
+        forall {A : Type},
+        forall {Ih_B : Inhab B},
+        forall {Ih_A : Inhab A},
+        forall f : B -> A,
+        forall s : sequence B,
+          (length (map f s) = length s).
+      Proof.
+        intros.
+        unfold length, map.
+        rew_listx.
+        auto.
+      Qed.
+
       Definition filter {A} {Ih : Inhab A} := @LibList.filter A.
 
       Lemma filter_elems :
-        forall A113 : Type,
-        forall {Ih : Inhab A113},
-        forall f : A113 -> bool,
-        forall s : sequence A113,
-        forall x, mem x s -> f x -> mem x (filter f s).
+        forall {A : Type},
+        forall {Ih_A : Inhab A},
+        forall f : A -> Prop,
+        forall s : sequence A,
+        forall x : A,
+          mem x s -> f x -> mem x (filter f s).
       Proof.
         intros A IhA f s.
         unfold mem in *. unfold multiplicity in *.
@@ -651,21 +654,20 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         let g :=
           fun x =>
             match f x with
-            |Some x => x |None => arbitrary end in
+            |Datatypes.Some x => x |Datatypes.None => arbitrary end in
         LibList.map g (LibList.filter (fun x => f x <> None) s).
 
       Lemma filter_map_elems :
-        forall {a707 : Type},
-        forall {a708 : Type},
-        forall {Ih_a707 : Inhab a707},
-        forall {Ih_a708 : Inhab a708},
-        forall f : a707 -> option a708,
-        forall s : sequence a707,
-        forall y : a708,
-          (exists x, f x = Some y /\ mem x s) <->
-            mem y (filter_map f s).
+        forall {B : Type},
+        forall {A : Type},
+        forall {Ih_B : Inhab B},
+        forall {Ih_A : Inhab A},
+        forall f : B -> option A,
+        forall s : sequence B,
+        forall y : A,
+          ((exists x : B, ((f x = Some y) /\ mem x s)) <-> mem y (filter_map f s)).
       Proof.
-        intros A B IhA IhB f s y.
+        intros B A IhB IhA f s y.
         unfold filter_map.
         split; intros H1.
         - destruct H1 as [x [H1 H2]].
@@ -674,14 +676,14 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
             rewrite H1. discriminate.
           + rewrite H1. auto.
         - apply LibList.mem_Nth
-            with B (LibList.map (*very awkward :|*)
-                      (fun x : A =>
+            with A (LibList.map (*very awkward :|*)
+                      (fun x : B =>
                          match f x with
-                         | Some x0 => x0
-                         | None => arbitrary
+                         | Datatypes.Some x0 => x0
+                         | Datatypes.None => arbitrary
                          end)
                       (LibList.filter
-                         (fun x : A => f x <> None)
+                         (fun x : B => f x <> None)
                          s)) y in H1.
           destruct H1 as [n H1].
           apply Nth_map_inv in H1.
@@ -701,8 +703,8 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {a156 : Type},
         forall {Ih_a156 : Inhab a156},
         forall s : sequence a156,
-        forall i : Coq.Numbers.BinNums.Z,
-          Coq.Init.Logic.eq (get s i) (seq_get s i).
+        forall i : Z,
+          Corelib.Init.Logic.eq (get s i) (seq_get s i).
       Proof.
         auto.
       Qed.
@@ -758,10 +760,10 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall A121 : Type,
         forall {Ih : Inhab A121},
         forall s : sequence A121,
-        forall i : Coq.Numbers.BinNums.Z,
+        forall i : Z,
         forall x : A121,
           in_range s i ->
-          Coq.Init.Logic.eq (seq_get (set s i x) i) x.
+          Corelib.Init.Logic.eq (seq_get (set s i x) i) x.
       Proof.
         intros A IHA s i x [H1 H2].
         unfold le in *. unfold lt in *. unfold seq_get in *. unfold length in *.
@@ -805,13 +807,13 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall A130 : Type,
         forall {Ih : Inhab A130},
         forall s : sequence A130,
-        forall i1 : Coq.Numbers.BinNums.Z,
-        forall i2 : Coq.Numbers.BinNums.Z,
+        forall i1 : Z,
+        forall i2 : Z,
         forall x : A130,
-          Coq.Init.Logic.not (Coq.Init.Logic.eq i1 i2) ->
+          Corelib.Init.Logic.not (Corelib.Init.Logic.eq i1 i2) ->
           in_range s i1 ->
           in_range s i2 ->
-          Coq.Init.Logic.eq (seq_get (set s i1 x) i2) (seq_get s i2).
+          Corelib.Init.Logic.eq (seq_get (set s i1 x) i2) (seq_get s i2).
       Proof.
         unfold in_range.
         intros A IhA s i1 i2 x H1 H2 H3.
@@ -826,7 +828,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall A134 : Type,
         forall {Ih: Inhab A134},
         forall s : sequence A134,
-          Coq.Init.Logic.eq (length s) (length (rev s)).
+          Corelib.Init.Logic.eq (length s) (length (rev s)).
       Proof.
         intros A Ih s. unfold length. unfold rev. rew_list. auto.
       Qed.
@@ -855,10 +857,10 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
       Lemma rev_elems :
         forall A143 : Type,
         forall {Ih : Inhab A143},
-        forall i : Coq.Numbers.BinNums.Z,
+        forall i : Z,
         forall s : sequence A143,
           in_range s i ->
-          Coq.Init.Logic.eq (seq_get (rev s) i) (
+          Corelib.Init.Logic.eq (seq_get (rev s) i) (
               seq_get s (minus (minus (length s) 1) (i)%Z)
             ).
       Proof.
@@ -891,7 +893,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {Ih_a204 : Inhab a204},
         forall f : a204 -> a203 -> a204,
         forall acc : a204,
-          Coq.Init.Logic.eq (fold_left f acc (@empty a203 Ih_a203)) acc.
+          Corelib.Init.Logic.eq (fold_left f acc (@empty a203 Ih_a203)) acc.
       Proof.
         intros A1 A2 Ih1 Ih2 f acc.
         unfold fold_left.
@@ -908,7 +910,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall acc : a216,
         forall x : a215,
         forall l : sequence a215,
-          Coq.Init.Logic.eq (fold_left f acc (cons x l)) (fold_left f (f acc x) l).
+          Corelib.Init.Logic.eq (fold_left f acc (cons x l)) (fold_left f (f acc x) l).
       Proof.
         intros A B IhA IhB f acc x l.
         unfold fold_left, cons.
@@ -929,7 +931,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {Ih_a222 : Inhab a222},
         forall acc : a222,
         forall f : a221 -> a222 -> a222,
-          Coq.Init.Logic.eq (fold_right f (@empty a221 Ih_a221) acc) acc.
+          Corelib.Init.Logic.eq (fold_right f (@empty a221 Ih_a221) acc) acc.
       Proof.
         intros A B IhA IhB acc f.
         unfold fold_right.
@@ -947,7 +949,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall f : a232 -> a234 -> a234,
         forall x : a232,
         forall l : sequence a232,
-          Coq.Init.Logic.eq (fold_right f (cons x l) acc) (
+          Corelib.Init.Logic.eq (fold_right f (cons x l) acc) (
               f x (fold_right f l acc)
             ).
       Proof.
@@ -962,11 +964,11 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {Ih : Inhab A171},
         forall s1 : sequence A171,
         forall s2 : sequence A171,
-          Coq.Init.Logic.eq (length s1) (length s2) ->
+          Corelib.Init.Logic.eq (length s1) (length s2) ->
           (
-            forall i : Coq.Numbers.BinNums.Z,
+            forall i : Z,
               in_range s1 i ->
-              Coq.Init.Logic.eq (seq_get s1 i) (seq_get s2 i)
+              Corelib.Init.Logic.eq (seq_get s1 i) (seq_get s2 i)
           ) -> s1 = s2.
       Proof.
         unfold in_range.
@@ -981,7 +983,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
       Qed.
 
       Definition permut {A} `{Inhab A} (s1 : sequence A) (s2 : sequence A) :=
-        (forall x : A, Coq.Init.Logic.iff (mem x s1) (mem x s2)).
+        (forall x : A, Corelib.Init.Logic.iff (mem x s1) (mem x s2)).
 
       Lemma permut_mem :
         forall {a300 : Type},
@@ -989,7 +991,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall s1 : sequence a300,
         forall s2 : sequence a300,
           permut s1 s2 ->
-          (forall x : a300, Coq.Init.Logic.iff (mem x s1) (mem x s2)).
+          (forall x : a300, Corelib.Init.Logic.iff (mem x s1) (mem x s2)).
       Proof.
         tauto.
       Qed.
@@ -1018,7 +1020,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
 
     Module Bag.
 
-      Parameter t : Type -> Type.
+      Definition t := bag.
 
       Definition multiplicity {A} `{Inhab A} (x : A) (b : bag A) : Z :=
         b x.
@@ -1042,7 +1044,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {a240 : Type},
         forall {Ih_a240 : Inhab a240},
         forall x : a240,
-          Coq.Init.Logic.eq (multiplicity x (@empty a240 Ih_a240)) (0)%Z.
+          Corelib.Init.Logic.eq (multiplicity x (@empty a240 Ih_a240)) (0)%Z.
       Proof.
         auto.
       Qed.
@@ -1053,9 +1055,9 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
       Lemma init_axiom :
         forall a182 : Type,
         forall {a182Ih : Inhab a182},
-        forall f : a182 -> Coq.Numbers.BinNums.Z,
+        forall f : a182 -> Z,
         forall x : a182,
-          Coq.Init.Logic.eq (max (0)%Z (f x)) (multiplicity x (init f)).
+          Corelib.Init.Logic.eq (max (0)%Z (f x)) (multiplicity x (init f)).
       Proof.
         unfold_all.
         unfold multiplicity, init.
@@ -1070,7 +1072,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {a188Ih : Inhab a188},
         forall b : bag a188,
         forall x : a188,
-          Coq.Init.Logic.eq (multiplicity x (add x b)) (
+          Corelib.Init.Logic.eq (multiplicity x (add x b)) (
               plus (1)%Z (multiplicity x b)
             ).
       Proof.
@@ -1087,21 +1089,32 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall x : a196,
         forall y : a196,
         forall b : bag a196,
-          Coq.Init.Logic.not (Coq.Init.Logic.eq x y) ->
-          Coq.Init.Logic.eq (multiplicity y (add x b)) (multiplicity y b).
+          Corelib.Init.Logic.not (Corelib.Init.Logic.eq x y) ->
+          Corelib.Init.Logic.eq (multiplicity y (add x b)) (multiplicity y b).
         intros A IhA x y b H1.
         unfold multiplicity, add.
         rewrite If_r; auto.
       Qed.
 
-      Definition singleton  (a : Type) { aIh : Inhab a } (x : a) : bag a:=
+      Definition singleton  {a : Type} { aIh : Inhab a } (x : a) : bag a:=
         add x (@empty a aIh).
+
+      Definition singleton_set {A} {I : Inhab A} := @singleton A I.
+
+      Lemma singleton_fun_def :
+        forall {A : Type},
+        forall {Ih_A : Inhab A},
+        forall x : A,
+          ((singleton_set x) = (singleton x)).
+      Proof.
+        tauto.
+      Qed.
 
       Lemma singleton_def :
         forall {a269 : Type},
         forall {Ih_a269 : Inhab a269},
         forall x : a269,
-          Coq.Init.Logic.eq (singleton x) (add x (@empty a269 Ih_a269)).
+          Corelib.Init.Logic.eq (singleton x) (add x (@empty a269 Ih_a269)).
       Proof.
         auto.
       Qed.
@@ -1109,14 +1122,38 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
       Definition mem  (a : Type) { aIh : Inhab a } (x : a) (b : bag a) : Prop:=
         gt (multiplicity x b) (0)%Z.
 
+      Definition belongs {A} {Ih : Inhab A} := @mem A Ih.
+
       Lemma mem_def :
         forall {a251 : Type},
         forall {Ih_a251 : Inhab a251},
         forall x : a251,
         forall b : bag a251,
-          Coq.Init.Logic.iff (mem x b) (gt (multiplicity x b) (0)%Z).
+          Corelib.Init.Logic.iff (mem x b) (gt (multiplicity x b) (0)%Z).
       Proof.
         tauto.
+      Qed.
+
+      Lemma mem_fun_def :
+        forall {A : Type},
+        forall {Ih_A : Inhab A},
+        forall x : A,
+        forall s : bag A,
+          ((belongs x s) <-> (mem x s)).
+      Proof.
+        tauto.
+      Qed.
+
+      Definition neg_belongs {A} `{Inhab A} (x : A) s := not (mem x s).
+
+      Lemma nmem_def :
+        forall {A : Type},
+        forall {Ih_A : Inhab A},
+        forall s : bag A,
+        forall x : A,
+          ((neg_belongs x s) <-> (not (belongs x s))).
+      Proof.
+        unfold neg_belongs. tauto.
       Qed.
 
       Definition remove {A} `{Inhab A} (x : A) b : bag A :=
@@ -1127,7 +1164,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {a205Ih : Inhab a205},
         forall b : bag a205,
         forall x : a205,
-          Coq.Init.Logic.eq (multiplicity x (remove x b)) (
+          Corelib.Init.Logic.eq (multiplicity x (remove x b)) (
               max (0)%Z (minus (multiplicity x b) (1)%Z)
             ).
       Proof.
@@ -1144,8 +1181,8 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall x : a213,
         forall y : a213,
         forall b : bag a213,
-          Coq.Init.Logic.not (Coq.Init.Logic.eq x y) ->
-          Coq.Init.Logic.eq (multiplicity y (remove x b)) (multiplicity y b).
+          Corelib.Init.Logic.not (Corelib.Init.Logic.eq x y) ->
+          Corelib.Init.Logic.eq (multiplicity y (remove x b)) (multiplicity y b).
       Proof.
         intros A IhA x y b H1.
         unfold multiplicity, remove.
@@ -1161,7 +1198,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall b : bag a221,
         forall b' : bag a221,
         forall x : a221,
-          Coq.Init.Logic.eq (max (multiplicity x b) (multiplicity x b')) (
+          Corelib.Init.Logic.eq (max (multiplicity x b) (multiplicity x b')) (
               multiplicity x (union b b')
             ).
       Proof.
@@ -1179,7 +1216,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall b : bag a229,
         forall b' : bag a229,
         forall x : a229,
-          Coq.Init.Logic.eq (plus (multiplicity x b) (multiplicity x b')) (
+          Corelib.Init.Logic.eq (plus (multiplicity x b) (multiplicity x b')) (
               multiplicity x (sum b b')
             ).
       Proof.
@@ -1196,7 +1233,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall b : bag a237,
         forall b' : bag a237,
         forall x : a237,
-          Coq.Init.Logic.eq (min (multiplicity x b) (multiplicity x b')) (
+          Corelib.Init.Logic.eq (min (multiplicity x b) (multiplicity x b')) (
               multiplicity x (inter b b')
             ).
       Proof.
@@ -1213,7 +1250,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall b : bag a245,
         forall b' : bag a245,
         forall x : a245,
-          Coq.Init.Logic.eq (
+          Corelib.Init.Logic.eq (
               max (0)%Z (minus (multiplicity x b) (multiplicity x b'))
             ) (multiplicity x (diff b b')).
       Proof.
@@ -1225,7 +1262,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
           b' : bag a
         ) : Prop:=
         forall x : a,
-          mem x b -> Coq.Init.Logic.not (mem x b').
+          mem x b -> Corelib.Init.Logic.not (mem x b').
 
 
       Lemma disjoint_def :
@@ -1233,9 +1270,9 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {Ih_a314 : Inhab a314},
         forall b : bag a314,
         forall b' : bag a314,
-          Coq.Init.Logic.iff (disjoint b b') (
+          Corelib.Init.Logic.iff (disjoint b b') (
               forall x : a314,
-                mem x b -> Coq.Init.Logic.not (mem x b')
+                mem x b -> Corelib.Init.Logic.not (mem x b')
             ).
       Proof.
         tauto.
@@ -1251,7 +1288,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {Ih_a328 : Inhab a328},
         forall b : bag a328,
         forall b' : bag a328,
-          Coq.Init.Logic.iff (subset b b') (
+          Corelib.Init.Logic.iff (subset b b') (
               forall x : a328,
                 le (multiplicity x b) (multiplicity x b')
             ).
@@ -1263,13 +1300,8 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         fun x => If p x then b x else 0%nat.
 
       Lemma filter_mem :
-        forall a259 : Type,
-        forall {a259Ih : Inhab a259},
-        forall b : bag a259,
-        forall x : a259,
-        forall f : a259 -> bool,
-          f x ->
-          Coq.Init.Logic.eq (multiplicity x (filter f b)) (multiplicity x b).
+        forall (A : Type) (Ih_A : Inhab A) (b : bag A) (x : A) (f : A -> Prop),
+          f x -> Bag.multiplicity x (Bag.filter f b) = Bag.multiplicity x b.
       Proof.
         intros A IhA b x f H1.
         unfold multiplicity, filter.
@@ -1277,13 +1309,8 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
       Qed.
 
       Lemma filter_mem_neg :
-        forall a266 : Type,
-        forall {a266Ih : Inhab a266},
-        forall b : bag a266,
-        forall x : a266,
-        forall f : a266 -> bool,
-          Coq.Init.Logic.not (f x) ->
-          Coq.Init.Logic.eq (multiplicity x (filter f b)) (0)%Z.
+        forall (A : Type) (Ih_A : Inhab A) (b : bag A) (x : A) (f : A -> Prop),
+          ~ f x -> Bag.multiplicity x (Bag.filter f b) = 0.
       Proof.
         intros A Ih b x f H1.
         unfold multiplicity, filter.
@@ -1307,8 +1334,8 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {a349 : Type},
         forall {Ih_a349 : Inhab a349},
         forall b : bag a349,
-          Coq.Init.Logic.iff (finite b) (
-              Coq.Init.Logic.ex (
+          Corelib.Init.Logic.iff (finite b) (
+              Corelib.Init.Logic.ex (
                   fun s : sequence a349 =>
                     forall x : a349,
                       mem x b -> Sequence.mem x s
@@ -1327,13 +1354,13 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
       Parameter card_empty :
         forall a276 : Type,
         forall {a276Ih : Inhab a276},
-          Coq.Init.Logic.eq (cardinal (@empty a276 a276Ih)) (0)%Z.
+          Corelib.Init.Logic.eq (cardinal (@empty a276 a276Ih)) (0)%Z.
 
       Parameter card_singleton :
         forall a280 : Type,
         forall {a280Ih : Inhab a280},
         forall x : a280,
-          Coq.Init.Logic.eq (cardinal (singleton x)) (1)%Z.
+          Corelib.Init.Logic.eq (cardinal (singleton x)) (1)%Z.
 
       Parameter card_union :
         forall a289 : Type,
@@ -1342,7 +1369,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall b2 : bag a289,
           finite b1 ->
           finite b2 ->
-          Coq.Init.Logic.eq (cardinal (union b1 b2)) (
+          Corelib.Init.Logic.eq (cardinal (union b1 b2)) (
               plus (cardinal b1) (cardinal b2)
             ).
 
@@ -1352,14 +1379,11 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall x : a296,
         forall b : bag a296,
           finite b ->
-          Coq.Init.Logic.eq (cardinal (add x b)) (plus (cardinal b) (1)%Z).
+          Corelib.Init.Logic.eq (cardinal (add x b)) (plus (cardinal b) (1)%Z).
 
       Parameter card_map :
-        forall a303 : Type,
-        forall {a303Ih : Inhab a303},
-        forall f : a303 -> bool,
-        forall b : bag a303,
-          finite b -> le (cardinal (filter f b)) (cardinal b).
+        forall (A : Type) (Ih_A : Inhab A) (f : A -> Prop) (b : bag A),
+          Bag.finite b -> Bag.cardinal (Bag.filter f b) <= Bag.cardinal b.
 
       Definition of_seq {A} `{Inhab A}
         (s : sequence A) : bag A :=
@@ -1370,7 +1394,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {a308Ih : Inhab a308},
         forall s : sequence a308,
         forall x : a308,
-          Coq.Init.Logic.eq (Sequence.multiplicity x s) (
+          Corelib.Init.Logic.eq (Sequence.multiplicity x s) (
               multiplicity x (of_seq s)
             ).
       Proof.
@@ -1394,17 +1418,43 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
     Definition set_create {A} {Ih : Inhab A} := fun (_:A) => False.
 
     Module _Set.
+      Import LibSet.
+
       Definition t := set.
 
-      Import TLC.LibSet.
+      Definition mem {A} {Ih : Inhab A} (x : A) (s : set A) : Prop :=  x \in s.
 
-      Definition mem {A} {Ih : Inhab A} (x : A) (s : set A) : Prop := is_in x s.
+      Definition belongs {A} {I : Inhab A} := @mem A I.
+
+      Definition neg_belongs {A} `{Inhab A} (x : A) s := ~ belongs x s.
+
+      Lemma mem_fun_def :
+        forall {A : Type},
+        forall {Ih_A : Inhab A},
+        forall x : A,
+        forall s : set A,
+          ((belongs x s) <-> (mem x s)).
+      Proof.
+        tauto.
+      Qed.
+
+      Lemma nmem_def :
+        forall {A : Type},
+        forall {Ih_A : Inhab A},
+        forall s : set A,
+        forall x : A,
+          (not (belongs x s) <-> (neg_belongs x s)).
+      Proof.
+        unfold neg_belongs. tauto.
+      Qed.
+
       Definition empty {A} {Ih : Inhab A} : set A := empty.
       Lemma empty_mem :
         forall A {Ih : Inhab A} x,
           ~ mem x (@empty A Ih).
         intros. unfold empty. auto.
       Qed.
+
       Definition add {A} {Ih : Inhab A} (x : A) (s : set A) : set A := s \u (single x).
       Lemma add_mem :
         forall A {Ih : Inhab A} s (x : A), mem x (add x s).
@@ -1418,8 +1468,8 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall s : set a323,
         forall x : a323,
         forall y : a323,
-          Coq.Init.Logic.not (Coq.Init.Logic.eq x y) ->
-          Coq.Init.Logic.iff (mem x s) (mem x (add y s)).
+          Corelib.Init.Logic.not (Corelib.Init.Logic.eq x y) ->
+          Corelib.Init.Logic.iff (mem x s) (mem x (add y s)).
       Proof.
         intros A Ih s x y Neq.
         split; intro H; unfold add in *; unfold mem in *.
@@ -1432,6 +1482,26 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
       Definition singleton  (a : Type) { aIh : Inhab a } (x : a) : set a:=
         add x (@empty a aIh).
 
+      Definition singleton_set {A} `{Inhab A} (x : A) := singleton x.
+
+      Lemma singleton_def :
+        forall {A : Type},
+        forall {Ih_A : Inhab A},
+        forall x : A,
+          ((singleton_set x) = (add x empty)).
+      Proof.
+        tauto.
+      Qed.
+
+      Lemma singleton_fun_def :
+        forall {A : Type},
+        forall {Ih_A : Inhab A},
+        forall x : A,
+          ((singleton_set x) = (singleton x)).
+      Proof.
+        tauto.
+      Qed.
+
       Definition remove {A} {Ih : Inhab A} (x : A) (s : set A) : set A :=
         s \-- x.
 
@@ -1440,7 +1510,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {a329Ih : Inhab a329},
         forall s : set a329,
         forall x : a329,
-          Coq.Init.Logic.not (mem x (remove x s)).
+          Corelib.Init.Logic.not (mem x (remove x s)).
       Proof.
         intros A Ih s x.
         unfold remove, mem, singleton, empty, add.
@@ -1455,8 +1525,8 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall s : set a336,
         forall x : a336,
         forall y : a336,
-          Coq.Init.Logic.not (Coq.Init.Logic.eq x y) ->
-          Coq.Init.Logic.iff (mem x s) (mem x (remove y s)).
+          Corelib.Init.Logic.not (Corelib.Init.Logic.eq x y) ->
+          Corelib.Init.Logic.iff (mem x s) (mem x (remove y s)).
         intros A Ih s x y Neq. split; intro H;
           unfold mem, remove, singleton, add, empty in *;
           rewrite set_in_remove_eq in *.
@@ -1473,7 +1543,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall s : set a343,
         forall s' : set a343,
         forall x : a343,
-          Coq.Init.Logic.or (mem x s) (mem x s') -> mem x (union s s').
+          Corelib.Init.Logic.or (mem x s) (mem x s') -> mem x (union s s').
       Proof.
         intros A Ih s s' x [H | H]; unfold mem, union in *;
           rewrite set_in_union_eq; [left | right]; auto.
@@ -1486,8 +1556,8 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall s : set a350,
         forall s' : set a350,
         forall x : a350,
-          Coq.Init.Logic.not (mem x s) ->
-          Coq.Init.Logic.not (mem x s') -> Coq.Init.Logic.not (mem x (union s s')).
+          Corelib.Init.Logic.not (mem x s) ->
+          Corelib.Init.Logic.not (mem x s') -> Corelib.Init.Logic.not (mem x (union s s')).
       Proof.
         intros A Ih s s' x H1 H2.
         unfold mem, union in *.
@@ -1513,16 +1583,12 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
 
 
       Lemma inter_mem_neq :
-        forall a364 : Type,
-        forall {a364Ih : Inhab a364},
-        forall s : set a364,
-        forall s' : set a364,
-        forall x : a364,
-          Coq.Init.Logic.not (Coq.Init.Logic.or (mem x s) (mem x s')) ->
-          Coq.Init.Logic.not (mem x (inter s s')).
+        forall (A : Type) (Ih_A : Inhab A) (s s' : set A) (x : A),
+          ~ (_Set.belongs x s \/ _Set.belongs x s') ->
+          neg_belongs x (_Set.inter s s').
       Proof.
         intros a Ih s s' x H1.
-        unfold mem, inter in *.
+        unfold neg_belongs, belongs, mem, inter in *.
         rewrite set_in_inter_eq.
         unfold not in *. intros [H2 H3].
         destruct H1. auto.
@@ -1532,15 +1598,15 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
       Definition disjoint  (a : Type) { aIh : Inhab a } (s : set a) (
           s' : set a
         ) : Prop:=
-        Coq.Init.Logic.eq (inter s s') (@empty a aIh).
+        Corelib.Init.Logic.eq (inter s s') (@empty a aIh).
 
       Lemma disjoint_def :
         forall {a443 : Type},
         forall {Ih_a443 : Inhab a443},
         forall s : set a443,
         forall s' : set a443,
-          Coq.Init.Logic.iff (disjoint s s') (
-              Coq.Init.Logic.eq (inter s s') (@empty a443 Ih_a443)
+          Corelib.Init.Logic.iff (disjoint s s') (
+              Corelib.Init.Logic.eq (inter s s') (@empty a443 Ih_a443)
             ).
       Proof.
         tauto.
@@ -1555,7 +1621,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall s : set a373,
         forall s' : set a373,
         forall x : a373,
-          mem x s' -> Coq.Init.Logic.not (mem x (diff s s')).
+          mem x s' -> Corelib.Init.Logic.not (mem x (diff s s')).
       Proof.
         intros A Ih s s' x H1.
         unfold mem, diff in *.
@@ -1569,8 +1635,8 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall s : set a380,
         forall s' : set a380,
         forall x : a380,
-          Coq.Init.Logic.not (mem x s') ->
-          Coq.Init.Logic.iff (mem x s) (mem x (diff s s')).
+          Corelib.Init.Logic.not (mem x s') ->
+          Corelib.Init.Logic.iff (mem x s) (mem x (diff s s')).
       Proof.
         intros A Ih s s' x H1.
         unfold mem, diff in *.
@@ -1589,7 +1655,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {Ih_a464 : Inhab a464},
         forall s : set a464,
         forall s' : set a464,
-          Coq.Init.Logic.iff (subset s s') (forall x : a464, mem x s -> mem x s').
+          Corelib.Init.Logic.iff (subset s s') (forall x : a464, mem x s -> mem x s').
       Proof.
         tauto.
       Qed.
@@ -1605,10 +1671,10 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall f : a474 -> a473,
         forall s : set a474,
         forall x : a473,
-          Coq.Init.Logic.iff (mem x (map f s)) (
-              Coq.Init.Logic.ex (
+          Corelib.Init.Logic.iff (mem x (map f s)) (
+              Corelib.Init.Logic.ex (
                   fun y : a474 =>
-                    Coq.Init.Logic.and (eq (f y) x) (mem y s)
+                    Corelib.Init.Logic.and (eq (f y) x) (mem y s)
                 )
             ).
       Proof.
@@ -1621,17 +1687,12 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
           set_st (fun x => ~p x /\ x \in s)).
 
       Lemma partition_l_mem :
-        forall {a486 : Type},
-        forall {Ih_a486 : Inhab a486},
-        forall f : a486 -> bool,
-        forall s : set a486,
-        forall x : a486,
-        forall p1 : set a486,
-        forall p2 : set a486,
-          mem x s ->
-          f x -> Coq.Init.Logic.eq (partition f s) (p1, p2) -> mem x p1.
+        forall (A : Type) (Ih_A : Inhab A) (f : A -> Prop)
+               (s : set A) (x : A) (p1 p2 : set A),
+          _Set.belongs x s ->
+          f x -> _Set.partition f s = (p1, p2) -> _Set.belongs x p1.
       Proof.
-        unfold mem, partition.
+        unfold belongs, mem, partition.
         intros A IhA f s x p1 p2 H1 H2 H3.
         injection H3.
         intros H4 H5.
@@ -1641,22 +1702,16 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
       Qed.
 
       Lemma partition_r_mem :
-        forall {a498 : Type},
-        forall {Ih_a498 : Inhab a498},
-        forall f : a498 -> bool,
-        forall s : set a498,
-        forall x : a498,
-        forall p1 : set a498,
-        forall p2 : set a498,
-          mem x s ->
-          Coq.Init.Logic.not (f x) ->
-          Coq.Init.Logic.eq (partition f s) (p1, p2) -> mem x p2.
+        forall (A : Type) (Ih_A : Inhab A) (f : A -> Prop)
+               (s : set A) (x : A) (p1 p2 : set A),
+          _Set.belongs x s ->
+          ~ f x -> _Set.partition f s = (p1, p2) -> _Set.belongs x p2.
       Proof.
         intros A IhA f s x p1 p2 H1 H2 H3.
         injection H3.
         intros H4 H5.
         rewrite <- H4.
-        unfold mem.
+        unfold belongs, mem.
         rew_set.
         auto.
       Qed.
@@ -1670,8 +1725,8 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {a504 : Type},
         forall {Ih_a504 : Inhab a504},
         forall s : set a504,
-          Coq.Init.Logic.iff (finite s) (
-              Coq.Init.Logic.ex (
+          Corelib.Init.Logic.iff (finite s) (
+              Corelib.Init.Logic.ex (
                   fun seq : sequence a504 =>
                     forall x : a504,
                       mem x s -> Sequence.mem x seq
@@ -1696,7 +1751,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
       Lemma cardinal_empty :
         forall a403 : Type,
         forall {a403Ih : Inhab a403},
-          Coq.Init.Logic.eq (cardinal (@empty a403 a403Ih)) (0)%Z.
+          Corelib.Init.Logic.eq (cardinal (@empty a403 a403Ih)) (0)%Z.
       Proof.
         intros A IhA.
         unfold cardinal, empty.
@@ -1705,69 +1760,70 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         apply card_empty.
       Qed.
 
-
-      Lemma cardinal_remove :
-        forall a415 : Type,
-        forall {a415Ih : Inhab a415},
-        forall s : set a415,
-        forall x : a415,
+      Lemma cardinal_remove_mem :
+        forall {A : Type},
+        forall {Ih_A : Inhab A},
+        forall s : set A,
+        forall x : A,
           finite s ->
-          (
-            if classicT (mem x s) then
-              Coq.Init.Logic.eq (cardinal (remove x s)) (minus (cardinal s) (1)%Z)
-            else
-              Coq.Init.Logic.eq (cardinal (remove x s)) (cardinal s)
-          ).
+          belongs x s -> ((cardinal (remove x s)) = (((cardinal s) - (1)%Z))).
       Proof.
-        intros A Ih s x H.
-        unfold mem, cardinal, minus, remove, singleton, empty, add.
-        assert (P : x \in s \/ ~ x \in s).
-        { apply classic. }
-        destruct P.
-        - rewrite If_l; auto.
-          rewrite card_diff_single; auto.
-          + assert (Q: 1%nat <= card s).
-            { apply card_ge_one with x; auto. }
-            { math. }
-        - rewrite If_r; auto.
-          f_equal.
-          f_equal.
-          rewrite set_in_extens_eq.
-          intros y. split; intros H1;
-            rewrite set_in_remove_eq in *.
-          destruct H1 as [H1 H2]. auto.
-          + split. auto. unfold not. intro H2.
-            rewrite set_in_single_eq in H2.
-            subst. contradiction.
+        unfold belongs, mem, cardinal, minus, remove, singleton, empty, add.
+        intros A Ih s x H1 H2.
+        rewrite card_diff_single; auto.
+        assert (Q: 1%nat <= card s).
+        { apply card_ge_one with x; auto. }
+        { rewrite Nat2Z.inj_sub. auto. math. }
+      Qed.
+
+      Lemma cardinal_remove_not_mem :
+        forall {A : Type},
+        forall {Ih_A : Inhab A},
+        forall s : set A,
+        forall x : A,
+          finite s -> neg_belongs x s -> ((cardinal (remove x s)) = (cardinal s)).
+      Proof.
+        unfold neg_belongs, belongs, mem, cardinal, minus, remove, singleton, empty, add, finite.
+        intros A I s x H1 H2.
+        repeat f_equal.
+        rewrite set_in_extens_eq.
+        intro y.
+        split; intros H3.
+        - rewrite in_remove_eq in H3.
+          destruct H3. auto.
+        - rewrite in_remove_eq. split; auto.
+          change (y <> x). intros H4.
+          subst. auto.
       Qed.
 
       Lemma cardinal_add :
-        forall a427 : Type,
-        forall {a427Ih : Inhab a427},
-        forall s : set a427,
-        forall x : a427,
+        forall {A : Type},
+        forall {Ih_A : Inhab A},
+        forall s : set A,
+        forall x : A,
           finite s ->
-          (
-            if classicT (mem x s) then
-              Coq.Init.Logic.eq (cardinal (add x s)) (cardinal s)
-            else
-              Coq.Init.Logic.eq (cardinal (add x s)) (plus (cardinal s) (1)%Z)
-          ).
+          neg_belongs x s -> ((cardinal (add x s)) = (((cardinal s) + 1))).
       Proof.
-        intros A Ih s x H.
-        unfold plus, cardinal, add in *.
-        unfold mem. assert (P : x \in s \/ ~ x \in s). {apply classic. }
-        destruct P.
-        - rewrite If_l; auto. f_equal. f_equal. rewrite set_in_extens_eq.
-          intro y.
-          assert (Q:y = x \/ y <> x). { apply classic. }
-          split; intro H1; rewrite set_in_union_eq in *.
-          + destruct Q. subst. auto.
-            destruct H1. auto. contradiction.
-          + left. auto.
-        - rewrite If_r; auto. rewrite card_disjoint_union_single; auto.
-          math.
+        unfold cardinal, neg_belongs, belongs, mem, add.
+        intros A Ih s x H1 H2.
+        - rewrite card_disjoint_union_single. 2, 3: auto. math.
       Qed.
+
+        Lemma cardinal_add_mem :
+          forall {A : Type},
+          forall {Ih_A : Inhab A},
+          forall s : set A,
+          forall x : A,
+            finite s -> belongs x s -> ((cardinal (add x s)) = (cardinal s)).
+        Proof.
+          unfold cardinal, neg_belongs, belongs, mem, add.
+          intros.
+          repeat f_equal.
+          rew_set.
+          split; intros.
+          + rew_set in H1. destruct H1; subst; auto.
+          + rew_set. auto.
+        Qed.
 
       Definition of_seq {A} {Ih : Inhab A} (s: sequence A) : set A :=
         fun x => LibList.mem x s.
@@ -1777,7 +1833,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {a433Ih : Inhab a433},
         forall x : a433,
         forall s : sequence a433,
-          Coq.Init.Logic.iff (Sequence.mem x s) (mem x (of_seq s)).
+          Corelib.Init.Logic.iff (Sequence.mem x s) (mem x (of_seq s)).
       Proof.
         intros A Ih x s.
         unfold mem.
@@ -1790,7 +1846,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall {Ih_a618 : Inhab a618},
         forall s : sequence a618,
         forall x : a618,
-          Coq.Init.Logic.iff (mem x (of_seq s)) (Sequence.mem x s).
+          Corelib.Init.Logic.iff (mem x (of_seq s)) (Sequence.mem x s).
       Proof.
         tauto.
       Qed.
@@ -1834,7 +1890,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
           finite s ->
           (
             forall x : a657,
-              Coq.Init.Logic.iff (mem x s) (eq (Sequence.multiplicity x (to_seq s)) (1)%Z)
+              Corelib.Init.Logic.iff (mem x s) (eq (Sequence.multiplicity x (to_seq s)) (1)%Z)
           ).
       Proof.
         intros A Ih s F x.
@@ -1893,7 +1949,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
 
     Module Map.
 
-      Parameter t : Type -> Type -> Type.
+      Definition t := map.
 
       Definition domain :
         forall {a : Type},
@@ -1916,7 +1972,7 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         forall x : a546,
         forall m : a546 -> a545,
         forall default : a545,
-          Coq.Init.Logic.not (eq (m x) default) -> _Set.mem x (domain default m).
+          Corelib.Init.Logic.not (eq (m x) default) -> _Set.mem x (domain default m).
       Proof.
         intros A B G1 G2 x m d H1.
         unfold _Set.mem.
@@ -1927,114 +1983,26 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
     End Map.
 
     Lemma map_set_def :
-      forall {a : Type},
-      forall {b : Type},
-      forall {Ih_a : Inhab a},
-      forall {Ih_b : Inhab b},
-      forall f : a -> b,
-      forall x : a,
-      forall y : b,
-        eq (map_set f x y) (
-            fun arg : a =>
-              if classicT (eq arg x) then y else f x
-          ).
+      forall (A B : Type) (Ih_A : Inhab A) (Ih_B : Inhab B)
+             (f : A -> B) (x : A) (y : B),
+        map_set f x y x = y.
     Proof.
-      tauto.
+      intros. unfold map_set. rewrite If_l; auto.
     Qed.
 
-    Module Array.
+    Lemma map_set_def_neq :
+      forall {A : Type},
+      forall {B : Type},
+      forall {Ih_A : Inhab A},
+      forall {Ih_B : Inhab B},
+      forall f : A -> B,
+      forall x : A,
+      forall y : B,
+      forall z : A,
+        (x <> z) -> ((map_set f x y z) = (f z)).
+    Proof.
+      intros.
+      unfold map_set. rewrite If_r; auto.
+    Qed.
 
-      Parameter array : Type -> Type.
-
-      Parameter get :
-        forall {a : Type},
-        forall {_Ga : Inhab a},
-          array a -> Coq.Numbers.BinNums.Z -> a.
-
-      Parameter length :
-        forall {a : Type},
-        forall {_Ga : Inhab a},
-          array a -> Coq.Numbers.BinNums.Z.
-
-      Parameter to_seq :
-        forall {a : Type},
-        forall {_Ga : Inhab a},
-          array a -> sequence a.
-
-      Parameter permut :
-        forall {a : Type},
-        forall {_Ga : Inhab a},
-          array a -> array a -> Prop.
-
-      Parameter permut_sub :
-        forall {a : Type},
-        forall {_Ga : Inhab a},
-          array a ->
-          array a -> Coq.Numbers.BinNums.Z -> Coq.Numbers.BinNums.Z -> Prop.
-
-    End Array.
-
-    Module List.
-
-      Parameter fold_left :
-        forall {a : Type},
-        forall {b : Type},
-        forall {_Ga : Inhab a},
-        forall {_Gb : Inhab b},
-          (b -> a -> b) -> b -> list a -> b.
-
-      Parameter _exists :
-        forall {a : Type},
-        forall {_Ga : Inhab a},
-          (a -> Prop) -> list a -> Prop.
-
-      Parameter length :
-        forall {a : Type},
-        forall {_Ga : Inhab a},
-          list a -> Coq.Numbers.BinNums.Z.
-
-      Parameter nth :
-        forall {a : Type},
-        forall {_Ga : Inhab a},
-          list a -> Coq.Numbers.BinNums.Z -> a.
-
-      Parameter mem :
-        forall {a : Type},
-        forall {_Ga : Inhab a},
-          a -> list a -> Prop.
-
-      Parameter map :
-        forall {a : Type},
-        forall {b : Type},
-        forall {_Ga : Inhab a},
-        forall {_Gb : Inhab b},
-          (a -> b) -> list a -> list b.
-
-    End List.
-
-    Module Order.
-
-      Parameter is_pre_order :
-        forall {a : Type},
-        forall {_Ga : Inhab a},
-          (a -> a -> int) -> Prop.
-
-    End Order.
-
-    Parameter ref : Type -> Type.
-
-    Parameter _UNUSED :
-      forall {a : Type},
-      forall {_Ga : Inhab a},
-        ref a -> a.
-
-    Parameter logand :
-      Coq.Numbers.BinNums.Z -> Coq.Numbers.BinNums.Z -> Coq.Numbers.BinNums.Z.
-
-    Parameter integer_of_int : int -> Coq.Numbers.BinNums.Z.
-
-    Module Sys.
-      Parameter word_size : int.
-    End Sys.
-
-End Stdlib.
+ End Stdlib.

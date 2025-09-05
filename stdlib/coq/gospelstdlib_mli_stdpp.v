@@ -8,11 +8,11 @@ Local Open Scope Z_scope.
 
 Module Type Stdlib.
 
+Parameter set : Type -> Type.
+
 Parameter sequence : Type -> Type.
 
 Parameter bag : Type -> Type.
-
-Parameter set : Type -> Type.
 
 Parameter option : Type -> Type.
 
@@ -165,14 +165,14 @@ Axiom in_range_def :
   forall {Ih_A : Inhabited A},
   forall s : sequence A,
   forall i : Z,
-  ((in_range s i) <-> (((((0)%Z <= i)) /\ ((i < (length s)))))).
+  ((in_range s i) <-> ((((0 <= i)) /\ ((i < (length s)))))).
 
 Axiom length_nonneg :
   forall {A : Type},
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
   forall s : sequence A,
-  ((0)%Z <= (length s)).
+  (0 <= (length s)).
 
 Axiom subseq_l :
   forall {A : Type},
@@ -188,7 +188,7 @@ Axiom subseq_r :
   forall {Ih_A : Inhabited A},
   forall s : sequence A,
   forall i : Z,
-  in_range s i -> ((seq_sub_r s i) = (seq_sub s (0)%Z i)).
+  in_range s i -> ((seq_sub_r s i) = (seq_sub s 0 i)).
 
 Axiom subseq :
   forall {A : Type},
@@ -199,9 +199,7 @@ Axiom subseq :
   forall i1 : Z,
   forall i2 : Z,
   (
-    (((0)%Z <= i1)) /\ (
-      (((i1 <= i)) /\ ((((i < i2)) /\ ((i2 <= (length s))))))
-    )
+    ((0 <= i1)) /\ ((((i1 <= i)) /\ ((((i < i2)) /\ ((i2 <= (length s)))))))
   ) ->
   ((seq_get s i) = (seq_get (seq_sub s i1 i2) ((i - i1)))).
 
@@ -212,7 +210,7 @@ Axiom subseq_len :
   forall s : sequence A,
   forall i1 : Z,
   forall i2 : Z,
-  ((((0)%Z <= i1)) /\ ((((i1 <= i2)) /\ ((i2 < (length s)))))) ->
+  (((0 <= i1)) /\ ((((i1 <= i2)) /\ ((i2 < (length s)))))) ->
   ((length (seq_sub s i1 i2)) = ((i2 - i1))).
 
 Parameter empty :
@@ -225,7 +223,7 @@ Axiom empty_length :
   forall {A : Type},
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
-  ((@length A Eq_A Ih_A empty) = (0)%Z).
+  ((@length A Eq_A Ih_A empty) = 0).
 
 Parameter init :
   forall {A : Type},
@@ -241,7 +239,7 @@ Axiom init_length :
   forall {Ih_A : Inhabited A},
   forall n : Z,
   forall f : Z -> A,
-  (n >= (0)%Z) -> ((length (init n f)) = n).
+  (n >= 0) -> ((length (init n f)) = n).
 
 Axiom init_elems :
   forall {A : Type},
@@ -250,7 +248,7 @@ Axiom init_elems :
   forall n : Z,
   forall f : Z -> A,
   forall i : Z,
-  ((((0)%Z <= i)) /\ ((i < n))) -> ((seq_get (init n f) i) = (f i)).
+  (((0 <= i)) /\ ((i < n))) -> ((seq_get (init n f) i) = (f i)).
 
 Parameter singleton :
   forall {A : Type},
@@ -265,7 +263,7 @@ Axiom singleton_def :
   forall {Ih_A : Inhabited A},
   forall x : A,
   forall f : Z -> A,
-  ((f (0)%Z) = x) -> ((singleton x) = (init (1)%Z f)).
+  ((f 0) = x) -> ((singleton x) = (init 1 f)).
 
 Parameter cons :
   forall {A : Type},
@@ -311,7 +309,7 @@ Axiom hd_def :
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
   forall s : sequence A,
-  ((hd s) = (seq_get s (0)%Z)).
+  ((hd s) = (seq_get s 0)).
 
 Parameter tl :
   forall {A : Type},
@@ -325,7 +323,7 @@ Axiom tl_def :
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
   forall s : sequence A,
-  ((tl s) = (seq_sub_l s (1)%Z)).
+  ((tl s) = (seq_sub_l s 1)).
 
 Parameter append :
   forall {A : Type},
@@ -383,7 +381,7 @@ Axiom mult_empty :
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
   forall x : A,
-  ((multiplicity x empty) = (0)%Z).
+  ((multiplicity x empty) = 0).
 
 Axiom mult_cons :
   forall {A : Type},
@@ -391,7 +389,7 @@ Axiom mult_cons :
   forall {Ih_A : Inhabited A},
   forall s : sequence A,
   forall x : A,
-  ((((1)%Z + (multiplicity x s))) = (multiplicity x (cons x s))).
+  (((1 + (multiplicity x s))) = (multiplicity x (cons x s))).
 
 Axiom mult_cons_neutral :
   forall {A : Type},
@@ -408,9 +406,15 @@ Axiom mult_length :
   forall {Ih_A : Inhabited A},
   forall x : A,
   forall s : sequence A,
-  (
-    (((0)%Z <= (multiplicity x s))) /\ (((multiplicity x s) <= (length s)))
-  ).
+  (((0 <= (multiplicity x s))) /\ (((multiplicity x s) <= (length s)))).
+
+Parameter belongs :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall x : A,
+  forall s : t A,
+  Prop.
 
 Parameter mem :
   forall {A : Type},
@@ -420,15 +424,39 @@ Parameter mem :
   forall s : t A,
   Prop.
 
+Axiom mem_fun_def :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall x : A,
+  forall s : sequence A,
+  ((belongs x s) <-> (mem x s)).
+
 Axiom mem_def :
   forall {A : Type},
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
   forall s : sequence A,
   forall x : A,
-  ((mem x s) <-> (((multiplicity x s) > (0)%Z))).
+  ((belongs x s) <-> (((multiplicity x s) > 0))).
 
-Parameter _forall :
+Parameter neg_belongs :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall x : A,
+  forall s : t A,
+  Prop.
+
+Axiom nmem_def :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall s : sequence A,
+  forall x : A,
+  ((neg_belongs x s) <-> (not (belongs x s))).
+
+Parameter Forall :
   forall {A : Type},
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
@@ -444,9 +472,9 @@ Axiom forall_def :
   forall p : A -> Prop,
   forall {Dec_p : forall x0 : _, Decision (p x0)},
   forall s : sequence A,
-  ((_forall p s) <-> (forall x : A, mem x s -> p x)).
+  ((Forall p s) <-> (forall x : A, belongs x s -> p x)).
 
-Parameter _exists :
+Parameter Exists :
   forall {A : Type},
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
@@ -455,14 +483,14 @@ Parameter _exists :
   forall s : sequence A,
   Prop.
 
-Axiom _exists_def :
+Axiom exists_def :
   forall {A : Type},
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
   forall p : A -> Prop,
   forall {Dec_p : forall x0 : _, Decision (p x0)},
   forall s : sequence A,
-  ((_exists p s) <-> (exists x : A, ((mem x s) /\ (p x)))).
+  ((Exists p s) <-> (exists x : A, ((belongs x s) /\ (p x)))).
 
 Parameter map :
   forall {A : Type},
@@ -515,7 +543,7 @@ Axiom filter_elems :
   forall {Dec_f : forall x0 : _, Decision (f x0)},
   forall s : sequence A,
   forall x : A,
-  mem x s -> f x -> mem x (filter f s).
+  belongs x s -> f x -> belongs x (filter f s).
 
 Parameter filter_map :
   forall {A : Type},
@@ -539,8 +567,8 @@ Axiom filter_map_elems :
   forall s : sequence B,
   forall y : A,
   (
-    (exists x : B, ((((f x) = (Some y))) /\ (mem x s))) <-> (
-      mem y (filter_map f s)
+    (exists x : B, ((((f x) = (Some y))) /\ (belongs x s))) <-> (
+      belongs y (filter_map f s)
     )
   ).
 
@@ -611,7 +639,7 @@ Axiom rev_elems :
   forall i : Z,
   forall s : sequence A,
   in_range s i ->
-  ((seq_get (rev s) i) = (seq_get s (((((length s) - (1)%Z)) - i)))).
+  ((seq_get (rev s) i) = (seq_get s (((((length s) - 1)) - i)))).
 
 Axiom extensionality :
   forall {A : Type},
@@ -709,7 +737,7 @@ Axiom permut_mem :
   forall {Ih_A : Inhabited A},
   forall s1 : sequence A,
   forall s2 : sequence A,
-  permut s1 s2 -> (forall x : A, ((mem x s1) <-> (mem x s2))).
+  permut s1 s2 -> (forall x : A, ((belongs x s1) <-> (belongs x s2))).
 
 Parameter permut_sub :
   forall {A : Type},
@@ -753,7 +781,7 @@ Axiom well_formed :
   forall {Ih_A : Inhabited A},
   forall b : bag A,
   forall x : A,
-  ((multiplicity x b) >= (0)%Z).
+  ((multiplicity x b) >= 0).
 
 Parameter empty :
   forall {A : Type},
@@ -766,7 +794,7 @@ Axiom empty_mult :
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
   forall x : A,
-  ((multiplicity x empty) = (0)%Z).
+  ((multiplicity x empty) = 0).
 
 Parameter init :
   forall {A : Type},
@@ -781,9 +809,9 @@ Axiom init_axiom :
   forall {Ih_A : Inhabited A},
   forall f : A -> Z,
   forall x : A,
-  ((max (0)%Z (f x)) = (multiplicity x (init f))).
+  ((max 0 (f x)) = (multiplicity x (init f))).
 
-Parameter mem :
+Parameter belongs :
   forall {A : Type},
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
@@ -791,13 +819,45 @@ Parameter mem :
   forall b : t A,
   Prop.
 
+Parameter mem :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall x : A,
+  forall s : t A,
+  Prop.
+
+Axiom mem_fun_def :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall x : A,
+  forall s : bag A,
+  ((belongs x s) <-> (mem x s)).
+
+Parameter neg_belongs :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall x : A,
+  forall s : t A,
+  Prop.
+
+Axiom nmem_def :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall s : bag A,
+  forall x : A,
+  ((neg_belongs x s) <-> (not (belongs x s))).
+
 Axiom mem_def :
   forall {A : Type},
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
   forall x : A,
   forall b : bag A,
-  ((mem x b) <-> (((multiplicity x b) > (0)%Z))).
+  ((belongs x b) <-> (((multiplicity x b) > 0))).
 
 Parameter add :
   forall {A : Type},
@@ -813,7 +873,7 @@ Axiom add_mult_x :
   forall {Ih_A : Inhabited A},
   forall b : bag A,
   forall x : A,
-  ((multiplicity x (add x b)) = (((1)%Z + (multiplicity x b)))).
+  ((multiplicity x (add x b)) = ((1 + (multiplicity x b)))).
 
 Axiom add_mult_neg_x :
   forall {A : Type},
@@ -824,6 +884,13 @@ Axiom add_mult_neg_x :
   forall b : bag A,
   (x <> y) -> ((multiplicity y (add x b)) = (multiplicity y b)).
 
+Parameter singleton_set :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall x : A,
+  t A.
+
 Parameter singleton :
   forall {A : Type},
   forall {Eq_A : EqDecision A},
@@ -831,12 +898,19 @@ Parameter singleton :
   forall x : A,
   t A.
 
+Axiom singleton_fun_def :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall x : A,
+  ((singleton_set x) = (singleton x)).
+
 Axiom singleton_def :
   forall {A : Type},
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
   forall x : A,
-  ((singleton x) = (add x empty)).
+  ((singleton_set x) = (add x empty)).
 
 Parameter remove :
   forall {A : Type},
@@ -852,11 +926,7 @@ Axiom remove_mult_x :
   forall {Ih_A : Inhabited A},
   forall b : bag A,
   forall x : A,
-  (
-    (multiplicity x (remove x b)) = (
-      max (0)%Z (((multiplicity x b) - (1)%Z))
-    )
-  ).
+  ((multiplicity x (remove x b)) = (max 0 (((multiplicity x b) - 1)))).
 
 Axiom remove_mult_neg_x :
   forall {A : Type},
@@ -944,7 +1014,7 @@ Axiom disjoint_def :
   forall {Ih_A : Inhabited A},
   forall b : bag A,
   forall b' : bag A,
-  ((disjoint b b') <-> (forall x : A, mem x b -> not (mem x b'))).
+  ((disjoint b b') <-> (forall x : A, belongs x b -> neg_belongs x b')).
 
 Parameter diff :
   forall {A : Type},
@@ -962,7 +1032,7 @@ Axiom diff_all :
   forall b' : bag A,
   forall x : A,
   (
-    (max (0)%Z (((multiplicity x b) - (multiplicity x b')))) = (
+    (max 0 (((multiplicity x b) - (multiplicity x b')))) = (
       multiplicity x (diff b b')
     )
   ).
@@ -1015,7 +1085,7 @@ Axiom filter_mem_neg :
   forall x : A,
   forall f : A -> Prop,
   forall {Dec_f : forall x0 : _, Decision (f x0)},
-  not (f x) -> ((multiplicity x (filter f b)) = (0)%Z).
+  not (f x) -> ((multiplicity x (filter f b)) = 0).
 
 Parameter cardinal :
   forall {A : Type},
@@ -1040,7 +1110,7 @@ Axiom finite_def :
     (finite b) <-> (
       exists s : sequence A,
       forall x : A,
-      mem x b -> Sequence.mem x s
+      belongs x b -> Sequence.belongs x s
     )
   ).
 
@@ -1049,20 +1119,20 @@ Axiom card_nonneg :
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
   forall b : bag A,
-  ((cardinal b) >= (0)%Z).
+  ((cardinal b) >= 0).
 
 Axiom card_empty :
   forall {A : Type},
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
-  ((@cardinal A Eq_A Ih_A empty) = (0)%Z).
+  ((@cardinal A Eq_A Ih_A empty) = 0).
 
 Axiom card_singleton :
   forall {A : Type},
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
   forall x : A,
-  ((cardinal (singleton x)) = (1)%Z).
+  ((cardinal (singleton_set x)) = 1).
 
 Axiom card_union :
   forall {A : Type},
@@ -1080,7 +1150,7 @@ Axiom card_add :
   forall {Ih_A : Inhabited A},
   forall x : A,
   forall b : bag A,
-  finite b -> ((cardinal (add x b)) = (((cardinal b) + (1)%Z))).
+  finite b -> ((cardinal (add x b)) = (((cardinal b) + 1))).
 
 Axiom card_map :
   forall {A : Type},
@@ -1118,6 +1188,22 @@ Parameter empty :
   forall {Ih_A : Inhabited A},
   t A.
 
+Parameter belongs :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall x : A,
+  forall s : t A,
+  Prop.
+
+Parameter neg_belongs :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall x : A,
+  forall s : t A,
+  Prop.
+
 Parameter mem :
   forall {A : Type},
   forall {Eq_A : EqDecision A},
@@ -1126,12 +1212,28 @@ Parameter mem :
   forall s : t A,
   Prop.
 
+Axiom mem_fun_def :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall x : A,
+  forall s : set A,
+  ((belongs x s) <-> (mem x s)).
+
+Axiom nmem_def :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall s : set A,
+  forall x : A,
+  ((not (belongs x s)) <-> (neg_belongs x s)).
+
 Axiom empty_mem :
   forall {A : Type},
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
   forall x : A,
-  not (mem x empty).
+  neg_belongs x empty.
 
 Parameter add :
   forall {A : Type},
@@ -1147,7 +1249,7 @@ Axiom add_mem :
   forall {Ih_A : Inhabited A},
   forall s : set A,
   forall x : A,
-  mem x (add x s).
+  belongs x (add x s).
 
 Axiom add_mem_neq :
   forall {A : Type},
@@ -1156,7 +1258,14 @@ Axiom add_mem_neq :
   forall s : set A,
   forall x : A,
   forall y : A,
-  (x <> y) -> ((mem x s) <-> (mem x (add y s))).
+  (x <> y) -> ((belongs x s) <-> (belongs x (add y s))).
+
+Parameter singleton_set :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall x : A,
+  t A.
 
 Parameter singleton :
   forall {A : Type},
@@ -1164,6 +1273,20 @@ Parameter singleton :
   forall {Ih_A : Inhabited A},
   forall x : A,
   t A.
+
+Axiom singleton_fun_def :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall x : A,
+  ((singleton_set x) = (singleton x)).
+
+Axiom singleton_def :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall x : A,
+  ((singleton_set x) = (add x empty)).
 
 Parameter remove :
   forall {A : Type},
@@ -1179,7 +1302,7 @@ Axiom remove_mem :
   forall {Ih_A : Inhabited A},
   forall s : set A,
   forall x : A,
-  not (mem x (remove x s)).
+  neg_belongs x (remove x s).
 
 Axiom remove_mem_neq :
   forall {A : Type},
@@ -1188,7 +1311,7 @@ Axiom remove_mem_neq :
   forall s : set A,
   forall x : A,
   forall y : A,
-  (x <> y) -> ((mem x s) <-> (mem x (remove y s))).
+  (x <> y) -> ((belongs x s) <-> (belongs x (remove y s))).
 
 Parameter union :
   forall {A : Type},
@@ -1205,7 +1328,7 @@ Axiom union_mem :
   forall s : set A,
   forall s' : set A,
   forall x : A,
-  ((mem x s) \/ (mem x s')) -> mem x (union s s').
+  ((belongs x s) \/ (belongs x s')) -> belongs x (union s s').
 
 Axiom union_mem_neg :
   forall {A : Type},
@@ -1214,7 +1337,7 @@ Axiom union_mem_neg :
   forall s : set A,
   forall s' : set A,
   forall x : A,
-  not (mem x s) -> not (mem x s') -> not (mem x (union s s')).
+  neg_belongs x s -> neg_belongs x s' -> neg_belongs x (union s s').
 
 Parameter inter :
   forall {A : Type},
@@ -1231,7 +1354,7 @@ Axiom inter_mem :
   forall s : set A,
   forall s' : set A,
   forall x : A,
-  mem x s -> mem x s' -> mem x (inter s s').
+  belongs x s -> belongs x s' -> belongs x (inter s s').
 
 Axiom inter_mem_neq :
   forall {A : Type},
@@ -1240,7 +1363,7 @@ Axiom inter_mem_neq :
   forall s : set A,
   forall s' : set A,
   forall x : A,
-  not (((mem x s) \/ (mem x s'))) -> not (mem x (inter s s')).
+  not (((belongs x s) \/ (belongs x s'))) -> neg_belongs x (inter s s').
 
 Parameter disjoint :
   forall {A : Type},
@@ -1273,7 +1396,7 @@ Axiom diff_mem :
   forall s : set A,
   forall s' : set A,
   forall x : A,
-  mem x s' -> not (mem x (diff s s')).
+  belongs x s' -> neg_belongs x (diff s s').
 
 Axiom diff_mem_fst :
   forall {A : Type},
@@ -1282,7 +1405,7 @@ Axiom diff_mem_fst :
   forall s : set A,
   forall s' : set A,
   forall x : A,
-  not (mem x s') -> ((mem x s) <-> (mem x (diff s s'))).
+  neg_belongs x s' -> ((belongs x s) <-> (belongs x (diff s s'))).
 
 Parameter subset :
   forall {A : Type},
@@ -1298,7 +1421,7 @@ Axiom subset_def :
   forall {Ih_A : Inhabited A},
   forall s : set A,
   forall s' : set A,
-  ((subset s s') <-> (forall x : A, mem x s -> mem x s')).
+  ((subset s s') <-> (forall x : A, belongs x s -> belongs x s')).
 
 Parameter map :
   forall {A : Type},
@@ -1321,7 +1444,12 @@ Axiom set_map :
   forall f : B -> A,
   forall s : set B,
   forall x : A,
-  ((mem x (map f s)) <-> (exists y : B, ((((f y) = x)) /\ (mem y s)))).
+  (
+    (belongs x (map f s)) <-> (
+      exists y : B,
+      ((((f y) = x)) /\ (belongs y s))
+    )
+  ).
 
 Parameter partition :
   forall {A : Type},
@@ -1342,7 +1470,7 @@ Axiom partition_l_mem :
   forall x : A,
   forall p1 : set A,
   forall p2 : set A,
-  mem x s -> f x -> ((partition f s) = (p1, p2)) -> mem x p1.
+  belongs x s -> f x -> ((partition f s) = (p1, p2)) -> belongs x p1.
 
 Axiom partition_r_mem :
   forall {A : Type},
@@ -1354,7 +1482,7 @@ Axiom partition_r_mem :
   forall x : A,
   forall p1 : set A,
   forall p2 : set A,
-  mem x s -> not (f x) -> ((partition f s) = (p1, p2)) -> mem x p2.
+  belongs x s -> not (f x) -> ((partition f s) = (p1, p2)) -> belongs x p2.
 
 Parameter cardinal :
   forall {A : Type},
@@ -1379,7 +1507,7 @@ Axiom finite_def :
     (finite s) <-> (
       exists seq : sequence A,
       forall x : A,
-      mem x s -> Sequence.mem x seq
+      belongs x s -> Sequence.belongs x seq
     )
   ).
 
@@ -1388,13 +1516,13 @@ Axiom cardinal_nonneg :
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
   forall s : set A,
-  ((cardinal s) >= (0)%Z).
+  ((cardinal s) >= 0).
 
 Axiom cardinal_empty :
   forall {A : Type},
   forall {Eq_A : EqDecision A},
   forall {Ih_A : Inhabited A},
-  ((@cardinal A Eq_A Ih_A empty) = (0)%Z).
+  ((@cardinal A Eq_A Ih_A empty) = 0).
 
 Axiom cardinal_remove_mem :
   forall {A : Type},
@@ -1403,7 +1531,7 @@ Axiom cardinal_remove_mem :
   forall s : set A,
   forall x : A,
   finite s ->
-  mem x s -> ((cardinal (remove x s)) = (((cardinal s) - (1)%Z))).
+  belongs x s -> ((cardinal (remove x s)) = (((cardinal s) - 1))).
 
 Axiom cardinal_remove_not_mem :
   forall {A : Type},
@@ -1411,7 +1539,7 @@ Axiom cardinal_remove_not_mem :
   forall {Ih_A : Inhabited A},
   forall s : set A,
   forall x : A,
-  finite s -> not (mem x s) -> ((cardinal (remove x s)) = (cardinal s)).
+  finite s -> neg_belongs x s -> ((cardinal (remove x s)) = (cardinal s)).
 
 Axiom cardinal_add :
   forall {A : Type},
@@ -1419,7 +1547,16 @@ Axiom cardinal_add :
   forall {Ih_A : Inhabited A},
   forall s : set A,
   forall x : A,
-  finite s -> not (mem x s) -> ((cardinal (add x s)) = (cardinal s)).
+  finite s ->
+  neg_belongs x s -> ((cardinal (add x s)) = (((cardinal s) + 1))).
+
+Axiom cardinal_add_mem :
+  forall {A : Type},
+  forall {Eq_A : EqDecision A},
+  forall {Ih_A : Inhabited A},
+  forall s : set A,
+  forall x : A,
+  finite s -> belongs x s -> ((cardinal (add x s)) = (cardinal s)).
 
 Parameter of_seq :
   forall {A : Type},
@@ -1434,7 +1571,7 @@ Axiom of_seq_mem :
   forall {Ih_A : Inhabited A},
   forall s : sequence A,
   forall x : A,
-  ((mem x (of_seq s)) <-> (Sequence.mem x s)).
+  ((belongs x (of_seq s)) <-> (Sequence.belongs x s)).
 
 Parameter to_seq :
   forall {A : Type},
@@ -1451,7 +1588,7 @@ Axiom to_seq_mem :
   finite s ->
   (
     forall x : A,
-    ((mem x s) <-> (((Sequence.multiplicity x (to_seq s)) = (1)%Z)))
+    ((belongs x s) <-> (((Sequence.multiplicity x (to_seq s)) = 1)))
   ).
 
 Parameter fold :
@@ -1550,8 +1687,10 @@ Axiom domain_mem :
   forall x : A,
   forall m : A -> B,
   forall default : B,
-  ((m x) <> default) -> _Set.mem x (domain default m).
+  ((m x) <> default) -> _Set.belongs x (domain default m).
 
 End Map.
 
 End Stdlib.
+
+

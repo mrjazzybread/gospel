@@ -551,6 +551,32 @@ Module Stdlib : gospelstdlib_mli_stdpp.Stdlib.
     Definition mem {A} `{EqDecision A} `{Inhabited A} (x : A) (s : sequence A) :=
       x ∈ s.
 
+    Definition belongs {A} `{EqDecision A} `{Inhabited A} (x : A) s := mem x s.
+
+    Lemma mem_fun_def :
+      forall {A : Type},
+      forall {Eq_A : EqDecision A},
+      forall {Ih_A : Inhabited A},
+      forall x : A,
+      forall s : sequence A,
+        ((belongs x s) <-> (mem x s)).
+    Proof.
+      tauto.
+    Qed.
+
+    Definition neg_belongs {A} `{EqDecision A} `{Inhabited A} (x : A) s := not (belongs x s).
+
+    Lemma nmem_def :
+      forall {A : Type},
+      forall {Eq_A : EqDecision A},
+      forall {Ih_A : Inhabited A},
+      forall s : sequence A,
+      forall x : A,
+        ((neg_belongs x s) <-> (not (belongs x s))).
+    Proof.
+      unfold neg_belongs. tauto.
+    Qed.
+
     Lemma mem_def :
       forall {A : Type},
       forall `{EqDecision A},
@@ -582,7 +608,7 @@ Module Stdlib : gospelstdlib_mli_stdpp.Stdlib.
           destruct (decide (x = y)); rewrite elem_of_cons; auto.
     Qed.
 
-    Definition _forall {A} `{EqDecision A} `{Inhabited A} (P : A -> Prop) `{forall x, Decision (P x)} (s : sequence A) :=
+    Definition Forall {A} `{EqDecision A} `{Inhabited A} (P : A -> Prop) `{forall x, Decision (P x)} (s : sequence A) :=
       Forall P s.
 
     Lemma forall_def :
@@ -591,26 +617,26 @@ Module Stdlib : gospelstdlib_mli_stdpp.Stdlib.
       forall p : A -> Prop,
       forall `{forall x, Decision (p x)},
       forall s : sequence A,
-        (_forall p s <-> forall x : A, mem x s -> p x).
+        (Forall p s <-> forall x : A, mem x s -> p x).
     Proof.
       intros.
-      unfold _forall, mem.
+      unfold Forall, mem.
       apply list.Forall_forall.
     Qed.
 
-    Definition _exists {A} `{EqDecision A} `{Inhabited A} (P : A -> Prop) `{forall x, Decision (P x)} (s : sequence A) :=
+    Definition Exists {A} `{EqDecision A} `{Inhabited A} (P : A -> Prop) `{forall x, Decision (P x)} (s : sequence A) :=
       Exists P s.
 
-    Lemma _exists_def :
+    Lemma exists_def :
       forall {A : Type},
       forall `{EqDecision A} `{Inhabited A},
       forall p : A -> Prop,
       forall `{forall x, Decision (p x)},
       forall s : sequence A,
-        (_exists p s <-> exists x : A, (mem x s /\ p x)).
+        (Exists p s <-> exists x : A, (mem x s /\ p x)).
     Proof.
       intros.
-      unfold _exists.
+      unfold Exists.
       apply list.Exists_exists.
     Qed.
 
@@ -1074,6 +1100,32 @@ Module Stdlib : gospelstdlib_mli_stdpp.Stdlib.
 
     Definition mem {A} `{EqDecision A} `{Inhabited A} (x : A) b := multiplicity x b > 0.
 
+    Definition belongs {A} `{EqDecision A} `{Inhabited A} (x : A) s := mem x s.
+
+    Lemma mem_fun_def :
+      forall {A : Type},
+      forall {Eq_A : EqDecision A},
+      forall {Ih_A : Inhabited A},
+      forall x : A,
+      forall s : bag A,
+        ((belongs x s) <-> (mem x s)).
+    Proof.
+      tauto.
+    Qed.
+
+    Definition neg_belongs {A} `{EqDecision A} `{Inhabited A} (x : A) s := not (belongs x s).
+
+    Lemma nmem_def :
+      forall {A : Type},
+      forall {Eq_A : EqDecision A},
+      forall {Ih_A : Inhabited A},
+      forall s : bag A,
+      forall x : A,
+        ((neg_belongs x s) <-> (not (belongs x s))).
+    Proof.
+      unfold neg_belongs. tauto.
+    Qed.
+
     Lemma mem_def :
       forall {A : Type},
       forall `{EqDecision A} `{Inhabited A},
@@ -1114,6 +1166,18 @@ Module Stdlib : gospelstdlib_mli_stdpp.Stdlib.
     Qed.
 
     Definition singleton {A} `{EqDecision A} `{Inhabited A} (x : A) := λ y, if decide (x = y) then 1%nat else 0%nat.
+
+    Definition singleton_set {A} `{EqDecision A} `{Inhabited A} (x : A) := singleton x.
+
+    Lemma singleton_fun_def :
+      forall {A : Type},
+      forall {Eq_A : EqDecision A},
+      forall {Ih_A : Inhabited A},
+      forall x : A,
+        ((singleton_set x) = (singleton x)).
+    Proof.
+      tauto.
+    Qed.
 
     Definition singleton_def :
       forall {A : Type},
@@ -1357,6 +1421,32 @@ Module Stdlib : gospelstdlib_mli_stdpp.Stdlib.
     Definition mem {A} `{EqDecision A} `{Inhabited A} (x : A) (s : set A) :=
       x ∈ s.
 
+    Definition belongs {A} `{EqDecision A} `{Inhabited A} (x : A) s := mem x s.
+
+    Lemma mem_fun_def :
+      forall {A : Type},
+      forall {Eq_A : EqDecision A},
+      forall {Ih_A : Inhabited A},
+      forall x : A,
+      forall s : set A,
+        ((belongs x s) <-> (mem x s)).
+    Proof.
+      tauto.
+    Qed.
+
+    Definition neg_belongs {A} `{EqDecision A} `{Inhabited A} (x : A) s := not (belongs x s).
+
+    Lemma nmem_def :
+      forall {A : Type},
+      forall {Eq_A : EqDecision A},
+      forall {Ih_A : Inhabited A},
+      forall s : set A,
+      forall x : A,
+        ((neg_belongs x s) <-> (not (belongs x s))).
+    Proof.
+      unfold neg_belongs. tauto.
+    Qed.
+
     Lemma empty_mem :
       forall {A : Type},
       forall `{EqDecision A} `{Inhabited A},
@@ -1401,7 +1491,27 @@ Module Stdlib : gospelstdlib_mli_stdpp.Stdlib.
     Qed.
 
 
-    Definition singleton {A} `{EqDecision A} `{Inhabited A} (x : A) : set A := {[ x ]}.
+    Definition singleton {A} `{EqDecision A} `{Inhabited A} (x : A) : set A := add x empty.
+
+    Definition singleton_set {A} `{EqDecision A} `{Inhabited A} (x : A) := singleton x.
+
+    Lemma singleton_def :
+      ∀ (A : Type) (Eq_A : EqDecision A) (Ih_A : Inhabited A) (x : A),
+        singleton_set x = add x empty.
+    Proof.
+      unfold singleton_set, singleton, add, empty.
+      tauto.
+    Qed.
+
+    Lemma singleton_fun_def :
+      forall {A : Type},
+      forall {Eq_A : EqDecision A},
+      forall {Ih_A : Inhabited A},
+      forall x : A,
+        ((singleton_set x) = (singleton x)).
+    Proof.
+      tauto.
+    Qed.
 
     Definition remove {A} `{EqDecision A} `{Inhabited A} (x : A) (s : set A) : set A := s ∖ {[ x ]}.
 
@@ -1469,285 +1579,292 @@ Module Stdlib : gospelstdlib_mli_stdpp.Stdlib.
       forall s' : set A,
       forall x : A,
         mem x s -> mem x s' -> mem x (inter s s').
-      Proof.
-        unfold mem, inter.
-        intros.
-        apply elem_of_intersection. auto.
-      Qed.
+    Proof.
+      unfold mem, inter.
+      intros.
+      apply elem_of_intersection. auto.
+    Qed.
 
-      Lemma inter_mem_neq :
-        forall {A : Type},
-        forall `{EqDecision A} `{Inhabited A},
-        forall s : set A,
-        forall s' : set A,
-        forall x : A,
-          not ((mem x s \/ mem x s')) -> not (mem x (inter s s')).
-      Proof.
-        unfold mem, inter.
-        intros A E I s s' x H1 H2.
-        apply elem_of_intersection in H2. tauto.
-      Qed.
+    Lemma inter_mem_neq :
+      forall {A : Type},
+      forall `{EqDecision A} `{Inhabited A},
+      forall s : set A,
+      forall s' : set A,
+      forall x : A,
+        not ((mem x s \/ mem x s')) -> not (mem x (inter s s')).
+    Proof.
+      unfold mem, inter.
+      intros A E I s s' x H1 H2.
+      apply elem_of_intersection in H2. tauto.
+    Qed.
 
-      Definition disjoint {A} `{EqDecision A} `{Inhabited A} (s1 : set A) (s2 : set A) := s1 ∩ s2 = ∅.
+    Definition disjoint {A} `{EqDecision A} `{Inhabited A} (s1 : set A) (s2 : set A) := s1 ∩ s2 = ∅.
 
-      Lemma disjoint_def :
-        forall {A : Type},
-        forall `{EqDecision A} `{Inhabited A},
-        forall s : set A,
-        forall s' : set A,
-          (disjoint s s' <-> (inter s s' = empty)).
-      Proof.
-        auto.
-      Qed.
+    Lemma disjoint_def :
+      forall {A : Type},
+      forall `{EqDecision A} `{Inhabited A},
+      forall s : set A,
+      forall s' : set A,
+        (disjoint s s' <-> (inter s s' = empty)).
+    Proof.
+      auto.
+    Qed.
 
-      Definition diff {A} `{EqDecision A} `{Inhabited A} (s1 : set A) s2 := s1 ∖ s2.
+    Definition diff {A} `{EqDecision A} `{Inhabited A} (s1 : set A) s2 := s1 ∖ s2.
 
-      Lemma diff_mem :
-        forall {A : Type},
-        forall `{EqDecision A} `{Inhabited A},
-        forall s : set A,
-        forall s' : set A,
-        forall x : A,
-          mem x s' -> not (mem x (diff s s')).
-      Proof.
-        unfold mem, diff.
-        intros A E Ih s1 s2 x H1 H2.
-        by apply elem_of_difference in H2 as [_ H2].
-      Qed.
+    Lemma diff_mem :
+      forall {A : Type},
+      forall `{EqDecision A} `{Inhabited A},
+      forall s : set A,
+      forall s' : set A,
+      forall x : A,
+        mem x s' -> not (mem x (diff s s')).
+    Proof.
+      unfold mem, diff.
+      intros A E Ih s1 s2 x H1 H2.
+      by apply elem_of_difference in H2 as [_ H2].
+    Qed.
 
-      Lemma diff_mem_fst :
-        forall {A : Type},
-        forall `{EqDecision A} `{Inhabited A},
-        forall s : set A,
-        forall s' : set A,
-        forall x : A,
-          not (mem x s') -> (mem x s <-> mem x (diff s s')).
-      Proof.
-        unfold mem, diff.
-        intros A I s1 s2 x H1.
-        split; intros H2.
-        + by apply elem_of_difference.
-        + by apply elem_of_difference in H2 as [H2 _].
-      Qed.
+    Lemma diff_mem_fst :
+      forall {A : Type},
+      forall `{EqDecision A} `{Inhabited A},
+      forall s : set A,
+      forall s' : set A,
+      forall x : A,
+        not (mem x s') -> (mem x s <-> mem x (diff s s')).
+    Proof.
+      unfold mem, diff.
+      intros A I s1 s2 x H1.
+      split; intros H2.
+      + by apply elem_of_difference.
+      + by apply elem_of_difference in H2 as [H2 _].
+    Qed.
 
-      Definition subset {A} `{EqDecision A} `{Inhabited A} (s1 : set A) (s2 : set A) :=
-        forall x, mem x s1 -> mem x s2.
+    Definition subset {A} `{EqDecision A} `{Inhabited A} (s1 : set A) (s2 : set A) :=
+      forall x, mem x s1 -> mem x s2.
 
-      Definition subset_def :
-        forall {A : Type},
-        forall `{EqDecision A} `{Inhabited A},
-        forall s : set A,
-        forall s' : set A,
-          (subset s s' <-> forall x : A, mem x s -> mem x s').
-      Proof.
-        auto.
-      Qed.
+    Definition subset_def :
+      forall {A : Type},
+      forall `{EqDecision A} `{Inhabited A},
+      forall s : set A,
+      forall s' : set A,
+        (subset s s' <-> forall x : A, mem x s -> mem x s').
+    Proof.
+      auto.
+    Qed.
 
-      Definition map {A} {B} `{EqDecision A} `{Inhabited A} `{EqDecision B} `{Inhabited B} (f : A -> B) (s : set A) :=
-        {[x | ∃ y, (f y) = x /\ y ∈ s]}.
+    Definition map {A} {B} `{EqDecision A} `{Inhabited A} `{EqDecision B} `{Inhabited B} (f : A -> B) (s : set A) :=
+      {[x | ∃ y, (f y) = x /\ y ∈ s]}.
 
-      Definition set_map :
-        forall {A : Type},
-        forall {B : Type},
-        forall `{EqDecision A} `{Inhabited A},
-        forall `{EqDecision B} `{Inhabited B},
-        forall f : B -> A,
-        forall s : set B,
-        forall x : A,
-          (mem x (map f s) <-> exists y : B, ((f y = x) /\ mem y s)).
-      Proof.
-        unfold mem, map.
-        intros.
-        split.
-        + intros H1. by apply -> (@elem_of_PropSet A) in H1.
-        + intros. by apply (@elem_of_PropSet A).
-      Qed.
+    Definition set_map :
+      forall {A : Type},
+      forall {B : Type},
+      forall `{EqDecision A} `{Inhabited A},
+      forall `{EqDecision B} `{Inhabited B},
+      forall f : B -> A,
+      forall s : set B,
+      forall x : A,
+        (mem x (map f s) <-> exists y : B, ((f y = x) /\ mem y s)).
+    Proof.
+      unfold mem, map.
+      intros.
+      split.
+      + intros H1. by apply -> (@elem_of_PropSet A) in H1.
+      + intros. by apply (@elem_of_PropSet A).
+    Qed.
 
-      Definition partition {A} `{EqDecision A} `{Inhabited A} (P : A -> Prop) `{forall x, Decision (P x)} (s : set A) :=
-        ({[x | x ∈ s /\ P x]}, {[x | x ∈ s /\ ~ P x]}).
+    Definition partition {A} `{EqDecision A} `{Inhabited A} (P : A -> Prop) `{forall x, Decision (P x)} (s : set A) :=
+      ({[x | x ∈ s /\ P x]}, {[x | x ∈ s /\ ~ P x]}).
 
-      Lemma partition_l_mem :
-        forall {A : Type},
-        forall `{EqDecision A} `{Inhabited A},
-        forall f : A -> Prop,
-        forall `{forall x, Decision (f x)},
-        forall s : set A,
-        forall x : A,
-        forall p1 : set A,
-        forall p2 : set A,
-          mem x s -> f x -> (partition f s = (p1, p2)) -> mem x p1.
-      Proof.
-        unfold mem, partition.
-        intros A E I f D s x p1 p2 H1 H2 H3.
-        injection H3.
-        intros.
-        subst.
-        by apply elem_of_PropSet.
-      Qed.
+    Lemma partition_l_mem :
+      forall {A : Type},
+      forall `{EqDecision A} `{Inhabited A},
+      forall f : A -> Prop,
+      forall `{forall x, Decision (f x)},
+      forall s : set A,
+      forall x : A,
+      forall p1 : set A,
+      forall p2 : set A,
+        mem x s -> f x -> (partition f s = (p1, p2)) -> mem x p1.
+    Proof.
+      unfold mem, partition.
+      intros A E I f D s x p1 p2 H1 H2 H3.
+      injection H3.
+      intros.
+      subst.
+      by apply elem_of_PropSet.
+    Qed.
 
-      Lemma partition_r_mem :
-        forall {A : Type},
-        forall `{EqDecision A} `{Inhabited A},
-        forall f : A -> Prop,
-        forall `{forall x, Decision (f x)},
-        forall s : set A,
-        forall x : A,
-        forall p1 : set A,
-        forall p2 : set A,
-          mem x s -> not (f x) -> (partition f s = (p1, p2)) -> mem x p2.
-        Proof.
-          unfold mem, partition.
-          intros A E I f D s x p1 p2 H1 H2 H3.
-          injection H3.
-          intros.
-          subst.
-          apply elem_of_PropSet. auto.
-        Qed.
+    Lemma partition_r_mem :
+      forall {A : Type},
+      forall `{EqDecision A} `{Inhabited A},
+      forall f : A -> Prop,
+      forall `{forall x, Decision (f x)},
+      forall s : set A,
+      forall x : A,
+      forall p1 : set A,
+      forall p2 : set A,
+        mem x s -> not (f x) -> (partition f s = (p1, p2)) -> mem x p2.
+    Proof.
+      unfold mem, partition.
+      intros A E I f D s x p1 p2 H1 H2 H3.
+      injection H3.
+      intros.
+      subst.
+      apply elem_of_PropSet. auto.
+    Qed.
 
-        Parameter cardinal :
-          forall {A : Type},
-          forall `{EqDecision A} `{Inhabited A},
-            t A -> Z.
+    Parameter cardinal :
+      forall {A : Type},
+      forall `{EqDecision A} `{Inhabited A},
+        t A -> Z.
 
-        Parameter finite :
-          forall {A : Type},
-          forall `{EqDecision A} `{Inhabited A},
-            t A -> Prop.
+    Parameter finite :
+      forall {A : Type},
+      forall `{EqDecision A} `{Inhabited A},
+        t A -> Prop.
 
-        Axiom finite_def :
-          forall {A : Type},
-          forall `{EqDecision A} `{Inhabited A},
-          forall s : set A,
-            (
-              finite s <-> exists seq : sequence A,
-              forall x : A,
-                mem x s -> Sequence.mem x seq
-            ).
-
-        Axiom cardinal_nonneg :
-          forall {A : Type},
-          forall `{EqDecision A} `{Inhabited A},
-          forall s : set A,
-            (cardinal s >= (0)%Z).
-
-        Axiom cardinal_empty :
-          forall {A : Type},
-          forall {E : EqDecision A} {I: Inhabited A},
-            (@cardinal A E I empty = (0)%Z).
-
-        Axiom cardinal_remove_mem :
-          forall {A : Type},
-          forall `{EqDecision A} `{Inhabited A},
-          forall s : set A,
+    Axiom finite_def :
+      forall {A : Type},
+      forall `{EqDecision A} `{Inhabited A},
+      forall s : set A,
+        (
+          finite s <-> exists seq : sequence A,
           forall x : A,
-            finite s -> mem x s -> (cardinal (remove x s) = (cardinal s - (1)%Z)).
+            mem x s -> Sequence.mem x seq
+        ).
 
-        Axiom cardinal_remove_not_mem :
-          forall {A : Type},
-          forall `{EqDecision A} `{Inhabited A},
-          forall s : set A,
+    Axiom cardinal_nonneg :
+      forall {A : Type},
+      forall `{EqDecision A} `{Inhabited A},
+      forall s : set A,
+        (cardinal s >= (0)%Z).
+
+    Axiom cardinal_empty :
+      forall {A : Type},
+      forall {E : EqDecision A} {I: Inhabited A},
+        (@cardinal A E I empty = (0)%Z).
+
+    Axiom cardinal_remove_mem :
+      forall {A : Type},
+      forall `{EqDecision A} `{Inhabited A},
+      forall s : set A,
+      forall x : A,
+        finite s -> mem x s -> (cardinal (remove x s) = (cardinal s - (1)%Z)).
+
+    Axiom cardinal_remove_not_mem :
+      forall {A : Type},
+      forall `{EqDecision A} `{Inhabited A},
+      forall s : set A,
+      forall x : A,
+        finite s -> not (mem x s) -> (cardinal (remove x s) = cardinal s).
+
+    Axiom cardinal_add :
+      ∀ (A : Type) (Eq_A : EqDecision A) (Ih_A : Inhabited A) (s : set A) (x : A),
+        _Set.finite s
+        → _Set.neg_belongs x s
+        → _Set.cardinal (_Set.add x s) = _Set.cardinal s + 1.
+
+    Axiom cardinal_add_mem :
+      forall {A : Type},
+      forall {Eq_A : EqDecision A},
+      forall {Ih_A : Inhabited A},
+      forall s : set A,
+      forall x : A,
+        finite s -> belongs x s -> ((cardinal (add x s)) = (cardinal s)).
+
+    Definition of_seq {A} `{EqDecision A} `{Inhabited A} (s : list A) : set A := {[x | Sequence.mem x s]}.
+
+    Lemma of_seq_mem :
+      forall {A : Type},
+      forall `{EqDecision A} `{Inhabited A},
+      forall s : sequence A,
+      forall x : A,
+        (mem x (of_seq s) <-> Sequence.mem x s).
+    Proof.
+      auto.
+    Qed.
+
+    Parameter to_seq :
+      forall {A : Type},
+      forall `{EqDecision A} `{Inhabited A},
+        t A -> Sequence.t A.
+
+    Axiom to_seq_mem :
+      forall {A : Type},
+      forall `{EqDecision A} `{Inhabited A},
+      forall s : set A,
+        finite s ->
+        (
           forall x : A,
-            finite s -> not (mem x s) -> (cardinal (remove x s) = cardinal s).
+            (mem x s <-> (Sequence.multiplicity x (to_seq s) = (1)%Z))
+        ).
 
-        Axiom cardinal_add :
-          forall {A : Type},
-          forall `{EqDecision A} `{Inhabited A},
-          forall s : set A,
-          forall x : A,
-            finite s -> not (mem x s) -> (cardinal (add x s) = cardinal s).
+    Parameter fold :
+      forall {A : Type},
+      forall {B : Type},
+      forall `{EqDecision A} `{Inhabited A},
+      forall `{EqDecision B} `{Inhabited B},
+        (A -> B) -> (B -> B -> B) -> t A -> B -> B.
 
-        Definition of_seq {A} `{EqDecision A} `{Inhabited A} (s : list A) : set A := {[x | Sequence.mem x s]}.
+    Axiom fold_def :
+      forall {A : Type},
+      forall {B : Type},
+      forall `{EqDecision A} `{Inhabited A},
+      forall `{EqDecision B} `{Inhabited B},
+      forall f : A -> B,
+      forall m : B -> B -> B,
+      forall s : set A,
+      forall acc : B,
+        finite s ->
+        comm_monoid m acc ->
+        (
+          fold f m s acc = Sequence.fold_right (
+                               fun x : A =>
+                               fun acc : B =>
+                                 m (f x) acc
+                             ) (to_seq s) acc
+        ).
 
-        Lemma of_seq_mem :
-          forall {A : Type},
-          forall `{EqDecision A} `{Inhabited A},
-          forall s : sequence A,
-          forall x : A,
-            (mem x (of_seq s) <-> Sequence.mem x s).
-        Proof.
-          auto.
-        Qed.
+  End _Set.
 
-Parameter to_seq :
-  forall {A : Type},
-  forall `{EqDecision A} `{Inhabited A},
-  t A -> Sequence.t A.
+  Definition map_set {A} {B} `{EqDecision A} `{Inhabited A} `{EqDecision B} `{Inhabited B} (f : A -> B) x y :=
+    λ z, if (decide (x = z)) then y else f z.
 
-Axiom to_seq_mem :
-  forall {A : Type},
-  forall `{EqDecision A} `{Inhabited A},
-  forall s : set A,
-  finite s ->
-  (
+  Lemma map_set_def :
+    forall {A : Type},
+    forall {B : Type},
+    forall {Eq_A : EqDecision A},
+    forall {Ih_A : Inhabited A},
+    forall {Eq_B : EqDecision B},
+    forall {Ih_B : Inhabited B},
+    forall f : A -> B,
     forall x : A,
-    (mem x s <-> (Sequence.multiplicity x (to_seq s) = (1)%Z))
-  ).
+    forall y : B,
+      ((map_set f x y x) = y).
+  Proof.
+    intros.
+    unfold map_set.
+    by rewrite decide_True.
+  Qed.
 
-Parameter fold :
-  forall {A : Type},
-  forall {B : Type},
-  forall `{EqDecision A} `{Inhabited A},
-  forall `{EqDecision B} `{Inhabited B},
-  (A -> B) -> (B -> B -> B) -> t A -> B -> B.
-
-Axiom fold_def :
-  forall {A : Type},
-  forall {B : Type},
-  forall `{EqDecision A} `{Inhabited A},
-  forall `{EqDecision B} `{Inhabited B},
-  forall f : A -> B,
-  forall m : B -> B -> B,
-  forall s : set A,
-  forall acc : B,
-  finite s ->
-  comm_monoid m acc ->
-  (
-    fold f m s acc = Sequence.fold_right (
-      fun x : A =>
-      fun acc : B =>
-      m (f x) acc
-    ) (to_seq s) acc
-  ).
-
-End _Set.
-
-Definition map_set {A} {B} `{EqDecision A} `{Inhabited A} `{EqDecision B} `{Inhabited B} (f : A -> B) x y :=
-  λ z, if (decide (x = z)) then y else f z.
-
-Lemma map_set_def :
-  forall {A : Type},
-  forall {B : Type},
-  forall {Eq_A : EqDecision A},
-  forall {Ih_A : Inhabited A},
-  forall {Eq_B : EqDecision B},
-  forall {Ih_B : Inhabited B},
-  forall f : A -> B,
-  forall x : A,
-  forall y : B,
-  ((map_set f x y x) = y).
-Proof.
-  intros.
-  unfold map_set.
-  by rewrite decide_True.
-Qed.
-
-Lemma map_set_def_neq :
-  forall {A : Type},
-  forall {B : Type},
-  forall {Eq_A : EqDecision A},
-  forall {Ih_A : Inhabited A},
-  forall {Eq_B : EqDecision B},
-  forall {Ih_B : Inhabited B},
-  forall f : A -> B,
-  forall x : A,
-  forall y : B,
-  forall z : A,
-  (x <> z) -> ((map_set f x y z) = (f z)).
-Proof.
-  intros.
-  unfold map_set.
-  by rewrite decide_False.
-Qed.
+  Lemma map_set_def_neq :
+    forall {A : Type},
+    forall {B : Type},
+    forall {Eq_A : EqDecision A},
+    forall {Ih_A : Inhabited A},
+    forall {Eq_B : EqDecision B},
+    forall {Ih_B : Inhabited B},
+    forall f : A -> B,
+    forall x : A,
+    forall y : B,
+    forall z : A,
+      (x <> z) -> ((map_set f x y z) = (f z)).
+  Proof.
+    intros.
+    unfold map_set.
+    by rewrite decide_False.
+  Qed.
 
   Module Map.
 

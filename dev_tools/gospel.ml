@@ -69,7 +69,7 @@ let read_gospel_file f =
 let path2module p =
   Filename.basename p |> Filename.chop_extension |> String.capitalize_ascii
 
-let rec check ~verbose tasts env = function
+let rec check ~verbose ~comp tasts env = function
   | [] -> tasts
   | file :: t ->
       (* Precondition: this file must have extension [.gospel] or be a valid
@@ -81,7 +81,7 @@ let rec check ~verbose tasts env = function
         if Filename.extension file = gospel_ext then
           (tasts, read_gospel_file file)
         else
-          let tast, mods = check_file ~verbose ~comp_dir ~env file in
+          let tast, mods = check_file ~verbose ~comp ~comp_dir ~env file in
           if verbose then (
             pp fmt "@[@\n*******************************@]@.";
             pp fmt "@[********** Typed GOSPEL *******@]@.";
@@ -90,16 +90,16 @@ let rec check ~verbose tasts env = function
           let file = { fname = file; fmodule = module_nm; fdefs = tast } in
           (file :: tasts, mods)
       in
-      check ~verbose tasts (Namespace.add_mod env id mods) t
+      check ~comp ~verbose tasts (Namespace.add_mod env id mods) t
 
-let tast ~verbose files =
+let tast ~verbose ~comp files =
   errors files;
   (* Create the compilation directory if it does not already exist. *)
-  if not (Sys.file_exists comp_dir) then
+  if comp && not (Sys.file_exists comp_dir) then
     (* The integer argument [0o777] creates the directory with full
        permissions. *)
     Sys.mkdir comp_dir 0o777
-  else if not (Sys.is_directory comp_dir) then
+  else if comp && not (Sys.is_directory comp_dir) then
     error
       "There exists a non-directory file named \"%s\": since Gospel uses this \
        directory name to store compiled [.gospel] files, please rename or \
@@ -119,10 +119,10 @@ let tast ~verbose files =
   in
 
   let env = Namespace.init_env ~ocamlprimitives stdlib in
-  check ~verbose [] env files
+  check ~verbose ~comp [] env files
 
 let sep ~verbose files =
-  let tast = tast files ~verbose:false in
+  let tast = tast files ~comp:false ~verbose:false in
   List.map
     (fun x ->
       let sdef = Semantics.process_sigs x.fdefs in

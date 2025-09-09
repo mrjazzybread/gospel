@@ -29,10 +29,12 @@ val check_file :
   ?comp_dir:string ->
   ?env:Namespace.env ->
   verbose:bool ->
+  comp:bool ->
   string ->
   Tast.s_signature * Namespace.mod_defs
-(** [check_file comp_dir env file] receives an [.mli] file name and type checks
-    it under [env]. If the file is correctly type checked, we create a [.gospel]
-    file in directory [comp_dir].
+(** [check_file comp_dir env comp verbose file] receives an [.mli] file name and
+    type checks it under [env]. If the file is correctly type checked, we create
+    a [.gospel] file in directory [comp_dir] if the [comp] is [true]. If the
+    [verbose] flag is [true], we print the term to the standard output.
     @raise Warnings.Error
       If there is a parsing or type checking error within [file]. *)

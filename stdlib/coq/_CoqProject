@@ -1,5 +1,0 @@
--R . Gospel
-gospelstdlib_mli_tlc.v
-gospelstdlib_mli_stdpp.v
-gospelstdlib_verified_tlc.v
-gospelstdlib_verified_stdpp.v

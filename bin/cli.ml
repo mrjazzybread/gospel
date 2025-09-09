@@ -38,10 +38,14 @@ let verbose =
   let doc = "Print all intermediate forms." in
   Arg.(value & flag & info [ "v"; "verbose" ] ~doc)
 
+let comp =
+  let doc = "Create compiled Gospel files" in
+  Arg.(value & flag & info [ "c"; "comp" ] ~doc)
+
 let tc =
   let doc = "Gospel type-checker." in
   let info = Cmd.info "check" ~doc in
-  let term = Term.(const Check.run $ verbose $ intfs) in
+  let term = Term.(const Check.run $ verbose $ comp $ intfs) in
   Cmd.v info term
 
 let sep =

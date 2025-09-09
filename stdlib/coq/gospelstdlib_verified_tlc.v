@@ -1,5 +1,8 @@
 Set Implicit Arguments.
 
+Set Warnings "-deprecated".
+Set Warnings "-default".
+Set Warnings "-syntax".
 From TLC Require Import LibString LibList LibCore LibListZ LibEpsilon LibSet LibOrder.
 
 Require Import Stdlib.ZArith.BinInt TLC.LibLogic TLC.LibRelation TLC.LibInt TLC.LibContainer.

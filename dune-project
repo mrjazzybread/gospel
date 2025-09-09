@@ -1,6 +1,7 @@
-(lang dune 3.0)
+(lang dune 3.19)
 (name gospel)
 (version 0.3.0)
 (using menhir 2.0)
+(using coq 0.10)
 (package (name gospel_checker))
 (package (name gospel))

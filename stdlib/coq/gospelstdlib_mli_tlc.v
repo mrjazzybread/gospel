@@ -1,5 +1,8 @@
 Set Implicit Arguments.
 
+Set Warnings "-deprecated".
+Set Warnings "-default".
+Set Warnings "-syntax".
 Require Import Stdlib.ZArith.BinInt TLC.LibLogic TLC.LibRelation TLC.LibInt TLC.LibListZ.
 
 Require Import Stdlib.ZArith.BinIntDef.

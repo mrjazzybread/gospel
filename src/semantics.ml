@@ -203,6 +203,7 @@ let rec signature_item_desc ns = function
           let f s = signature_item ns s in
           let defs = List.concat_map f s in
           [ Module (nm, defs) ])
+  | Sig_ghost_open m -> [ Import m ]
   | _ -> []
 
 and signature_item ns s =

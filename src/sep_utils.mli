@@ -17,7 +17,7 @@ type namespace
 val empty_env : unit -> namespace
 (** The empty namespace *)
 
-val get_pred : namespace -> Id_uast.pty -> Sast.psymbol option
+val get_pred : namespace -> Id_uast.pty -> Sast.psymbol
 (** [get_pred m s] returns the representation predicate for the type [s].
     @raise Not_found
       If [s] is a type whose logical model is isomorphic to its OCaml

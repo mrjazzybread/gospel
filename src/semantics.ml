@@ -171,11 +171,8 @@ let lifted_arg ns env is_pre arg =
       let arg_prog = to_prog v in
       let to_term v = mk_term (Tvar (Qid v.ts_id)) v.ts_ty Location.none in
       let arg_spatial =
-        Option.map
-          (fun pred ->
-            let arg_pred = Lift (pred, to_term arg_prog, to_term arg_ts) in
-            { arg_pred; arg_log = arg_ts; ro })
-          pred
+        let arg_pred = Lift (pred, to_term arg_prog, to_term arg_ts) in
+        Some { arg_pred; arg_log = arg_ts; ro }
       in
       let arg_val =
         Sast.Value
@@ -257,10 +254,4 @@ and signature_item env s =
   let sigs = List.map (fun sep -> { d_node = sep; d_loc = s.sloc }) sigs in
   sigs
 
-let process_sigs file =
-  let env = empty_env () in
-  let f s =
-    let sigs = signature_item env s in
-    sigs
-  in
-  List.concat_map f file
+let process_sigs env file = List.concat_map (signature_item env) file

@@ -8,4 +8,5 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 
-val process_sigs : Tast.s_signature_item list -> Sast.definitions
+val process_sigs :
+  Sep_utils.namespace -> Tast.s_signature_item list -> Sast.definitions

@@ -22,8 +22,8 @@ let get_pred ns ty =
   match ty with
   | Id_uast.PTtyapp (ts, _) ->
       let id = Uast_utils.leaf ts.app_qid in
-      Env.find_opt ns id.id_tag
-  | _ -> None
+      Env.find ns id.id_tag
+  | _ -> assert false
 
 let map_pred ns tid ps_name is_mutable ps_args =
   let ps = { ps_name; ps_args; ps_sep = is_mutable } in

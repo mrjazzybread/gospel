@@ -125,7 +125,10 @@ let sep ~verbose files =
   let tast = tast files ~comp:false ~verbose:false in
   List.map
     (fun x ->
-      let sdef = Semantics.process_sigs x.fdefs in
+      let env : Sep_utils.namespace =
+        Marshal.from_string [%blob "../stdlib/ocamlprimitives.sep"] 0
+      in
+      let sdef = Semantics.process_sigs env x.fdefs in
       if verbose then Sast_printer.definitions fmt sdef;
       { x with fdefs = sdef })
     tast

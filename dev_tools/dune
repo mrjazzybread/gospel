@@ -5,4 +5,5 @@
   (pps ppx_blob))
  (preprocessor_deps
   (file ../stdlib/gospelstdlib.gospel)
-  (file ../stdlib/ocamlprimitives.gospel)))
+  (file ../stdlib/ocamlprimitives.gospel)
+  (file ../stdlib/ocamlprimitives.sep)))

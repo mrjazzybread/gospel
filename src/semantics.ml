@@ -211,10 +211,4 @@ and signature_item ns s =
   let sigs = List.map (fun sep -> { d_node = sep; d_loc = s.sloc }) sigs in
   sigs
 
-let process_sigs file =
-  let ns = empty_env () in
-  let f s =
-    let sigs = signature_item ns s in
-    sigs
-  in
-  List.concat_map f file
+let process_sigs env file = List.concat_map (signature_item env) file

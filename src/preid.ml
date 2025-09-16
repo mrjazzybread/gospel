@@ -11,17 +11,22 @@
 let pp_attr ppf attr = Format.fprintf ppf "[@%s]" attr
 let pp_attrs = Format.pp_print_list pp_attr
 
-type t = { pid_str : string; pid_attrs : string list; pid_loc : Location.t }
+type pid_style = Normal | Infix | Mixfix | Prefix
+
+type t = {
+  pid_str : string;
+  pid_style : pid_style;
+  pid_attrs : string list;
+  pid_loc : Location.t;
+}
 
 let pp ppf pid =
-  let l = String.split_on_char ' ' pid.pid_str in
-  match l with
-  | [ id ] -> Format.fprintf ppf "%s%a" id pp_attrs pid.pid_attrs
-  | [ _; id ] -> Format.fprintf ppf "(%s)%a" id pp_attrs pid.pid_attrs
-  | _ -> assert false
+  match pid.pid_style with
+  | Normal -> Format.fprintf ppf "%s%a" pid.pid_str pp_attrs pid.pid_attrs
+  | _ -> Format.fprintf ppf "(%s)%a" pid.pid_str pp_attrs pid.pid_attrs
 
 let add_attr t attr = { t with pid_attrs = attr :: t.pid_attrs }
 let eq id1 id2 = id1.pid_str = id2.pid_str
 
-let create ?(attrs = []) ~loc str =
-  { pid_str = str; pid_attrs = attrs; pid_loc = loc }
+let create ?(style = Normal) ?(attrs = []) ~loc str =
+  { pid_str = str; pid_style = style; pid_attrs = attrs; pid_loc = loc }

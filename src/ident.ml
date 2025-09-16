@@ -53,6 +53,7 @@ module IdTable = Hashtbl.Make (Tag)
 
 type t = {
   id_str : string;
+  id_style : Preid.pid_style;
   id_attrs : string list;
   id_loc : Location.t;
   id_tag : Tag.t;
@@ -72,7 +73,13 @@ let equal x y = Tag.equal x.id_tag y.id_tag
 let hash x = Tag.hash x.id_tag
 
 let mk_id ?loc:(id_loc = Location.none) id_str =
-  { id_str; id_attrs = []; id_loc; id_tag = Tag.gen_id () }
+  {
+    id_str;
+    id_style = Preid.Normal;
+    id_attrs = [];
+    id_loc;
+    id_tag = Tag.gen_id ();
+  }
 
 let stdlib_id = mk_id "Gospelstdlib"
 let is_stdlib id = Tag.is_project id.id_tag stdlib_project
@@ -81,6 +88,7 @@ let is_primitive id = Tag.is_project id.id_tag primitive_project
 let from_preid p =
   {
     id_str = p.Preid.pid_str;
+    id_style = p.pid_style;
     id_attrs = p.pid_attrs;
     id_loc = p.pid_loc;
     id_tag = Tag.gen_id ();

@@ -357,7 +357,7 @@ let rec hastype (t : Id_uast.term) (r : variable) =
     | Tif (g, then_b, else_b) ->
         (* if g then then_b else else_b *)
         (* The guard must have type [bool] *)
-        let+ g = lift hastype g S.ty_bool
+        let+ g = lift hastype g S.ty_prop
         (* Both branches must have the return type [r] *)
         and+ then_b = hastype then_b r
         and+ else_b = hastype else_b r in

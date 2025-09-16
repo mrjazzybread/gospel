@@ -31,7 +31,7 @@
       let t16 = t14.y in
       let t17 = fun x y -> x + y in
       let t18 = fun (x : integer) (y : integer) -> x + y in
-      let t19 = if true then 0 else 1 in
+      let t19 = if True then 0 else 1 in
       let t20 = t17 0 0 in
       (t1 : prop)
  *)

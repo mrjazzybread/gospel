@@ -15,7 +15,7 @@
 
 (*@ axiom if_and : forall p1 p2. (<->) (iff p1 p2) (( /\ ) ((->) p1 p2) ((->) p2 p1)) *)
 
-(*@ axiom aif : forall p. (\/) (if true then p True True else False) False *)
+(*@ axiom aif : forall p. (\/) (if True then p True True else False) False *)
 
 (*@ function application (f : integer -> integer -> integer)
                 (x : integer) (y : integer) : integer =

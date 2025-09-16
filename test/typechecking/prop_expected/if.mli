@@ -14,6 +14,6 @@
 [1] File "if.mli", line 11, characters 18-19:
     11 | (*@ axiom ax : if 0 then True else false *)
                            ^
-    Error: Mismatch between type bool and type integer
+    Error: Mismatch between type prop and type integer
     
 |gospel_expected} *)

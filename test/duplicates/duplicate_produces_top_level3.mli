@@ -16,9 +16,9 @@ val f : unit -> unit
     produces y *)
 
 (* {gospel_expected|
-[1] File "duplicate_produces_top_level3.mli", line 11, characters 4-5:
-    11 | val x : int ref
-             ^
+[1] File "duplicate_produces_top_level3.mli", line 15, characters 13-14:
+    15 |     produces x
+                      ^
     Error: The variable x is listed as produced twice
     
 |gospel_expected} *)

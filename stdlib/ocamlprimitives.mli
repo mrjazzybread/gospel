@@ -19,6 +19,8 @@ type bool
 (*@ model : prop *)
 
 type float
+(*@ model : float *)
+
 type char
 (*@ model : char *)
 

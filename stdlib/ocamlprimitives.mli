@@ -42,4 +42,7 @@ type 'a ref
 (*@ mutable
     model : 'a *)
 
+type 'a option
+(*@ model : 'a option *)
+
 type floatarray

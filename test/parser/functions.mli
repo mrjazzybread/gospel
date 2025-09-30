@@ -26,6 +26,14 @@
 (*@ function F5 (n : integer) : integer = 0 + 0 + 0 *)
 (*@ function F6 (n1 : integer) (n2 : integer) : integer = 0 + 0 + 0 *)
 
+(* Parameterless functions *)
+(*@ function f7 : integer *)
+(*@ function f8 : integer -> integer *)
+(*@ function f9 : integer sequence -> integer *)
+(*@ function f10 : 'a sequence -> integer *)
+(*@ function f11 : 'a sequence -> 'b *)
+(*@ function f12 : ('a,'b) map -> ('b,'a) map *)
+
 (* Abstract predicates *)
 (*@ predicate p1 *)
 (*@ predicate p2 (n : integer) *)

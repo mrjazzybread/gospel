@@ -106,6 +106,13 @@
 (*@ function ([_..]) (s: 'a sequence) (i: integer): 'a sequence *)
 (*@ function ([.._]) (s: 'a sequence) (i: integer): 'a sequence *)
 
+(*@ function ( let* ) (x : 'a option) (f : 'a -> 'b) : 'b *)
+
+(*@ axiom let_some :
+      forall x y f.
+      x = Some y ->
+        ( let* ) x f = f y  *)
+
 (*@ predicate monoid (f : 'a -> 'a -> 'a) (neutral : 'a) *)
 
 (*@ axiom monoid_def :

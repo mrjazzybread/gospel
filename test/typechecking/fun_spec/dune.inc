@@ -57,3 +57,17 @@
  (action
   (diff invalid_pre.mli invalid_pre.mli.output)))
 
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to positive.mli.output
+   (run %{checker} %{dep:positive.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff positive.mli positive.mli.output)))
+

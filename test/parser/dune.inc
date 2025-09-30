@@ -49,6 +49,34 @@
   (:checker %{project_root}/test/utils/testchecker.exe)
        _gospel)
  (action
+  (with-outputs-to keyword_as_prefix.mli.output
+   (run %{checker} %{dep:keyword_as_prefix.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff keyword_as_prefix.mli keyword_as_prefix.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to literals.mli.output
+   (run %{checker} %{dep:literals.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff literals.mli literals.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
   (with-outputs-to modules.mli.output
    (run %{checker} %{dep:modules.mli}))))
 
@@ -56,6 +84,20 @@
  (alias runtest)
  (action
   (diff modules.mli modules.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to no_specification.mli.output
+   (run %{checker} %{dep:no_specification.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff no_specification.mli no_specification.mli.output)))
 
 (rule
  (deps

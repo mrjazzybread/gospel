@@ -63,6 +63,48 @@
   (:checker %{project_root}/test/utils/testchecker.exe)
        _gospel)
  (action
+  (with-outputs-to expressions.mli.output
+   (run %{checker} %{dep:expressions.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff expressions.mli expressions.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to ghost_args1.mli.output
+   (run %{checker} %{dep:ghost_args1.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff ghost_args1.mli ghost_args1.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to ghost_args2.mli.output
+   (run %{checker} %{dep:ghost_args2.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff ghost_args2.mli ghost_args2.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
   (with-outputs-to higher_order.mli.output
    (run %{checker} %{dep:higher_order.mli}))))
 
@@ -70,6 +112,20 @@
  (alias runtest)
  (action
   (diff higher_order.mli higher_order.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to infix.mli.output
+   (run %{checker} %{dep:infix.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff infix.mli infix.mli.output)))
 
 (rule
  (deps
@@ -147,6 +203,20 @@
   (:checker %{project_root}/test/utils/testchecker.exe)
        _gospel)
  (action
+  (with-outputs-to invalid_modifies.mli.output
+   (run %{checker} %{dep:invalid_modifies.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff invalid_modifies.mli invalid_modifies.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
   (with-outputs-to invalid_ret_number1.mli.output
    (run %{checker} %{dep:invalid_ret_number1.mli}))))
 
@@ -217,6 +287,34 @@
   (:checker %{project_root}/test/utils/testchecker.exe)
        _gospel)
  (action
+  (with-outputs-to old_in_checks.mli.output
+   (run %{checker} %{dep:old_in_checks.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff old_in_checks.mli old_in_checks.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to old_in_pre.mli.output
+   (run %{checker} %{dep:old_in_pre.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff old_in_pre.mli old_in_pre.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
   (with-outputs-to pure_cant_consume.mli.output
    (run %{checker} %{dep:pure_cant_consume.mli}))))
 
@@ -280,6 +378,20 @@
  (alias runtest)
  (action
   (diff return_option.mli return_option.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to top_level.mli.output
+   (run %{checker} %{dep:top_level.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff top_level.mli top_level.mli.output)))
 
 (rule
  (deps

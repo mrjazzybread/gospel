@@ -40,6 +40,7 @@ let type_declaration ~ocaml ns t =
   let model_decl model_type =
     match model_type with
     | Id_uast.Fields fields ->
+        let fields = List.map (fun x -> (x.pld_name, x.pld_type)) fields in
         let def = Record fields in
         Some
           (Type
@@ -65,8 +66,8 @@ let type_declaration ~ocaml ns t =
 
     let pred_model_ty =
       match model_type with
-      | No_model -> pred_prog_ty
-      | Implicit t -> t
+      | No_model _ -> pred_prog_ty
+      | Implicit (_, t) -> t
       | Fields _ -> PTtyapp (app, tvar_list)
     in
     let model_vs = mk_ts (Ident.mk_id "model") pred_model_ty in
@@ -87,7 +88,11 @@ let type_declaration ~ocaml ns t =
   let tvar_list = List.map (fun x -> PTtyvar x) t.tparams in
   let model_type = spec.ty_model in
   let is_record = match model_type with Fields _ -> true | _ -> false in
-  let is_mutable = spec.ty_mutable in
+  let is_mutable =
+    match spec.ty_model with
+    | No_model m | Implicit (m, _) -> m = Parse_uast.Mutable
+    | Fields l -> List.exists (fun x -> x.pld_mutable = Mutable) l
+  in
   let type_name =
     if is_record then change_id (( ^ ) "_") t.tname else t.tname
   in

@@ -112,10 +112,21 @@ type val_spec = {
   sp_loc : Location.t;
 }
 
-type model = No_model | Implicit of pty | Fields of (id * pty) list
+type mutable_flag = Mutable | Immutable
+
+type label_declaration = {
+  pld_name : id;
+  pld_mutable : mutable_flag;
+  pld_type : pty;
+  pld_loc : Location.t;
+}
+
+type model =
+  | No_model of mutable_flag
+  | Implicit of mutable_flag * pty
+  | Fields of label_declaration list
 
 type type_spec = {
-  ty_mutable : bool;
   ty_invariant : (id * term list) option;
   ty_model : model;
   ty_text : string;
@@ -158,15 +169,6 @@ type s_val_description = {
   vspec : val_spec option;
   (* specification *)
   vloc : Location.t;
-}
-
-type mutable_flag = Mutable | Immutable
-
-type label_declaration = {
-  pld_name : id;
-  pld_mutable : mutable_flag;
-  pld_type : pty;
-  pld_loc : Location.t;
 }
 
 type type_kind = PTtype_abstract | PTtype_record of label_declaration list

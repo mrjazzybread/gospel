@@ -78,7 +78,7 @@ type record_info = {
   rparams : Ident.t list;
   (* The type parameters for the record type. Should be equal to the [tparams]
        list in the entry for [rid] in the corresponding type environment. *)
-  rfields : (Ident.t * Id_uast.pty) list; (* The list of all record fields. *)
+  rfields : Id_uast.label_declaration list; (* The list of all record fields. *)
 }
 
 type field_info = { rfid : Ident.t; rfty : Id_uast.pty; rfrecord : record_info }
@@ -391,7 +391,7 @@ let fields_qualid ~loc defs fields =
      [labels] list. *)
   let find_label pid =
     List.find
-      (fun (id, _) -> id.Ident.id_str = pid.Preid.pid_str)
+      (fun lbl -> lbl.pld_name.Ident.id_str = pid.Preid.pid_str)
       record.rfields
   in
 
@@ -403,8 +403,8 @@ let fields_qualid ~loc defs fields =
     | Parse_uast.Qid pid ->
         (* If a field is not qualified, we look for the corresponding identifier in
           [id_labels]. This lookup always succeeds. *)
-        let id, ty = find_label pid in
-        (Qid id, ty)
+        let lbl = find_label pid in
+        (Qid lbl.pld_name, lbl.pld_type)
     | Qdot (pre, pid) ->
         (* If a field is qualified, we check if we can reach [record] by
           following the modules in [q] in environment [defs]. If not, either
@@ -432,8 +432,8 @@ let fields_qualid ~loc defs fields =
         (* If we reach this point, [pre] is a valid path to reach the field
           [pid]. We then look for the corresponding identifier in the [labels]
           list *)
-        let id, ty = find_label pid in
-        (Qdot (pre_id, id), ty)
+        let lbl = find_label pid in
+        (Qdot (pre_id, lbl.pld_name), lbl.pld_type)
   in
 
   let l = List.map resolve_field fields in
@@ -533,15 +533,17 @@ let add_gospel_type env id params alias =
 let add_record rid rparams rfields defs =
   let info = { rid; rparams; rfields } in
   (* Maps each record field name to the a field info object *)
-  let f defs (rfid, rfty) =
+  let f defs lbl =
     let rfenv = defs.field_env in
-    let rfinfo = { rfid; rfty; rfrecord = info } in
-    { defs with field_env = Env.add rfid.Ident.id_str rfinfo rfenv }
+    let rfinfo =
+      { rfid = lbl.pld_name; rfty = lbl.pld_type; rfrecord = info }
+    in
+    { defs with field_env = Env.add lbl.pld_name.Ident.id_str rfinfo rfenv }
   in
   (* Map each field name to a [field_info] object. *)
   let defs = List.fold_left f defs rfields in
   (* Map the list of field names to the [record_info] object. *)
-  let field_nms = List.map (fun (x, _) -> x.Ident.id_str) rfields in
+  let field_nms = List.map (fun lbl -> lbl.pld_name.id_str) rfields in
   let env = defs.record_env in
   { defs with record_env = Record_env.add field_nms info env }
 

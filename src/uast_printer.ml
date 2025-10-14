@@ -222,23 +222,28 @@ let val_spec fmt spec =
 
 (* Type specifications *)
 
+let mutable_flag sep fmt = function
+  | Mutable -> pp fmt "mutable%a" sep ()
+  | Immutable -> ()
+
+let mutable_flag_sp fmt = mutable_flag sp fmt
+
+let label_declaration fmt lbl =
+  pp fmt "@[%a%a :@ %a@]" mutable_flag_sp lbl.pld_mutable Preid.pp lbl.pld_name
+    print_ty lbl.pld_type
+
 let model fmt = function
-  | No_model -> ()
-  | Implicit ty -> pp fmt "model :@ %a@\n" print_ty ty
-  | Fields l ->
-      let field fmt (id, ty) =
-        pp fmt "model %a :@ %a@\n" Preid.pp id print_ty ty
-      in
-      (list field fmt) l
+  | No_model flag -> mutable_flag nop fmt flag
+  | Implicit (flag, ty) ->
+      pp fmt "%amodel :@ %a@\n" mutable_flag_sp flag print_ty ty
+  | Fields l -> (list label_declaration fmt) l
 
 let invariants fmt (id, l) =
   let invariant fmt t = pp fmt "@[invariant %a@]" term t in
   pp fmt "with %a %a" Preid.pp id (list ~sep:newline invariant) l
 
 let type_spec fmt tspec =
-  pp fmt "@[%a%a%a@]"
-    (if' tspec.ty_mutable (fun fmt () -> pp fmt "mutable@\n"))
-    () model tspec.ty_model (option invariants) tspec.ty_invariant
+  pp fmt "@[%a%a@]" model tspec.ty_model (option invariants) tspec.ty_invariant
 
 (* Function specifications *)
 
@@ -269,16 +274,6 @@ let s_val_description fmt v =
   pp fmt "@[@[val %a :@ %a@]@\n%a@]" Preid.pp v.vname print_ty v.vtype
     (option (gospel val_spec))
     v.vspec
-
-(* Type declarations *)
-
-let mutable_flag fmt = function
-  | Mutable -> pp fmt "mutable@ "
-  | Immutable -> ()
-
-let label_declaration fmt lbl =
-  pp fmt "@[%a%a :@ %a@]" mutable_flag lbl.pld_mutable Preid.pp lbl.pld_name
-    print_ty lbl.pld_type
 
 let type_kind fmt = function
   | PTtype_abstract -> ()

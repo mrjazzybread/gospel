@@ -141,23 +141,22 @@ let function_ fmt f =
 
 (* Type specifications *)
 
+let label_declaration fmt lbl =
+  pp fmt "@[%a%a :@ %a@]" Uast_printer.mutable_flag_sp lbl.pld_mutable Ident.pp
+    lbl.pld_name print_ty lbl.pld_type
+
 let model fmt = function
-  | No_model -> ()
-  | Implicit ty -> pp fmt "model :@ %a@\n" print_ty ty
-  | Fields l ->
-      let field fmt (id, ty) =
-        pp fmt "model %a :@ %a@\n" Ident.pp id print_ty ty
-      in
-      (list field fmt) l
+  | No_model m -> Uast_printer.mutable_flag nop fmt m
+  | Implicit (m, ty) ->
+      pp fmt "%amodel :@ %a@\n" Uast_printer.mutable_flag_sp m print_ty ty
+  | Fields l -> (list label_declaration fmt) l
 
 let invariants fmt (id, l) =
   let invariant fmt t = pp fmt "@[invariant %a@]" term t in
   pp fmt "with %a %a" Ident.pp id (list ~sep:newline invariant) l
 
 let type_spec fmt tspec =
-  pp fmt "@[%a%a%a@]"
-    (if' tspec.ty_mutable (fun fmt () -> pp fmt "mutable@\n"))
-    () model tspec.ty_model (option invariants) tspec.ty_invariant
+  pp fmt "@[%a%a@]" model tspec.ty_model (option invariants) tspec.ty_invariant
 
 (* Type declarations *)
 
@@ -167,10 +166,6 @@ let tparams p fmt = function
   | [] -> ()
   | [ x ] -> pp fmt "%a " p x
   | l -> (parens (list ~sep:comma p) ++ sp) fmt l
-
-let label_declaration fmt lbl =
-  pp fmt "@[%a%a :@ %a@]" Uast_printer.mutable_flag lbl.pld_mutable Ident.pp
-    lbl.pld_name print_ty lbl.pld_type
 
 let type_kind fmt = function
   | PTtype_abstract -> ()
@@ -189,8 +184,10 @@ let s_type_declaration ~ghost fmt decl =
   pp fmt "%a%a%a%a%a@]%a" (tparams print_tv) decl.tparams Ident.pp decl.tname eq
     () type_kind decl.tkind (option print_ty) decl.tmanifest
     (option (newline ++ gospel type_spec))
-    (if decl.tspec.ty_model = No_model && decl.tspec.ty_invariant = None then
-       None
+    (if
+       decl.tspec.ty_model = No_model Immutable
+       && decl.tspec.ty_invariant = None
+     then None
      else Some decl.tspec)
 
 let tdecl_list ~ghost =

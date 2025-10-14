@@ -434,28 +434,24 @@ let alias_order l =
     in
     W.error ~loc error
 
+let field ~ocaml env lenv l =
+  let id = Ident.from_preid l.Parse_uast.pld_name in
+  let pty = unique_pty ~ocaml ~bind:false (scope env) lenv l.pld_type in
+  {
+    Id_uast.pld_name = id;
+    pld_mutable = l.pld_mutable;
+    pld_type = pty;
+    pld_loc = l.pld_loc;
+  }
+
 let type_kind ~ocaml env tid tparams lenv = function
   | Parse_uast.PTtype_abstract -> (env, PTtype_abstract)
   | PTtype_record l ->
-      let open Parse_uast in
       (* Function to create a unique record field *)
-      let field l =
-        let id = Ident.from_preid l.pld_name in
-        let pty = unique_pty ~ocaml ~bind:false (scope env) lenv l.pld_type in
-        {
-          Id_uast.pld_name = id;
-          pld_mutable = l.pld_mutable;
-          pld_type = pty;
-          pld_loc = l.pld_loc;
-        }
-      in
-      let fields = List.map field l in
-      let fields_id =
-        List.map (fun l -> (l.Id_uast.pld_name, l.pld_type)) fields
-      in
+      let fields = List.map (field ~ocaml env lenv) l in
       (* If this is an OCaml record declaration, the record fields are not
          inserted into the namespace. *)
-      let env = if ocaml then env else add_record env tid tparams fields_id in
+      let env = if ocaml then env else add_record env tid tparams fields in
       (env, PTtype_record fields)
 
 let unique_tspec env model local_env self_ty inv_ty tspec =
@@ -476,8 +472,8 @@ let unique_tspec env model local_env self_ty inv_ty tspec =
     in
     (id, List.map inv l)
   in
-  Tast.mk_type_spec tspec.Parse_uast.ty_mutable
-    (Option.map invariants tspec.ty_invariant)
+  Tast.mk_type_spec
+    (Option.map invariants tspec.Parse_uast.ty_invariant)
     model tspec.ty_text tspec.ty_loc
 
 (** [create_model env lenv tname tparams tspec] Processes the model field(s) of
@@ -489,22 +485,24 @@ let create_model env lenv tname tparams tspec =
   let open Parse_uast in
   let unique_pty = unique_pty ~ocaml:false ~bind:false (scope env) lenv in
   match tspec with
-  | None -> (env, Id_uast.No_model)
+  | None -> (env, Id_uast.No_model Immutable)
   | Some t -> (
       let model = t.ty_model in
       match model with
-      | No_model -> (env, No_model)
-      | Implicit pty ->
+      | No_model m -> (env, No_model m)
+      | Implicit (m, pty) ->
           let mpty = unique_pty pty in
-          (env, Implicit mpty)
+          (env, Implicit (m, mpty))
       | Fields l ->
           let model_tname = Ident.from_preid tname in
-          let l =
-            List.map (fun (id, pty) -> (Ident.from_preid id, unique_pty pty)) l
-          in
+          let l = List.map (field ~ocaml:false env lenv) l in
           let env = Namespace.add_gospel_type env model_tname tparams None in
           let env = Namespace.add_record env model_tname tparams l in
           (env, Fields l))
+
+let is_mutable = function
+  | Parse_uast.No_model m | Implicit (m, _) -> m = Mutable
+  | Fields l -> List.exists (fun x -> x.Parse_uast.pld_mutable = Mutable) l
 
 (** [can_be_owned tkind talias spec] Checks if the OCaml type definition [tkind]
     coupled with the specifications [tspec] and type alias [talias] denote a
@@ -515,7 +513,9 @@ let create_model env lenv tname tparams tspec =
 let can_be_owned tkind talias tspec =
   (* The mutable flag the user specified *)
   let spec_mut =
-    Option.fold ~some:(fun s -> s.Parse_uast.ty_mutable) ~none:false tspec
+    Option.fold
+      ~some:(fun s -> is_mutable s.Parse_uast.ty_model)
+      ~none:false tspec
   in
   (* If the type is not abstract, this will mark if the flag . *)
   let kind_mut =
@@ -595,7 +595,7 @@ let type_decl ~ocaml lenv env t =
      typed specification, where there will always be a variable of this type. *)
   let model_ty =
     match model with
-    | Implicit pty -> Some pty
+    | Implicit (_, pty) -> Some pty
     | Fields _ ->
         (* If the model has multiple named fields, we fetch the record type
           created by [create_model]. *)
@@ -604,7 +604,7 @@ let type_decl ~ocaml lenv env t =
             tvars
         in
         Some (PTtyapp (t, tvars))
-    | No_model -> Option.bind tmanifest Uast_utils.ocaml_to_model
+    | No_model _ -> Option.bind tmanifest Uast_utils.ocaml_to_model
   in
 
   (* Closure that generates the typed declaration. Note that all this closure

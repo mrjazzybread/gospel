@@ -34,7 +34,7 @@ type record_info = {
   rparams : Ident.t list;
   (* The type parameters for the record type. Should be equal to the [tparams]
        list in the entry for [rid] in the corresponding type environment. *)
-  rfields : (Ident.t * Id_uast.pty) list; (* The list of all record fields. *)
+  rfields : Id_uast.label_declaration list; (* The list of all record fields. *)
 }
 (** [record_info] contains the necessary to type check field accesses and record
     creation. When a record type is processed, an entry of [record_info] is
@@ -57,7 +57,7 @@ val add_ocaml_type :
   env
 
 val add_record :
-  env -> Ident.t -> Ident.t list -> (Ident.t * Id_uast.pty) list -> env
+  env -> Ident.t -> Ident.t list -> Id_uast.label_declaration list -> env
 
 val add_exn : env -> Ident.t -> Id_uast.pty list -> env
 (** [add_exn env id args] adds an exception named [id] to [env] that receives

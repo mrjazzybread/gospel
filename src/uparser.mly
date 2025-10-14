@@ -183,9 +183,8 @@ type_decl(X):
       tmanifest = alias;
       tattributes = [];
       tspec = Some {
-		  ty_mutable = false;
 		  ty_invariant = inv;
-		  ty_model = No_model;
+		  ty_model = No_model Immutable;
 		  ty_text = "";
 		  ty_loc = mk_loc $loc(inv);
 		};
@@ -266,30 +265,32 @@ nonempty_func_spec:
 ;
 
 model_field:
-| MODEL id = lident COLON t = typ
-  { id, t }
+| m=mutable_flag MODEL id = lident COLON t = typ
+  { { pld_name=id;
+      pld_mutable=m;
+      pld_type=t;
+      pld_loc=mk_loc $loc } }
 
 ts_model:
-| (* epsilon *)
-  { No_model }
-| MODEL COLON t=typ
-  { Implicit t }
+| m=mutable_flag
+  { No_model m }
+| m=mutable_flag MODEL COLON t=typ
+  { Implicit (m, t) }
 | l = model_field+
   { Fields l }
 
 type_spec:
-| m=ts_mutable model=ts_model i=ts_invariants EOF
-  { { ty_mutable = m;
-      ty_invariant = i;
+| model=ts_model i=ts_invariants EOF
+  { { ty_invariant = i;
       ty_model = model;
       ty_text = "";
       ty_loc = Location.none;
   } }
 ;
 
-ts_mutable:
-| MUTABLE { true }
-|         { false }
+mutable_flag:
+| MUTABLE { Mutable }
+|         { Immutable }
 ;
 
 ts_invariants:

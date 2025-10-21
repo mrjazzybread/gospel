@@ -96,7 +96,7 @@
 
 (* symbols *)
 
-%token CONJ AMPAMP ARROW BAR BARBAR COLON COLONCOLON COMMA DOT DOTDOT
+%token CONJ AMPAMP ARROW BAR BARBAR COLON COLONCOLON COMMA DOT DOTDOT AT
 %token EOF EQUAL
 %token LRARROW LEFTBRC LEFTBRCCOLON LEFTPAR LEFTBRCRIGHTBRC
 %token LEFTSQ LTGT DISJ RIGHTBRC COLONRIGHTBRC RIGHTPAR RIGHTSQ SEMICOLON
@@ -302,8 +302,43 @@ ts_invariant:
 | INVARIANT inv=term { inv }
 ;
 
+lens:
+| v = lens_arg
+    { v }
+| arg = lens ARROW ret = lens
+    { PTarrow (arg, ret) }
+| t = lens_arg STAR l = lens_tuple
+    { PTtuple (t :: l) }
+;
+
+lens_tuple:
+| arg = lens_arg
+    { [arg] }
+| ty = lens_arg STAR l = lens_tuple
+    { ty :: l }
+;
+
+lens_arg:
+| q = qualid
+    { PTtyapp (q, []) }
+| v = quote_lident
+    { PTtyvar v }
+| LEFTPAR ty = lens RIGHTPAR
+    { ty }
+/* | ty = lens_arg q = qualid */
+/*     { PTtyapp (q, [ty]) } */
+/* | LEFTPAR ty = lens COMMA l = separated_nonempty_list(COMMA, lens)  RIGHTPAR id=qualid */
+/*     { PTtyapp (id, ty :: l) } */
+;
+
+lens_app:
+| AT t=lens { { lens_desc=t; lens_loc=mk_loc($loc) } }
+
+own:
+| q = qualid l = lens_app? { (q, l) }
+
 val_spec_own:
-| l=separated_nonempty_list(COMMA, qualid)
+| l=separated_nonempty_list(COMMA, own)
    { l }
 
 val_spec_pre:

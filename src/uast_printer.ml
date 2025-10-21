@@ -172,7 +172,9 @@ let spec_clauses clause_pp fmt (keyword, l) =
   list ~sep:newline spec_clause fmt l
 
 let condition = spec_clauses term
-let ownership = spec_clauses qualid
+let lens fmt ty = pp fmt "@ %@ %a" print_ty ty.lens_desc
+let own_clause fmt (q, ty) = pp fmt "%a%a" qualid q (option lens) ty
+let ownership = spec_clauses own_clause
 let ensures post = ("ensures", post)
 let requires pre = ("requires", pre)
 

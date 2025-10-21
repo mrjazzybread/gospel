@@ -97,7 +97,7 @@
 
 (* symbols *)
 
-%token CONJ AMPAMP ARROW BAR BARBAR COLON COLONCOLON COMMA DOT DOTDOT
+%token CONJ AMPAMP ARROW BAR BARBAR COLON COLONCOLON COMMA DOT DOTDOT AT
 %token EOF EQUAL
 %token LRARROW LEFTBRC LEFTBRCCOLON LEFTPAR LEFTBRCRIGHTBRC
 %token LEFTSQ LTGT DISJ RIGHTBRC COLONRIGHTBRC RIGHTPAR RIGHTSQ SEMICOLON
@@ -303,8 +303,14 @@ ts_invariant:
 | INVARIANT inv=term { inv }
 ;
 
+lens:
+| AT t=typ { t }
+
+own:
+| q = qualid l = lens? { (q, l) }
+
 val_spec_own:
-| l=separated_nonempty_list(COMMA, qualid)
+| l=separated_nonempty_list(COMMA, own)
    { l }
 
 val_spec_pre:

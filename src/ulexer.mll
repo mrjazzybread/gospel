@@ -277,6 +277,8 @@ rule token = parse
       { OP4 s }
   | "\""
       { STRING (string (Buffer.create 128) lexbuf) }
+  | "@"
+      { AT }
   | eof
       { EOF }
   | _ as c

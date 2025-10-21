@@ -807,7 +807,7 @@ let valid_header loc header val_nm types rets xspecs =
 (** [is_unit ty] Checks if the resolved type [ty] is [unit]. *)
 let is_unit = function
   | PTtyapp ({ app_qid = Qid id; app_alias = None; _ }, []) ->
-      Ident.equal Namespace.unit_id id
+      Ident.equal Constants.unit_id id
   | _ -> false
 
 (** [pair_hd_vars ~loc types vars] Traverses the [vars] and [types], where

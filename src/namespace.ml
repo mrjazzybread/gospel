@@ -305,7 +305,7 @@ let resolve_application ~ocaml env q l =
        model depends on do not have a logical representation. *)
     let model =
       match Option.map (map_tvars model_tbl) info.tmodel with
-      | None | (exception Not_found) -> Types.ty_val
+      | None | (exception Not_found) -> Constants.ty_val
       | Some model -> model
     in
     Some { app_gospel = model; app_mut = info.tmut }
@@ -596,17 +596,18 @@ let type_env =
   List.fold_left
     (fun tenv (x, y) ->
       let tparams =
-        if Ident.equal Structure.set_id y then [ Ident.mk_id "a" ] else []
+        if Ident.equal Constants.set_id y then [ Ident.mk_id "a" ] else []
       in
       Env.add x
         { tid = y; tparams; tmut = false; talias = None; tmodel = None }
         tenv)
-    Env.empty Structure.primitive_list
+    Env.empty Constants.primitive_list
 
 (** [fun_env] contains the definitions for logical disjunction and conjunction.
     These are the only functions that exist as primitives. *)
 let fun_env =
   let open Types in
+  let open Constants in
   let op_ty = ty_arrow ty_prop (ty_arrow ty_prop ty_prop) in
   let op_info fid = { fid; fparams = []; fty = op_ty } in
   let conj = "/\\" in
@@ -619,8 +620,6 @@ let fun_env =
     Gospel type definitions. *)
 let empty_env =
   { defs = empty_defs; scope = { empty_defs with type_env; fun_env } }
-
-let unit_id = Ident.mk_id "unit"
 
 (** The initial environment for every Gospel file. The only names in scope are
     primitive Gospel and OCaml type definitions and the definitions within the
@@ -653,7 +652,7 @@ let init_env ?ocamlprimitives gospelstdlib =
            definition must be present at compile time. *)
         let unit_info =
           {
-            tid = unit_id;
+            tid = Constants.unit_id;
             tparams = [];
             tmut = false;
             talias = None;

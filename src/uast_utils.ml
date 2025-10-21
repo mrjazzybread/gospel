@@ -182,3 +182,6 @@ let mk_let_apply l pat bind body =
   let lam = mk_term (Tlambda (args, body, None)) body.term_loc in
   let tid = mk_term (Tvar (Qid l)) l.pid_loc in
   Tapply (mk_term (Tapply (tid, bind)) l.pid_loc, lam)
+
+let mk_info ?(alias = None) ?(model = None) id =
+  { Id_uast.app_qid = id; app_alias = alias; app_model = model }

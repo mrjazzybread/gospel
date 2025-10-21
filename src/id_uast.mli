@@ -21,11 +21,12 @@ type pty =
   | PTtuple of pty list
   | PTarrow of pty * pty
 
+and app_model = { app_mut : bool; app_gospel : pty }
+
 and app_info = {
   app_qid : qualid;
   app_alias : pty option;
-  app_model : pty option;
-  app_mut : bool;
+  app_model : app_model option;
 }
 (** For every type application the user writes, we also keep track of the alias
     for that type. We need the type alias for the type checking phase and we
@@ -36,8 +37,9 @@ and app_info = {
     Invariant : If a type application has the type alias [t], all type
     applications used within [t] will not have any aliases.
 
-    Invariant: If a type application has the model [t], all type application
-    used within [t] will not have any models. *)
+    Invariant: If the [app_model] in a type application is [Some model] all type
+    applications in [model.app_gospel] will be [None]. In practice, this means
+    that the model of an OCaml type does not itself have a model. *)
 
 (* Logical terms and formulas *)
 
@@ -86,7 +88,7 @@ and term_desc =
 type ocaml_sp_var = {
   var_name : qualid; (* Variable name *)
   ty_ocaml : pty; (* OCaml type of the variable. *)
-  ty_gospel : pty option; (* Gospel type of the variable. *)
+  ty_gospel : pty; (* Gospel type of the variable. *)
   prod : bool;
   (* Flag indicating if the function receives ownership of the value. *)
   cons : bool;

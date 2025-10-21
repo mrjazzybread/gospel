@@ -83,23 +83,27 @@ type spec_header = {
   sp_hd_args : labelled_arg list; (* header arguments' names *)
 }
 
+type lens_desc = pty
+type lens = { lens_desc : lens_desc; lens_loc : Location.t }
+type own = qualid * lens option
+
 type pre_spec = {
   sp_pre : term list;
   sp_checks : term list;
-  sp_consumes : qualid list;
-  sp_modifies : qualid list;
-  sp_preserves : qualid list;
+  sp_consumes : own list;
+  sp_modifies : own list;
+  sp_preserves : own list;
   sp_diverge : bool;
   sp_pure : bool;
 }
 
-type post_spec = { sp_post : term list; sp_produces : qualid list }
+type post_spec = { sp_post : term list; sp_produces : own list }
 
 type xpost_spec = {
   sp_exn : qualid;
   sp_xrets : labelled_arg list;
   sp_xpost : term list;
-  sp_xproduces : qualid list;
+  sp_xproduces : own list;
   sp_xloc : Location.t;
 }
 

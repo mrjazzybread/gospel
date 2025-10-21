@@ -292,9 +292,14 @@ let resolve_application ~ocaml env q l =
        logical representations of the type expressions [l]. This will
        result in a [Not_found] if any of the types in [l] that the
        model depends on do not have a logical representation. *)
-    try Option.map (map_tvars model_tbl) info.tmodel with Not_found -> None
+    let model =
+      match Option.map (map_tvars model_tbl) info.tmodel with
+      | None | (exception Not_found) -> Types.ty_val
+      | Some model -> model
+    in
+    Some { app_gospel = model; app_mut = info.tmut }
   in
-  Types.mk_info q ~alias ~model ~mut:info.tmut
+  Types.mk_info q ~alias ~model
 
 module Lookup_fun = Lookup (struct
   type info = fun_info

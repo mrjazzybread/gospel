@@ -604,13 +604,17 @@ let type_decl ~ocaml lenv env t =
             tvars
         in
         Some (PTtyapp (t, tvars))
-    | No_model _ -> Option.bind tmanifest Uast_utils.ocaml_to_model
+    | No_model _ ->
+        if ocaml then Option.map Uast_utils.ocaml_to_model tmanifest else None
   in
 
   (* Closure that generates the typed declaration. Note that all this closure
      does is process the type specification. *)
   let def_gen =
-    let info = Types.mk_info ~alias:tmanifest ~model:model_ty (Qid tname) in
+    let app_model =
+      Option.map (fun ty -> { app_gospel = ty; app_mut = mut }) model_ty
+    in
+    let info = Types.mk_info ~alias:tmanifest ~model:app_model (Qid tname) in
     let self_ty = PTtyapp (info, tvars) in
     (* The [pty] object that represents values of this type within
        type invariants, if there are any. If this is an OCaml type, we
@@ -997,7 +1001,6 @@ let add_values_env hd_args hd_rets lenv defs args rets consumes produces
 
         (* Creates the Gospel representation for this OCaml value. *)
         let ty_gospel = Uast_utils.ocaml_to_model ty_ocaml in
-        let has_gospel = Option.is_some ty_gospel in
         (* Checks if the function receives or returns ownership of this value. *)
         let cons = List.exists var_mem consumes in
         let prod = List.exists var_mem produces in
@@ -1007,9 +1010,7 @@ let add_values_env hd_args hd_rets lenv defs args rets consumes produces
            consumed or produced, respectively.  Additionally, if the
            variable does not have a valid gospel representation, it is
            never added to either environment. *)
-        let add_var ~add env =
-          if add && has_gospel then add_term_var var_name env else env
-        in
+        let add_var ~add env = if add then add_term_var var_name env else env in
         ( OCaml { var_name = Qid var_name; ty_ocaml; ty_gospel; prod; cons; ro },
           add_var ~add:cons pre_env,
           add_var ~add:prod post_env )
@@ -1115,8 +1116,8 @@ let global_values_list pre_tbl post_tbl consumes produces modifies preserves =
       let prod = List.exists (mem var_name) produces in
       let cons = List.exists (mem var_name) consumes in
       (* Populates the [pre_tbl] and [post_tbl]. *)
-      if cons then Option.iter (Tbl.add pre_tbl var_tag) ty_gospel;
-      if prod then Option.iter (Tbl.add post_tbl var_tag) ty_gospel;
+      if cons then Tbl.add pre_tbl var_tag ty_gospel;
+      if prod then Tbl.add post_tbl var_tag ty_gospel;
       {
         var_name;
         ty_ocaml;

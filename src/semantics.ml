@@ -14,7 +14,7 @@ type spatial_info = {
 type val_info = { arg_val : triple_val; arg_spatial : spatial_info option }
 
 let ty_loc =
-  let app = Types.mk_info (Qid (Ident.mk_id "loc")) in
+  let app = Uast_utils.mk_info (Qid (Ident.mk_id "loc")) in
   PTtyapp (app, [])
 
 let cons x l = match x with None -> l | Some x -> x :: l
@@ -58,7 +58,7 @@ let type_declaration ~ocaml ns t =
      logical model is isomorphic to the OCaml type, then it returns
      [None] *)
   let pred_def model_type is_mutable tvar_list =
-    let app = Types.mk_info (Qid t.tname) in
+    let app = Uast_utils.mk_info (Qid t.tname) in
     let prog_ty = PTtyapp (app, tvar_list) in
     let pred_prog_ty = if is_mutable then ty_loc else prog_ty in
 

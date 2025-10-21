@@ -36,12 +36,6 @@ val ty_arrow : ty -> ty -> ty
 val ty_prop : ty
 (** Type of propositions *)
 
-val mk_info :
-  ?alias:ty option ->
-  ?model:Id_uast.app_model option ->
-  Id_uast.qualid ->
-  Id_uast.app_info
-
 val ty_val : ty
 (** Type of program variables in Gospel n*)
 

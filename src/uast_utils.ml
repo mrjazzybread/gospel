@@ -173,3 +173,6 @@ let rec can_own ty =
       (* For now, we assume that all OCaml functions are pure. *) false
 
 let qualid_loc = function Id_uast.Qid id | Qdot (_, id) -> id.id_loc
+
+let mk_info ?(alias = None) ?(model = None) id =
+  { Id_uast.app_qid = id; app_alias = alias; app_model = model }

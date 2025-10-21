@@ -118,7 +118,7 @@ let unique_pty ~ocaml ~bind defs env pty =
     | PTtyapp (Qid id, l) when is_local_type ~ocaml id env ->
         (* This branch is reached when we are processing a set of recursive type
           definitions and [id] is one of the type names. *)
-        let info = Types.mk_info (Qid (get_local_type ~ocaml id env)) in
+        let info = Uast_utils.mk_info (Qid (get_local_type ~ocaml id env)) in
         PTtyapp (info, List.map unique_pty l)
     | PTtyapp (q, l) ->
         let l = List.map unique_pty l in
@@ -614,7 +614,9 @@ let type_decl ~ocaml lenv env t =
     let app_model =
       Option.map (fun ty -> { app_gospel = ty; app_mut = mut }) model_ty
     in
-    let info = Types.mk_info ~alias:tmanifest ~model:app_model (Qid tname) in
+    let info =
+      Uast_utils.mk_info ~alias:tmanifest ~model:app_model (Qid tname)
+    in
     let self_ty = PTtyapp (info, tvars) in
     (* The [pty] object that represents values of this type within
        type invariants, if there are any. If this is an OCaml type, we

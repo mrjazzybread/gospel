@@ -310,7 +310,7 @@ let resolve_application ~ocaml env q l =
     in
     Some { app_gospel = model; app_mut = info.tmut }
   in
-  Types.mk_info q ~alias ~model
+  Uast_utils.mk_info q ~alias ~model
 
 module Lookup_fun = Lookup (struct
   type info = fun_info

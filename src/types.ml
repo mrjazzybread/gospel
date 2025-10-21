@@ -83,14 +83,11 @@ let inject n =
 (** Maps a type variable to a decoded type. *)
 let variable v = PTtyvar v
 
-let mk_info ?(alias = None) ?(model = None) id =
-  { Id_uast.app_qid = id; app_alias = alias; app_model = model }
-
 (** Maps a structure whose variables are decoded types into a decoded type. *)
 let structure t =
   match t with
   | S.Tyapp (id, l) ->
-      let info = mk_info id in
+      let info = Uast_utils.mk_info id in
       PTtyapp (info, l)
   | Tyarrow (t1, t2) -> PTarrow (t1, t2)
   | Tytuple l -> PTtuple l
@@ -105,8 +102,8 @@ let mu v ty = PTarrow (PTtyvar v, ty)
 open Utils.Fmt
 
 let ty_arrow arg ret = PTarrow (arg, ret)
-let ty_prop = PTtyapp (mk_info (Qid S.prop_id), [])
-let ty_val = PTtyapp (mk_info (Qid S.val_id), [])
+let ty_prop = PTtyapp (Uast_utils.mk_info (Qid S.prop_id), [])
+let ty_val = PTtyapp (Uast_utils.mk_info (Qid S.val_id), [])
 
 let rec print_tv fmt tv = pp fmt "'%s" tv.Ident.id_str
 and print_arrow_ty fmt = list ~sep:arrow print_ty fmt

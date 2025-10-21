@@ -146,7 +146,7 @@ let int_literal_modifier = 'i'
 let op_char_1 = ['=' '<' '>' '~']
 let op_char_2 = ['+' '-']
 let op_char_3 = ['*' '/' '\\' '%']
-let op_char_4 = ['!' '$' '&' '?' '@' '^' '.' ':' '|' '#']
+let op_char_4 = ['!' '$' '&' '?' '^' '.' ':' '|' '#']
 let op_char_1234 = op_char_1 | op_char_2 | op_char_3 | op_char_4
 let op_char_234  = op_char_2 | op_char_3 | op_char_4
 let op_char_34   = op_char_3 | op_char_4
@@ -269,6 +269,8 @@ rule token = parse
       { OP4 s }
   | "\""
       { STRING (string (Buffer.create 128) lexbuf) }
+  | "@"
+      { AT }
   | eof
       { EOF }
   | _ as c

@@ -8,6 +8,8 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 
+open Constants
+
 (** This module contains the definition of an Inferno [structure], which in the
     case of our type checker is a type with unresolved type variables. *)
 
@@ -20,14 +22,7 @@ type 'a structure =
   | Tvar of Ident.t
 
 (* Built in Gospel types *)
-let bool_id = Ident.mk_id "bool"
-let prop_id = Ident.mk_id "prop"
-let integer_id = Ident.mk_id "integer"
-let char_id = Ident.mk_id "char"
-let string_id = Ident.mk_id "string"
-let float_id = Ident.mk_id "float"
-let set_id = Ident.mk_id "set"
-let val_id = Ident.mk_id "val"
+
 let ty_bool = Tyapp (Qid bool_id, [])
 let ty_prop = Tyapp (Qid prop_id, [])
 let ty_integer = Tyapp (Qid integer_id, [])
@@ -35,19 +30,6 @@ let ty_char = Tyapp (Qid char_id, [])
 let ty_string = Tyapp (Qid string_id, [])
 let ty_float = Tyapp (Qid float_id, [])
 let ty_set v = Tyapp (Qid set_id, [ v ])
-
-let primitive_list =
-  [
-    ("bool", bool_id);
-    ("prop", prop_id);
-    ("integer", integer_id);
-    ("char", char_id);
-    ("string", string_id);
-    ("float", float_id);
-    ("set", set_id);
-    ("val", val_id);
-  ]
-
 let ty_arrow v1 v2 = Tyarrow (v1, v2)
 
 (* Traversal functions required by Inferno *)

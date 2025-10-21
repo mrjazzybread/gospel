@@ -850,7 +850,7 @@ type owned_variables = {
     and, naturally, raise the produced exception. *)
 let resolve_vars defs vars dup_error l =
   (* [resolve_var qid] finds the variable [qid] in [vars] list. *)
-  let resolve_var qid =
+  let resolve_var (qid, _) =
     let find pid = fun (x, _) -> x.Ident.id_str = pid.Preid.pid_str in
     (* The resolved identifier with its type. *)
     let id, ty, global =

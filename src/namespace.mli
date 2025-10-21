@@ -150,9 +150,6 @@ val empty_env : env
     This should be the initial environment when processing the Gospel standard
     library. *)
 
-val unit_id : Ident.t
-(** The unique identifier for the unit type. *)
-
 val init_env : ?ocamlprimitives:mod_defs -> mod_defs -> env
 (** [init_env ocamlprimitives stdlib] receives the definitions in the Gospel
     standard library [stdlib] and creates an environment where every name in

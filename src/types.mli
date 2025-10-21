@@ -33,12 +33,6 @@ val ty_arrow : ty -> ty -> ty
 (** [ty_arrow ty1 ty2] creates an arrow type where the argument is of type [ty1]
     and the result is [ty2]*)
 
-val ty_prop : ty
-(** Type of propositions *)
-
-val ty_val : ty
-(** Type of program variables in Gospel n*)
-
 val print_ty : Format.formatter -> Id_uast.pty -> unit
 
 (* The following functions are used to emit errors when it is necessary to print

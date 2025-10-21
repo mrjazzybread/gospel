@@ -508,7 +508,7 @@ let invariant_constraint id ty inv =
     specification is well typed. *)
 let function_cstr (f : Id_uast.function_) : (Tast.function_ * Id_uast.pty) co =
   (* Turn the return type into a deep type *)
-  let ret_pty = Option.value ~default:Types.ty_prop f.fun_type in
+  let ret_pty = Option.value ~default:Constants.ty_prop f.fun_type in
   let arrow_ty =
     List.fold_right
       (fun (_, pty) acc -> PTarrow (pty, acc))

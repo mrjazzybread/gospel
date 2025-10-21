@@ -8,27 +8,23 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 
-type 'a structure =
-  | Tyapp of Id_uast.qualid * 'a list
-  | Tyarrow of 'a * 'a
-  | Tytuple of 'a list
-  | Tvar of Ident.t
+(** Identifiers *)
 
-val ty_bool : 'a structure
-val ty_integer : 'a structure
-val ty_char : 'a structure
-val ty_string : 'a structure
-val ty_float : 'a structure
-val ty_prop : 'a structure
-val ty_set : 'a -> 'a structure
-val ty_arrow : 'a -> 'a -> 'a structure
-val iter : ('a -> unit) -> 'a structure -> unit
-val fold : ('a -> 'b -> 'b) -> 'a structure -> 'b -> 'b
-val map : ('a -> 'b) -> 'a structure -> 'b structure
+val bool_id : Ident.t
+val integer_id : Ident.t
+val char_id : Ident.t
+val string_id : Ident.t
+val float_id : Ident.t
+val prop_id : Ident.t
+val set_id : Ident.t
+val val_id : Ident.t
+val unit_id : Ident.t
 
-exception InconsistentConjunction
+val primitive_list : (string * Ident.t) list
+(** List of primitive Gospel types. *)
 
-val conjunction :
-  ('a -> 'a -> unit) -> 'a structure -> 'a structure -> 'a structure
+(** Types *)
 
-val pprint : 'a -> 'b -> 'c
+val ty_prop : Id_uast.pty
+val ty_val : Id_uast.pty
+val ty_unit : Id_uast.pty

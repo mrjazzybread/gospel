@@ -477,28 +477,28 @@ let unique_tspec env model local_env self_ty inv_ty tspec =
     model tspec.ty_text tspec.ty_loc
 
 (** [create_model env lenv tname tparams tspec] Processes the model field(s) of
-    the type specification [tspec]. If [tspec] has named model fields, we create
-    a Gospel record with the same name as the OCaml type whose fields have the
-    same names as the model and add it to [env]. Otherwise, we return [env]
-    unchanged. *)
-let create_model env lenv tname tparams tspec =
+    the type specification [tspec]. *)
+let create_model env lenv tspec =
   let open Parse_uast in
   let unique_pty = unique_pty ~ocaml:false ~bind:false (scope env) lenv in
   match tspec with
-  | None -> (env, Id_uast.No_model Immutable)
+  | None -> Id_uast.No_model Immutable
   | Some t -> (
       let model = t.ty_model in
       match model with
-      | No_model m -> (env, No_model m)
+      | No_model m -> No_model m
       | Implicit (m, pty) ->
           let mpty = unique_pty pty in
-          (env, Implicit (m, mpty))
+          Implicit (m, mpty)
       | Fields l ->
-          let model_tname = Ident.from_preid tname in
           let l = List.map (field ~ocaml:false env lenv) l in
-          let env = Namespace.add_gospel_type env model_tname tparams None in
-          let env = Namespace.add_record env model_tname tparams l in
-          (env, Fields l))
+          Fields l)
+
+let update_model_env env tname tparams = function
+  | No_model _ | Implicit _ -> env
+  | Fields l ->
+      let env = Namespace.add_gospel_type env tname tparams None in
+      Namespace.add_record env tname tparams l
 
 let is_mutable = function
   | Parse_uast.No_model m | Implicit (m, _) -> m = Mutable
@@ -586,7 +586,8 @@ let type_decl ~ocaml lenv env t =
   in
 
   let env, tkind = type_kind ~ocaml env tname tparams lenv t.tkind in
-  let env, model = create_model env lenv t.tname tparams t.tspec in
+  let model = create_model env lenv t.tspec in
+  let env = update_model_env env tname tparams model in
   let mut = can_be_owned tkind tmanifest t.tspec in
 
   let tvars = List.map (fun x -> PTtyvar x) tparams in
@@ -597,12 +598,9 @@ let type_decl ~ocaml lenv env t =
     match model with
     | Implicit (_, pty) -> Some pty
     | Fields _ ->
-        (* If the model has multiple named fields, we fetch the record type
-          created by [create_model]. *)
-        let t =
-          Namespace.resolve_application ~ocaml:false (scope env) (Qid t.tname)
-            tvars
-        in
+        (* If the model has multiple named fields, its model is the
+           record type created by [update_model_env]. *)
+        let t = Uast_utils.mk_info (Qid tname) in
         Some (PTtyapp (t, tvars))
     | No_model _ ->
         if ocaml then Option.map Uast_utils.ocaml_to_model tmanifest else None

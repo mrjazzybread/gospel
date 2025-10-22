@@ -251,20 +251,6 @@ let get_exn_info env id =
 
 module Tbl = Ident.IdTable
 
-(** [map_tvars var_map alias] returns a new type with the same structure as
-    [alias] where every type variable has been replaced with their binding in
-    [var_map]. *)
-let rec map_tvars var_tbl alias =
-  let map_tvars = map_tvars var_tbl in
-  match alias with
-  | PTtyvar id ->
-      (* The type variable [id] is replaced with its binding in the
-         table [var_tbl]. *)
-      Tbl.find var_tbl id.id_tag
-  | PTarrow (t1, t2) -> PTarrow (map_tvars t1, map_tvars t2)
-  | PTtyapp (q, l) -> PTtyapp (q, List.map map_tvars l)
-  | PTtuple l -> PTtuple (List.map map_tvars l)
-
 let resolve_application ~ocaml env q l =
   let q, info =
     if ocaml then ocaml_type_info env q else gospel_type_info env q
@@ -273,42 +259,25 @@ let resolve_application ~ocaml env q l =
   let len1, len2 = (List.length params, List.length l) in
   if len1 <> len2 then (* type arity check *)
     W.error ~loc:Location.none (W.Bad_arity (info.tid.Ident.id_str, len1, len2));
-  (* Auxiliary tables to map type variables to concrete types. *)
-  let alias_tbl = Ident.IdTable.create 100 in
-  let model_tbl = Ident.IdTable.create 100 in
-  (* [populate ~f tbl tys] associates the type parameters [params]
-     with its respective element in [tys].  The [f] function is a
-     map/filter function that is called on each element of [tys].  If
-     [f] returns [None], the respective type variable is not bound in
-     the table. *)
-  let populate ~f tbl tys =
-    List.iter2
-      (fun avar t -> Option.iter (Tbl.add tbl avar.Ident.id_tag) (f t))
-      params tys
-  in
-  (* Map each type variable to the respective type in [l]. *)
-  let () = populate ~f:(fun x -> Some x) alias_tbl l in
-  (* Map each type variable to the logical representation of its
-     respective type in [l].  If there is no logical representation,
-     this variable will be unbound in [model_tbl]. *)
-  let () =
-    populate ~f:(fun x -> Some (Uast_utils.ocaml_to_model x)) model_tbl l
-  in
-  (* If the type [q] is an abbreviation for another type, we can
-     always expand the abbreviation by replacing respective type
-     variables with the applied type expressions [l]. *)
-  let alias = Option.map (map_tvars alias_tbl) info.talias in
+  let alias = Option.map (fun pty -> Solver.ty_inst pty params l) info.talias in
   let model =
-    (* If the type [q] has a model, we try to build it using the
+    if ocaml then
+      (* If the type [q] has a model, we try to build it using the
        logical representations of the type expressions [l]. This will
        result in a [Not_found] if any of the types in [l] that the
        model depends on do not have a logical representation. *)
-    let model =
-      match Option.map (map_tvars model_tbl) info.tmodel with
-      | None | (exception Not_found) -> Constants.ty_val
-      | Some model -> model
-    in
-    Some { app_gospel = model; app_mut = info.tmut }
+      let model_args = List.map Uast_utils.ocaml_to_model l in
+      let model =
+        match
+          Option.map
+            (fun pty -> Solver.ty_inst pty params model_args)
+            info.tmodel
+        with
+        | None | (exception Not_found) -> Constants.ty_val
+        | Some model -> model
+      in
+      Some { app_gospel = model; app_mut = info.tmut }
+    else None
   in
   Uast_utils.mk_info q ~alias ~model
 

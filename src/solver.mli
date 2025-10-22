@@ -30,3 +30,9 @@ val spec : Ident.t list -> Id_uast.val_spec -> Tast.val_spec * Tast.tvar list
 
 val invariant :
   Ident.t list -> Ident.t -> Id_uast.pty -> Id_uast.term -> Tast.term
+
+val ty_inst : Id_uast.pty -> Ident.t list -> Id_uast.pty list -> Id_uast.pty
+(** [ty_inst ty vars args] instantiates the type variables in [ty] with the type
+    arguments [args]. This function always succeeds as long as the length of
+    [vars] and [args] is equal. Additionally, the resulting type will not
+    generate any new type variables that were not already present in [args]. *)

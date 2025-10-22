@@ -597,12 +597,9 @@ let type_decl ~ocaml lenv env t =
     match model with
     | Implicit (_, pty) -> Some pty
     | Fields _ ->
-        (* If the model has multiple named fields, we fetch the record type
-          created by [create_model]. *)
-        let t =
-          Namespace.resolve_application ~ocaml:false (scope env) (Qid t.tname)
-            tvars
-        in
+        (* If the model has multiple named fields, its model is the
+           record type created by [update_model_env]. *)
+        let t = Uast_utils.mk_info (Qid tname) in
         Some (PTtyapp (t, tvars))
     | No_model _ ->
         if ocaml then Option.map Uast_utils.ocaml_to_model tmanifest else None

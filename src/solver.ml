@@ -612,3 +612,21 @@ let invariant tvars id ty inv =
   (* TODO: What to do about type variables defined in type invariants. *)
   let t, _ = typecheck tvars (invariant_constraint id ty inv) in
   t
+
+let ty_inst ty tvars args =
+  let c =
+    let@ vars = assoc_vars tvars in
+    let@ t = pty_to_deep_flex vars ty in
+    let combine = List.combine vars args in
+    let+ _ =
+      map_constraints
+        (fun ((_, v1), ty) ->
+          let@ v2 = pty_to_deep_rigid ty in
+          v1 -- v2)
+        combine
+    and+ t = decode t in
+    t
+  in
+  (* This call to solve can never fail for any valid function call. *)
+  let _, t = Solver.solve ~rectypes:false (let0 c) in
+  t

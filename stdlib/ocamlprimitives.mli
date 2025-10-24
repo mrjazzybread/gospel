@@ -23,11 +23,11 @@ type char
 (*@ model : char *)
 
 type 'a list
-(*@ model : 'a sequence *)
+(*@ model : val sequence *)
 
 type 'a array
 (*@ mutable
-    model elems : 'a sequence
+    model elems : val sequence
     model length : integer
     with arr invariant 0 ≤ arr.length ≤ Sequence.length arr.elems *)
 
@@ -40,9 +40,9 @@ type bytes
 
 type 'a ref
 (*@ mutable
-    model : 'a *)
+    model : val *)
 
 type 'a option
-(*@ model : 'a option *)
+(*@ model : val option *)
 
 type floatarray

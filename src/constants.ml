@@ -20,6 +20,8 @@ let float_id = Ident.mk_id "float"
 let set_id = Ident.mk_id "set"
 let val_id = Ident.mk_id "val"
 let unit_id = Ident.mk_id "unit"
+let val_lens_id = Ident.mk_id "Val"
+let unit_lens_id = Ident.mk_id "Unit"
 
 let primitive_list =
   let l =
@@ -37,6 +39,11 @@ let primitive_list =
   in
   List.map (fun x -> (x.Ident.id_str, x)) l
 
-let ty_prop = PTtyapp (mk_info (Qid prop_id), [])
-let ty_val = PTtyapp (mk_info (Qid val_id), [])
-let ty_unit = PTtyapp (mk_info (Qid unit_id), [])
+let ty_prop = PTtyapp (mk_info ~mut:false (Qid prop_id), [])
+let ty_val = PTtyapp (mk_info ~mut:false (Qid val_id), [])
+let ty_unit = PTtyapp (mk_info ~mut:false (Qid unit_id), [])
+let lens_unit = Lidapp (mk_linfo (Qid unit_id) [] ty_unit ty_unit)
+
+let lens_val =
+  let id = Ident.mk_id "a" in
+  Lidapp (mk_linfo (Qid unit_id) [ id ] (PTtyvar id) ty_val)

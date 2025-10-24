@@ -171,7 +171,7 @@ let lifted_arg ns env is_pre arg =
   | OCaml v ->
       let ro = v.ro in
       let arg_log = map_id env (is_pre || ro) v.var_name in
-      let arg_ts = mk_ts arg_log v.ty_gospel in
+      let arg_ts = mk_ts arg_log (fst v.ty_gospel_prod) in
       let pred = get_pred ns v.ty_ocaml in
       let arg_prog = to_prog v in
       let to_term v = mk_term (Tvar (Qid v.ts_id)) v.ts_ty Location.none in

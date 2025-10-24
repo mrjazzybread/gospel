@@ -136,43 +136,20 @@ let eq_qualid q1 q2 =
   let id2 = leaf q2 in
   Ident.equal id1 id2
 
-(** [ocaml_to_model defs ty] Turns an OCaml type into its logical
-    representation. This function fails if [ty] is not a valid OCaml type. *)
-let rec ocaml_to_model ty =
-  let open Id_uast in
-  match ty with
-  | PTtyvar v ->
-      (* Note: The treatment of type variables within the Gospel type
-        checker is still unclear: currently we assume that we can use
-        an OCaml type variable as if it were a Gospel type variable,
-        which is unsound since OCaml types may be impure and
-        therefore unusable in a logical context. *)
-      PTtyvar v
-  | PTtyapp (q, _) ->
-      let model = Option.get q.app_model in
-      model.app_gospel
-  | PTtuple l ->
-      let l = List.map ocaml_to_model l in
-      PTtuple l
-  | PTarrow (arg, ret) ->
-      let arg = ocaml_to_model arg in
-      let ret = ocaml_to_model ret in
-      PTarrow (arg, ret)
-
-(** [can_own ty] traverses an OCaml type and checks if one needs to claim
-    ownership of this value in order to use it within a specification.. *)
+(** [can_own ty] traverses an OCaml type and checks if values of this type can
+    change over time. *)
 let rec can_own ty =
   match ty with
   | Id_uast.PTtyvar _ -> false
-  | PTtyapp (id, l) -> (
-      match id.app_model with
-      | None -> false
-      | Some model -> model.app_mut || List.exists can_own l)
+  | PTtyapp (id, _) -> id.app_mut
   | PTtuple l -> List.exists can_own l
   | PTarrow _ ->
       (* For now, we assume that all OCaml functions are pure. *) false
 
 let qualid_loc = function Id_uast.Qid id | Qdot (_, id) -> id.id_loc
 
-let mk_info ?(alias = None) ?(model = None) id =
-  { Id_uast.app_qid = id; app_alias = alias; app_model = model }
+let mk_info ?(mut = false) ?(alias = None) id =
+  { Id_uast.app_qid = id; app_alias = alias; app_mut = mut }
+
+let mk_linfo lid ltvars lmatch lmodel = { Id_uast.lid; ltvars; lmatch; lmodel }
+let bool_mutable = function Mutable -> true | Immutable -> false

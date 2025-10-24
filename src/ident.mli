@@ -37,6 +37,7 @@ module Tag : sig
 end
 
 module IdTable : Hashtbl.S with type key = Tag.t
+module IdMap : Map.S with type key = Tag.t
 
 type t = {
   id_str : string; (* Variable name. Not used internally. *)

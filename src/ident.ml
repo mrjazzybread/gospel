@@ -20,6 +20,7 @@ module type ID = sig
   type t
 
   val equal : t -> t -> bool
+  val compare : t -> t -> int
   val hash : t -> int
   val set_project_name : string -> unit
   val is_project : t -> string -> bool
@@ -38,6 +39,7 @@ module Tag : ID = struct
 
   let project_name = ref primitive_project
   let equal x y = x.id = y.id && x.project = y.project
+  let compare x y = compare x y
   let hash x = x.id
   let set_project_name nm = project_name := nm
   let is_project id nm = id.project = nm
@@ -50,6 +52,7 @@ module Tag : ID = struct
 end
 
 module IdTable = Hashtbl.Make (Tag)
+module IdMap = Map.Make (Tag)
 
 type t = {
   id_str : string;

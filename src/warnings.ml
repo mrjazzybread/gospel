@@ -43,6 +43,7 @@ type kind =
   | Repeated_ret_case
   | Syntax_error
   | Unbound_exception of string list
+  | Unbound_lens of string list
   | Unbound_module of string list
   | Unbound_record_label of string list
   | Unbound_type of string list
@@ -175,6 +176,7 @@ let pp_kind ppf = function
   | Unbound_exception s -> pf ppf "Unbound exception %a" print_qid s
   | Unbound_module s -> pf ppf "Unbound module %a" print_qid s
   | Unbound_record_label s -> pf ppf "Unbound record label %a" print_qid s
+  | Unbound_lens s -> pf ppf "Unbound lens %a" print_qid s
   | Unbound_type s -> pf ppf "Unbound type constructor %a" print_qid s
   | Unbound_type_variable s ->
       pf ppf "The type variable '%s is unbound in this type declaration" s

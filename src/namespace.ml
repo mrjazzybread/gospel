@@ -9,6 +9,7 @@
 (**************************************************************************)
 
 module Env = Map.Make (String)
+open Ident
 
 module String_list = struct
   type t = string list
@@ -45,6 +46,14 @@ type fun_info = {
   fty : Id_uast.pty; (* The function's type. *)
 }
 
+type lens_info = {
+  lid : Ident.t;
+      (* The name of the lens.  Invariant: The name is always capitalized *)
+  lpersistent : bool; (* Marks if the lens is persistent. *)
+  locaml : pty; (* The OCaml type this lens lifts *)
+  lmodel : Id_uast.pty; (* The logical model exposed by this lens *)
+}
+
 type ty_info = {
   tid : Ident.t; (* The unique identifier for the type *)
   tparams : Ident.t list;
@@ -58,8 +67,6 @@ type ty_info = {
      When typechecking we replace [t] with its alias where every ['a]
      is replaced with [int] and ['b] is replaced with [string],
      resulting in the expanded type [int -> string]. *)
-  tmut : bool;
-  (* Mutability flag.  Always [false] for Gospel types. *)
   talias : Id_uast.pty option;
       (* In case of a type declaration of the form [type t = alias] where alias is
      some type expression, this value is [Some alias]. All applications of type
@@ -68,9 +75,6 @@ type ty_info = {
      The [talias] field always points to the "top most" alias. This means if we
      have the following program [type t1 type t2 = t1 type t3 = t2] the [talias]
      field for [t3] will be [t1].*)
-  tmodel : Id_uast.pty option;
-      (* The logical representation for the type.  [None] if the type
-      has no model or is a Gospel type. *)
 }
 
 type record_info = {
@@ -115,6 +119,8 @@ and mod_defs = {
 
      Invariant: the cardinality of [record_env] is smaller or equal than
      the cardinality of [type_env]. *)
+  lens_env : lens_info Env.t; (* Lens definitions *)
+  default_lens_env : lens_info IdMap.t;
   (* Environments for OCaml definitions *)
   ocaml_type_env : ty_info Env.t;
   (* OCaml type definitions. *)
@@ -130,6 +136,8 @@ let empty_defs =
     type_env = Env.empty;
     field_env = Env.empty;
     record_env = Record_env.empty;
+    lens_env = Env.empty;
+    default_lens_env = IdMap.empty;
     ocaml_type_env = Env.empty;
     ocaml_val_env = Env.empty;
     exn_env = Env.empty;
@@ -230,6 +238,11 @@ end)
 
 let type_info = Lookup_type.unique_toplevel_qualid
 
+let get_default_lens qid env =
+  let open Ident in
+  let id = Uast_utils.leaf qid in
+  IdMap.find id.id_tag env.default_lens_env
+
 module Lookup_exn = Lookup (struct
   type info = exn_info
 
@@ -244,6 +257,15 @@ let get_exn_info env id =
 
 module Tbl = Ident.IdTable
 
+let rec default_lens env = function
+  | PTtyvar _ | PTarrow _ -> Constants.lens_val
+  | PTtyapp (v, _) ->
+      let lens_info = get_default_lens v.app_qid env in
+      Lidapp
+        (Uast_utils.mk_linfo (Qid lens_info.lid) lens_info.locaml
+           lens_info.lmodel)
+  | PTtuple l -> Ltuple (List.map (default_lens env) l)
+
 let resolve_application ~ocaml env q l =
   let q, info = type_info ~ocaml env q in
   let params = info.tparams in
@@ -252,26 +274,7 @@ let resolve_application ~ocaml env q l =
     W.error ~loc:(Uast_utils.qualid_loc q)
       (W.Bad_arity (info.tid.Ident.id_str, len1, len2));
   let alias = Option.map (fun pty -> Solver.ty_inst pty params l) info.talias in
-  let model =
-    if ocaml then
-      (* If the type [q] has a model, we try to build it using the
-       logical representations of the type expressions [l]. This will
-       result in a [Not_found] if any of the types in [l] that the
-       model depends on do not have a logical representation. *)
-      let model_args = List.map Uast_utils.ocaml_to_model l in
-      let model =
-        match
-          Option.map
-            (fun pty -> Solver.ty_inst pty params model_args)
-            info.tmodel
-        with
-        | None | (exception Not_found) -> Constants.ty_val
-        | Some model -> model
-      in
-      Some { app_gospel = model; app_mut = info.tmut }
-    else None
-  in
-  Uast_utils.mk_info q ~alias ~model
+  Uast_utils.mk_info q ~alias
 
 module Lookup_fun = Lookup (struct
   type info = fun_info
@@ -462,27 +465,37 @@ let rec to_alias = function
   | PTarrow (arg, res) -> PTarrow (to_alias arg, to_alias res)
   | PTtuple l -> PTtuple (List.map to_alias l)
 
-let add_ocaml_type tid tparams tmut talias tmodel defs =
-  let tenv = defs.ocaml_type_env in
-  let info =
-    { tid; tparams; tmut; talias = Option.map to_alias talias; tmodel }
-  in
-  { defs with ocaml_type_env = Env.add tid.Ident.id_str info tenv }
+let mk_lens lid lpersistent locaml lmodel = { lid; lpersistent; locaml; lmodel }
 
-let add_ocaml_type env id params ~mut alias model =
-  add_def (add_ocaml_type id params mut alias model) env
+(** The [Val] lens that can be applied to any argument *)
+let val_lens_info =
+  mk_lens Constants.val_lens_id true
+    (PTtyvar (Ident.mk_id "a"))
+    Constants.ty_val
+
+let add_lens info defs =
+  let lenv = defs.lens_env in
+  { defs with lens_env = Env.add info.lid.Ident.id_str info lenv }
+
+let add_lens env info = add_def (add_lens info) env
+
+let add_ocaml_type tid tparams talias tlens defs =
+  let tlens = Option.value ~default:val_lens_info tlens in
+  let lenv = defs.default_lens_env in
+  let tenv = defs.ocaml_type_env in
+  let info = { tid; tparams; talias = Option.map to_alias talias } in
+  {
+    defs with
+    ocaml_type_env = Env.add tid.Ident.id_str info tenv;
+    default_lens_env = IdMap.add tid.id_tag tlens lenv;
+  }
+
+let add_ocaml_type env id params alias tlens =
+  add_def (add_ocaml_type id params alias tlens) env
 
 let add_gospel_type tid tparams talias defs =
   let tenv = defs.type_env in
-  let info =
-    {
-      tid;
-      tparams;
-      tmut = false;
-      talias = Option.map to_alias talias;
-      tmodel = None;
-    }
-  in
+  let info = { tid; tparams; talias = Option.map to_alias talias } in
   { defs with type_env = Env.add tid.Ident.id_str info tenv }
 
 let add_gospel_type env id params alias =
@@ -522,12 +535,15 @@ let defs_union ~ocaml m1 m2 =
   let choose_snd = fun _ _ x -> Some x in
   let union e1 e2 = Env.union choose_snd e1 e2 in
   let runion e1 e2 = Record_env.union choose_snd e1 e2 in
+  let idunion e1 e2 = IdMap.union choose_snd e1 e2 in
   let ounion e1 e2 = if ocaml then Env.union choose_snd e1 e2 else e1 in
   {
     fun_env = union m1.fun_env m2.fun_env;
     type_env = union m1.type_env m2.type_env;
     field_env = union m1.field_env m2.field_env;
     record_env = runion m1.record_env m2.record_env;
+    lens_env = union m1.lens_env m2.lens_env;
+    default_lens_env = idunion m1.default_lens_env m2.default_lens_env;
     ocaml_type_env = ounion m1.ocaml_type_env m2.ocaml_type_env;
     ocaml_val_env = ounion m1.ocaml_val_env m2.ocaml_val_env;
     exn_env = ounion m1.exn_env m2.exn_env;
@@ -549,9 +565,7 @@ let type_env =
       let tparams =
         if Ident.equal Constants.set_id y then [ Ident.mk_id "a" ] else []
       in
-      Env.add x
-        { tid = y; tparams; tmut = false; talias = None; tmodel = None }
-        tenv)
+      Env.add x { tid = y; tparams; talias = None } tenv)
     Env.empty Constants.primitive_list
 
 (** [fun_env] contains the definitions for logical disjunction and conjunction.
@@ -602,13 +616,7 @@ let init_env ?ocamlprimitives gospelstdlib =
            needed for typechecking specifications, meaning its
            definition must be present at compile time. *)
         let unit_info =
-          {
-            tid = Constants.unit_id;
-            tparams = [];
-            tmut = false;
-            talias = None;
-            tmodel = None;
-          }
+          { tid = Constants.unit_id; tparams = []; talias = None }
         in
         let m =
           { m with ocaml_type_env = Env.add "unit" unit_info m.ocaml_type_env }

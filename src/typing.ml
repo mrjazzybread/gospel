@@ -12,6 +12,7 @@ module Env = Map.Make (String)
 open Id_uast
 module W = Warnings
 open Namespace
+open Uast_utils
 
 type local_env = {
   term_var : Ident.t Env.t;
@@ -494,11 +495,22 @@ let create_model env lenv tspec =
           let l = List.map (field ~ocaml:false env lenv) l in
           Fields l)
 
-let update_model_env env tname tparams = function
-  | No_model _ | Implicit _ -> env
+let update_model_env env self_ty tname tparams model_ty =
+  let capitalize_id id =
+    let nm = String.capitalize_ascii id.Ident.id_str in
+    Ident.mk_id nm
+  in
+  function
+  | No_model _ -> (None, env)
+  | Implicit (m, ty) ->
+      let l = mk_lens (capitalize_id tname) (bool_mutable m) self_ty ty in
+      (Some l, add_lens env l)
   | Fields l ->
+      let model_ty = Option.get model_ty in
+      let mut = List.exists (fun x -> bool_mutable x.pld_mutable) l in
+      let lens = mk_lens (capitalize_id tname) mut self_ty model_ty in
       let env = Namespace.add_gospel_type env tname tparams None in
-      Namespace.add_record env tname tparams l
+      (Some lens, Namespace.add_record env tname tparams l)
 
 let is_mutable = function
   | Parse_uast.No_model m | Implicit (m, _) -> m = Mutable
@@ -549,6 +561,12 @@ let can_be_owned tkind talias tspec =
          check if it is mutable or not. *)
       kind_mut
 
+let ocaml_to_model env lens ocaml_ty =
+  let lens =
+    match lens with None -> Namespace.default_lens env ocaml_ty | Some l -> l
+  in
+  Solver.apply_lens ocaml_ty lens
+
 (** [type_decl lenv env t] processes the type declaration [t] and adds it to
     [env]. Additionally, if the typed specification of [t] contains named
     models, we also add to [env] a record type with the same model fields as
@@ -587,8 +605,6 @@ let type_decl ~ocaml lenv env t =
 
   let env, tkind = type_kind ~ocaml env tname tparams lenv t.tkind in
   let model = create_model env lenv t.tspec in
-  let env = update_model_env env tname tparams model in
-  let mut = can_be_owned tkind tmanifest t.tspec in
 
   let tvars = List.map (fun x -> PTtyvar x) tparams in
 
@@ -603,19 +619,21 @@ let type_decl ~ocaml lenv env t =
         let t = Uast_utils.mk_info (Qid tname) in
         Some (PTtyapp (t, tvars))
     | No_model _ ->
-        if ocaml then Option.map Uast_utils.ocaml_to_model tmanifest else None
+        if ocaml then Option.map (ocaml_to_model defs None) tmanifest else None
+  in
+
+  let mut = can_be_owned tkind tmanifest t.tspec in
+
+  let info = Uast_utils.mk_info ~alias:tmanifest ~mut (Qid tname) in
+  let self_ty = PTtyapp (info, tvars) in
+
+  let default, env =
+    update_model_env env self_ty tname tparams model_ty model
   in
 
   (* Closure that generates the typed declaration. Note that all this closure
      does is process the type specification. *)
   let def_gen =
-    let app_model =
-      Option.map (fun ty -> { app_gospel = ty; app_mut = mut }) model_ty
-    in
-    let info =
-      Uast_utils.mk_info ~alias:tmanifest ~model:app_model (Qid tname)
-    in
-    let self_ty = PTtyapp (info, tvars) in
     (* The [pty] object that represents values of this type within
        type invariants, if there are any. If this is an OCaml type, we
        use its model, if it exists. If it is a Gospel type, we use the
@@ -632,7 +650,7 @@ let type_decl ~ocaml lenv env t =
   (* Update the environment depending on whether or not this is an OCaml
      definition. *)
   let env =
-    if ocaml then add_ocaml_type env tname tparams ~mut tmanifest model_ty
+    if ocaml then add_ocaml_type env tname tparams tmanifest default
     else add_gospel_type env tname tparams tmanifest
   in
   (env, def_gen)
@@ -840,8 +858,8 @@ let rec pair_hd_vars types vars =
 module Tbl = Ident.IdTable
 
 type owned_variables = {
-  global : (qualid * Id_uast.pty) list;
-  header : Ident.t list;
+  global : (qualid * Id_uast.pty * lens) list;
+  header : (Ident.t * lens) list;
 }
 
 (** [resolve_vars defs vars dup_error l] traverses the list of variables [l] and
@@ -869,7 +887,11 @@ let resolve_vars defs vars dup_error l =
           let qid, ty_ocaml = ocaml_val_qualid defs qid in
           (qid, ty_ocaml, true)
     in
-    if global then Either.left (id, ty) else Either.right (Uast_utils.leaf id)
+    (* If variables of type [ty] cannot appear in ownership clauses
+       (e.g. arrow types), then we raise a Gospel exception. *)
+    let lens = Namespace.default_lens defs ty in
+    if global then Either.left (id, ty, lens)
+    else Either.right (Uast_utils.leaf id, lens)
   in
   let global, header = List.partition_map resolve_var l in
   (* Check for duplicates in the list of resolved variables. *)
@@ -879,12 +901,15 @@ let resolve_vars defs vars dup_error l =
   in
   (* Check for duplicate ownership clauses *)
   let () =
-    Utils.duplicate (fun x y -> Ident.equal x y) (fun x -> error (Qid x)) header
+    Utils.duplicate
+      (fun (x, _) (y, _) -> Ident.equal x y)
+      (fun (x, _) -> error (Qid x))
+      header
   in
   let () =
     Utils.duplicate
-      (fun (x, _) (y, _) -> Uast_utils.eq_qualid x y)
-      (fun (x, _) -> error x)
+      (fun (x, _, _) (y, _, _) -> Uast_utils.eq_qualid x y)
+      (fun (x, _, _) -> error x)
       global
   in
   { global; header }
@@ -904,8 +929,8 @@ let common_value l1 l2 error =
 let duplicated_owned o1 o2 error =
   (* Helper functions to turn [owned_variables] into sequences that can
    be used by [duplicated_ocaml_var] *)
-  let header_to_seq l = List.to_seq l |> Seq.map (fun x -> Qid x) in
-  let global_to_seq l = List.to_seq l |> Seq.map fst in
+  let header_to_seq l = List.to_seq l |> Seq.map (fun (x, _) -> Qid x) in
+  let global_to_seq l = List.to_seq l |> Seq.map (fun (x, _, _) -> x) in
   let own_to_seq o =
     Seq.append (header_to_seq o.header) (global_to_seq o.global)
   in
@@ -994,21 +1019,37 @@ let add_values_env hd_args hd_rets lenv defs args rets consumes produces
         let var_mem = fun id -> pid.pid_str = id.Ident.id_str in
         let var_name, ty_ocaml = List.find (fun (id, _) -> var_mem id) vals in
 
-        (* Creates the Gospel representation for this OCaml value. *)
-        let ty_gospel = Uast_utils.ocaml_to_model ty_ocaml in
-        (* Checks if the function receives or returns ownership of this value. *)
-        let cons = List.exists var_mem consumes in
-        let prod = List.exists var_mem produces in
+        (* Creates the Gospel representation for this OCaml value
+           paired with its lens. *)
+        let ty_gospel (id, lens) =
+          if var_mem id then Some (Solver.apply_lens ty_ocaml lens, lens)
+          else None
+        in
+        let ty_gospel_default l =
+          (* If this value is not consumed or produced, we use the val
+             lens. *)
+          let opt = List.find_map ty_gospel l in
+          Option.value ~default:(Constants.ty_val, Constants.lens_val) opt
+        in
+
+        (* Checks if the function receives or returns ownership of
+           this value. *)
+        let ty_gospel_cons = ty_gospel_default consumes in
+        let ty_gospel_prod = ty_gospel_default produces in
         (* Check if this value is modified. *)
         let ro = List.exists var_mem read_only in
-        (* Adds the variable to the pre and post environment if it is
-           consumed or produced, respectively.  Additionally, if the
-           variable does not have a valid gospel representation, it is
-           never added to either environment. *)
-        let add_var ~add env = if add then add_term_var var_name env else env in
-        ( OCaml { var_name = Qid var_name; ty_ocaml; ty_gospel; prod; cons; ro },
-          add_var ~add:cons pre_env,
-          add_var ~add:prod post_env )
+        (* Adds the variable to the pre and post environment. *)
+        let add_var env = add_term_var var_name env in
+        ( OCaml
+            {
+              var_name = Qid var_name;
+              ty_ocaml;
+              ty_gospel_prod;
+              ty_gospel_cons;
+              ro;
+            },
+          add_var pre_env,
+          add_var post_env )
   in
   (* [process_vars pre_env post_env l] processes a list of header variables. *)
   let rec process_header pre_env post_env vals = function
@@ -1025,13 +1066,14 @@ let add_values_env hd_args hd_rets lenv defs args rets consumes produces
 (** If an OCaml argument or return value does not appear in an ownership clause,
     we assume, in the case of an argument, a [preserves] clause and, in the case
     of a return value, a [produces] clause. *)
-let insert_ownership consumes produces ro args rets =
+let insert_ownership defs consumes produces ro args rets =
   (* [is_own q1] checks if [q1] is in any ownership clause.  If so,
      returns [None]. *)
-  let is_own (id, _) =
+  let is_own (id, ty) =
     (* Check if [q1] is in either the [produces] or [consumes]. *)
-    let eq = Ident.equal id in
-    if List.exists eq produces || List.exists eq consumes then None else Some id
+    let eq (own, _) = Ident.equal id own in
+    if List.exists eq produces || List.exists eq consumes then None
+    else Some (id, Namespace.default_lens defs ty)
   in
   (* We filter the [args] and [rets] list so that we only get the
      variables that are not in any ownership clause. *)
@@ -1040,7 +1082,7 @@ let insert_ownership consumes produces ro args rets =
   (* Since the values in [args] are not in any ownership clause, they
      are preserved, meaning they are consumed, produced and
      unmodified.  The values in [rets] are only produced. *)
-  (args @ consumes, args @ rets @ produces, args @ ro)
+  (args @ consumes, args @ rets @ produces, List.map fst args @ List.map fst ro)
 
 (** [valid_pure loc args rets tops ~diverge ~pure] Checks if the function is
     pure or not. A function is pure if it does not modify any top level variable
@@ -1096,29 +1138,39 @@ let type_val_spec spec defs args rets tops xspec pre_env post_env =
     Also populates the [pre_tbl] and the [post_tbl] with the top level variables
     that can be used in pre and post conditions, respectively. *)
 let global_values_list pre_tbl post_tbl consumes produces modifies preserves =
-  let mem x = fun (y, _) -> Uast_utils.eq_qualid x y in
+  let mem x = fun (y, _, _) -> Uast_utils.eq_qualid x y in
   (* The produces list without any value from the [consumes] list.  At
      this point, there cannot be any duplicates in any other list. *)
   let prod_no_cons =
-    List.filter (fun (x, _) -> List.exists (mem x) consumes) produces
+    List.filter (fun (x, _, _) -> List.exists (mem x) consumes) produces
   in
   List.map
-    (fun (var_name, ty_ocaml) ->
-      (* Get the Gospel model of the type. *)
-      let ty_gospel = Uast_utils.ocaml_to_model ty_ocaml in
+    (fun (var_name, ty_ocaml, lens) ->
       (* Check if the values are consumed and produced. *)
       let var_tag = (Uast_utils.leaf var_name).id_tag in
-      let prod = List.exists (mem var_name) produces in
-      let cons = List.exists (mem var_name) consumes in
+      (* Creates the Gospel representation for this OCaml value
+           paired with its lens. *)
+      let ty_gospel l =
+        if List.exists (mem var_name) l then
+          Some (Solver.apply_lens ty_ocaml lens, lens)
+        else None
+      in
+      let ty_gospel_default l =
+        (* If this value is not consumed or produced, we use the val
+             lens. *)
+        let opt = ty_gospel l in
+        Option.value ~default:(Constants.ty_val, Constants.lens_val) opt
+      in
+      let ty_gospel_cons = ty_gospel_default consumes in
+      let ty_gospel_prod = ty_gospel_default produces in
       (* Populates the [pre_tbl] and [post_tbl]. *)
-      if cons then Tbl.add pre_tbl var_tag ty_gospel;
-      if prod then Tbl.add post_tbl var_tag ty_gospel;
+      Tbl.add pre_tbl var_tag (fst ty_gospel_cons);
+      Tbl.add post_tbl var_tag (fst ty_gospel_prod);
       {
         var_name;
         ty_ocaml;
-        ty_gospel;
-        prod;
-        cons;
+        ty_gospel_cons;
+        ty_gospel_prod;
         ro = List.exists (mem var_name) preserves;
       })
     (consumes @ prod_no_cons @ modifies @ preserves)
@@ -1155,7 +1207,8 @@ let process_produces defs lenv produces hd_args hd_rets consumes modifies
      clause, these will always be automatically added to the list of
      consumed, produced and read only variables*)
   let consumes_header, produces_header, read_only =
-    insert_ownership consumes.header produces.header preserves.header args rets
+    insert_ownership defs consumes.header produces.header preserves.header args
+      rets
   in
   (* Creates environments with the variables defined in the header. *)
   let sp_args, sp_rets, pre_env, post_env =
@@ -1247,10 +1300,7 @@ let value_spec ~loc defs lenv name ocaml_ty spec =
        return values mapped to their respective types.  *)
   let args = pair_hd_vars arg_types header.sp_hd_args in
   let rets = pair_hd_vars ret_types header.sp_hd_ret in
-  (* Resolves the variables in [modifies] and [preserves] clauses.
-       [mod_and_pres] contains all the variables in both [modifies] and
-       [preserves] clauses, whereas [read_only] only contains those in
-       [preserves] clauses. *)
+  (* Resolves the variables in [modifies] and [preserves] clauses. *)
   let modifies, preserves =
     process_sugar_ownership defs spec.sp_pre_spec args
   in

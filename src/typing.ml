@@ -869,11 +869,6 @@ let resolve_vars defs vars dup_error l =
           let qid, ty_ocaml = ocaml_val_qualid defs qid in
           (qid, ty_ocaml, true)
     in
-    (* If variables of type [ty] cannot appear in ownership clauses
-       (e.g. arrow types), then we raise a Gospel exception. *)
-    if not (Uast_utils.can_own ty) then
-      W.error ~loc:(Uast_utils.qualid_loc id)
-        (W.Cant_be_owned (Uast_utils.flatten_ident id));
     if global then Either.left (id, ty) else Either.right (Uast_utils.leaf id)
   in
   let global, header = List.partition_map resolve_var l in

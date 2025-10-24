@@ -258,7 +258,8 @@ let resolve_application ~ocaml env q l =
   let params = info.tparams in
   let len1, len2 = (List.length params, List.length l) in
   if len1 <> len2 then (* type arity check *)
-    W.error ~loc:Location.none (W.Bad_arity (info.tid.Ident.id_str, len1, len2));
+    W.error ~loc:(Uast_utils.qualid_loc q)
+      (W.Bad_arity (info.tid.Ident.id_str, len1, len2));
   let alias = Option.map (fun pty -> Solver.ty_inst pty params l) info.talias in
   let model =
     if ocaml then

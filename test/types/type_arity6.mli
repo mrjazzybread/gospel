@@ -13,7 +13,10 @@
 (*@ predicate test (x : 'a t1) *)
 
 (* {gospel_expected|
-[1] Error: The type constructor t1 expected 2 argument(s)
-           but is applied to 1 argument(s) here.
+[1] File "type_arity6.mli", line 11, characters 18-20:
+    11 | (*@ type ('a, 'b) t1 *)
+                           ^^
+    Error: The type constructor t1 expected 2 argument(s)
+           but is applied to 1 argument(s) here
     
 |gospel_expected} *)

@@ -495,10 +495,23 @@ let create_model env lenv tspec =
           let l = List.map (field ~ocaml:false env lenv) l in
           Fields l)
 
+(** [update_model_env env self_ty tname tparams model_ty] Returns the default
+    lens this model declaration introduces or [None] if there is no model.
+    Additionally, also returns [env] updated with the returned lens, or
+    unchanged if there is no model. This lens will lift the OCaml type [self_ty]
+    into the type of its model. If there is one or more named model fields, the
+    model will be a record containing each model field. *)
 let update_model_env env self_ty tname tparams model_ty =
   let capitalize_id id =
     let nm = String.capitalize_ascii id.Ident.id_str in
     Ident.mk_id nm
+  in
+  let field_lens env lbl =
+    if lbl.pld_mutable = Mutable then env
+    else
+      let lens_nm = capitalize_id lbl.pld_name in
+      let lens = mk_lens lens_nm false self_ty tparams lbl.pld_type in
+      add_lens env lens
   in
   function
   | No_model _ -> (None, env)
@@ -511,6 +524,7 @@ let update_model_env env self_ty tname tparams model_ty =
       let model_ty = Option.get model_ty in
       let mut = List.exists (fun x -> bool_mutable x.pld_mutable) l in
       let lens = mk_lens (capitalize_id tname) mut self_ty tparams model_ty in
+      let env = List.fold_left field_lens env l in
       let env = add_lens env lens in
       let env = Namespace.add_gospel_type env tname tparams None in
       (Some lens, Namespace.add_record env tname tparams l)

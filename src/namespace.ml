@@ -46,15 +46,6 @@ type fun_info = {
   fty : Id_uast.pty; (* The function's type. *)
 }
 
-type lens_info = {
-  lid : Ident.t;
-      (* The name of the lens.  Invariant: The name is always capitalized *)
-  lpersistent : bool; (* Marks if the lens is persistent. *)
-  locaml : pty; (* The OCaml type this lens lifts *)
-  lvars : Ident.t list; (* The type parameters of the OCaml type *)
-  lmodel : Id_uast.pty; (* The logical model exposed by this lens *)
-}
-
 type ty_info = {
   tid : Ident.t; (* The unique identifier for the type *)
   tparams : Ident.t list;
@@ -120,8 +111,8 @@ and mod_defs = {
 
      Invariant: the cardinality of [record_env] is smaller or equal than
      the cardinality of [type_env]. *)
-  lens_env : lens_info Env.t; (* Lens definitions *)
-  default_lens_env : lens_info IdTable.t;
+  lens_env : Tast.lens_info Env.t; (* Lens definitions *)
+  default_lens_env : Tast.lens_info IdTable.t;
   (* The default lens for each OCaml type. *)
   (* Environments for OCaml definitions *)
   ocaml_type_env : ty_info Env.t;
@@ -260,7 +251,7 @@ let get_exn_info env id =
   (id, info.eargs)
 
 let mk_lens lid lpersistent locaml lvars lmodel =
-  { lid; lpersistent; locaml; lvars; lmodel }
+  { Tast.lid; lpersistent; locaml; lvars; lmodel }
 
 (** The [Val] lens that can be applied to any argument *)
 let val_lens_info =
@@ -273,9 +264,9 @@ let get_default_lens env qid =
   IdTable.find env.default_lens_env id.id_tag
 
 module Lookup_lens = Lookup (struct
-  type info = lens_info
+  type info = Tast.lens_info
 
-  let id_lookup info = info.lid
+  let id_lookup info = info.Tast.lid
   let env defs = defs.lens_env
   let err id = W.Unbound_lens id
 end)
@@ -500,7 +491,7 @@ let rec to_alias = function
 
 let add_lens info defs =
   let lenv = defs.lens_env in
-  { defs with lens_env = Env.add info.lid.Ident.id_str info lenv }
+  { defs with lens_env = Env.add info.Tast.lid.Ident.id_str info lenv }
 
 let add_lens env info = add_def (add_lens info) env
 

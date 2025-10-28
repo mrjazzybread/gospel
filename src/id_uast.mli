@@ -138,14 +138,6 @@ type model =
   | Implicit of Parse_uast.mutable_flag * pty
   | Fields of label_declaration list
 
-type type_spec = {
-  ty_ephemeral : bool;
-  ty_invariant : (id * term list) option;
-  ty_model : model;
-  ty_text : string;
-  ty_loc : Location.t;
-}
-
 type fun_spec = {
   fun_req : term list;
   fun_ens : term list;
@@ -176,57 +168,9 @@ type axiom = {
 
 type type_kind = PTtype_abstract | PTtype_record of label_declaration list
 
-type s_type_declaration = {
-  tname : id;
-  tparams : id list;
-  tkind : type_kind;
-  tmanifest : pty option;
-  tattributes : attributes;
-  (* ... [@@id1] [@@id2] *)
-  tspec : type_spec option;
-  (* specification *)
-  tloc : Location.t;
-}
-
-type gospel_signature =
-  | Sig_function of function_
-  | Sig_axiom of axiom
-  | Sig_ghost_type of s_type_declaration
-  | Sig_ghost_open of qualid
-
 type exception_decl = {
   exn_id : id;
   exn_args : pty list;
   exn_loc : Location.t;
   exn_attributes : attributes;
-}
-
-type s_signature_item_desc =
-  | Sig_type of rec_flag * s_type_declaration list
-  (* type t1 = ... and ... and tn = ... *)
-  | Sig_module of s_module_declaration
-  (* module X : MT *)
-  | Sig_exception of exception_decl
-  (* exception C of T *)
-  | Sig_attribute of attribute
-  (* [@@@id] *)
-  (* Specific to specification *)
-  | Sig_gospel of gospel_signature * string
-
-and s_signature_item = { sdesc : s_signature_item_desc; sloc : Location.t }
-and s_signature = s_signature_item list
-and s_module_type_desc = Mod_ident of Longident.t loc
-
-and s_module_type = {
-  mdesc : s_module_type_desc;
-  mloc : Location.t;
-  mattributes : attributes; (* ... [@id1] [@id2] *)
-}
-
-and s_module_declaration = {
-  mdname : id;
-  mdtype : s_module_type;
-  mdattributes : attributes;
-  (* ... [@@id1] [@@id2] *)
-  mdloc : Location.t;
 }

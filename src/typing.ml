@@ -566,7 +566,7 @@ let can_be_owned tkind talias tspec =
 
 let default_lens env pty =
   let rec default_lens = function
-    | PTtyvar _ -> Constants.lens_val
+    | PTtyvar _ -> Constants.lens_val.lens_desc
     | PTarrow (t1, t2) ->
         let arg = default_lens t1 in
         let ret = default_lens t2 in
@@ -578,7 +578,7 @@ let default_lens env pty =
              lens_info.locaml lens_info.lmodel)
     | PTtuple l -> Ltuple (List.map default_lens l)
   in
-  default_lens pty
+  { lens_desc = default_lens pty; lens_loc = Location.none }
 
 let ocaml_to_model env ocaml_ty =
   let lens = default_lens env ocaml_ty in
@@ -884,6 +884,16 @@ let mk_head head_id head_lens = { head_id; head_lens }
 
 type owned_variables = { global : top_owned list; header : head_owned list }
 
+let rec resolve_lens env = function
+  | Parse_uast.PTtyvar _ -> assert false
+  | PTtyapp (v, []) ->
+      let q, info = Namespace.get_lens_info env v in
+      let linfo = Uast_utils.mk_linfo q info.lvars info.locaml info.lmodel in
+      Lidapp linfo
+  | PTtyapp _ -> assert false
+  | PTtuple l -> Ltuple (List.map (resolve_lens env) l)
+  | PTarrow (t1, t2) -> Larrow (resolve_lens env t1, resolve_lens env t2)
+
 (** [resolve_vars defs vars dup_error l] traverses the list of variables [l] and
     returns the corresponding variable in [vars] or in the top level environment
     [defs].
@@ -910,7 +920,13 @@ let resolve_vars defs vars dup_error l =
           (qid, ty_ocaml, true)
     in
     let lens =
-      match lens with None -> default_lens defs ty | Some _ -> assert false
+      match lens with
+      | None -> default_lens defs ty
+      | Some lens ->
+          {
+            lens_desc = resolve_lens defs lens.Parse_uast.lens_desc;
+            lens_loc = lens.lens_loc;
+          }
     in
     if global then Either.left (mk_top id ty lens)
     else Either.right (mk_head (Uast_utils.leaf id) lens)

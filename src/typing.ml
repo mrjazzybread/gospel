@@ -909,8 +909,6 @@ let resolve_vars defs vars dup_error l =
           let qid, ty_ocaml = ocaml_val_qualid defs qid in
           (qid, ty_ocaml, true)
     in
-    (* If variables of type [ty] cannot appear in ownership clauses
-       (e.g. arrow types), then we raise a Gospel exception. *)
     let lens =
       match lens with None -> default_lens defs ty | Some _ -> assert false
     in

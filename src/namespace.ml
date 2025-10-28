@@ -266,6 +266,16 @@ let get_default_lens env qid =
   Format.print_string id.id_str;
   IdTable.find env.default_lens_env id.id_tag
 
+module Lookup_lens = Lookup (struct
+  type info = lens_info
+
+  let id_lookup info = info.lid
+  let env ~ocaml:_ defs = defs.lens_env
+  let err id = W.Unbound_lens id
+end)
+
+let get_lens_info = Lookup_lens.unique_toplevel_qualid ~ocaml:true
+
 let resolve_application ~ocaml env q l =
   let q, info = type_info ~ocaml env q in
   let params = info.tparams in

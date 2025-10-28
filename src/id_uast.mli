@@ -76,7 +76,13 @@ and term_desc =
 (* Specification *)
 
 type linfo = { lid : qualid; ltvars : id list; lmatch : pty; lmodel : pty }
-type lens = Lidapp of linfo | Ltuple of lens list | Larrow of lens * lens
+
+type lens_desc =
+  | Lidapp of linfo
+  | Ltuple of lens_desc list
+  | Larrow of lens_desc * lens_desc
+
+type lens = { lens_desc : lens_desc; lens_loc : Location.t }
 
 type ocaml_sp_var = {
   var_name : qualid; (* Variable name *)

@@ -149,6 +149,9 @@ val get_exn_info :
 (** [get_exn_info defs id] receives an exception identifier [id] and the types
     of its arguments. *)
 
+val get_lens_info : mod_defs -> Parse_uast.qualid -> Id_uast.qualid * lens_info
+(** [get_lens_info defs id] find the information associated with lens [id]. *)
+
 val get_default_lens : mod_defs -> Id_uast.qualid -> lens_info
 
 val gospel_open : env -> Parse_uast.qualid -> Id_uast.qualid * env

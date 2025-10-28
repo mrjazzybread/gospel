@@ -655,5 +655,8 @@ let rec lens_cstr ocaml_ty lens =
   | _ -> assert false (* TODO replace with W.error *)
 
 let apply_lens ocaml_ty lens =
-  let c = lens_cstr ocaml_ty lens in
+  let c = lens_cstr ocaml_ty lens.lens_desc in
+  let c =
+    Solver.correlate (lens.lens_loc.loc_start, lens.lens_loc.loc_end) @@ c
+  in
   fst (typecheck [] c)

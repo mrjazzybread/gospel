@@ -219,7 +219,7 @@ and lens fmt = function
 
 let lens_application fmt var ~prod =
   let _, l = if prod then var.ty_gospel_prod else var.ty_gospel_cons in
-  pp fmt "%a %@@ %a" qualid var.var_name lens l
+  pp fmt "%a %@@ %a" qualid var.var_name lens l.lens_desc
 
 let labelled_args fmt = function
   | [ arg ] -> labelled_arg fmt arg

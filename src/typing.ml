@@ -1092,7 +1092,9 @@ let add_values_env hd_args hd_rets lenv defs args rets consumes produces
         (* Check if this value is modified. *)
         let ro = List.exists var_mem read_only in
         (* Adds the variable to the pre and post environment. *)
-        let add_var env = add_term_var var_name env in
+        let post_env = add_term_var (Ident.mk_updated var_name) post_env in
+        let pre_env = add_term_var var_name pre_env in
+
         ( OCaml
             {
               var_name = Qid var_name;
@@ -1101,8 +1103,8 @@ let add_values_env hd_args hd_rets lenv defs args rets consumes produces
               ty_gospel_cons;
               ro;
             },
-          add_var pre_env,
-          add_var post_env )
+          pre_env,
+          post_env )
   in
   (* [process_vars pre_env post_env l] processes a list of header variables. *)
   let rec process_header pre_env post_env vals = function

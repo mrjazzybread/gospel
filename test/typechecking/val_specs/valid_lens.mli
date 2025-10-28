@@ -64,3 +64,9 @@ val f9 : t3 -> t3
 (*@ x = f9 y
     modifies y @ Left
     produces x @ Right *)
+
+val f10 : t3 -> unit
+(*@ () = f10 x
+    consumes x @ Left
+    produces x @ Right
+    ensures x = old x *)

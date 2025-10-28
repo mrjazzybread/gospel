@@ -455,7 +455,7 @@ let type_kind ~ocaml env tid tparams lenv = function
       let env = if ocaml then env else add_record env tid tparams fields in
       (env, PTtype_record fields)
 
-let unique_tspec env model local_env self_ty inv_ty tspec =
+let unique_tspec env model local_env self_ty lenses inv_ty tspec =
   (* [invariants [pid, l] processes a list of invariants for the give type
      where [pid] is a variable of type [self_ty]. *)
   let invariants (pid, l) =
@@ -475,7 +475,7 @@ let unique_tspec env model local_env self_ty inv_ty tspec =
   in
   Tast.mk_type_spec
     (Option.map invariants tspec.Parse_uast.ty_invariant)
-    model tspec.ty_text tspec.ty_loc
+    model lenses tspec.ty_text tspec.ty_loc
 
 (** [create_model env lenv tname tparams tspec] Processes the model field(s) of
     the type specification [tspec]. *)
@@ -506,28 +506,30 @@ let update_model_env env self_ty tname tparams model_ty =
     let nm = String.capitalize_ascii id.Ident.id_str in
     Ident.mk_id nm
   in
-  let field_lens env lbl =
-    if lbl.pld_mutable = Mutable then env
+  let field_lens lbl =
+    if lbl.pld_mutable = Mutable then None
     else
       let lens_nm = capitalize_id lbl.pld_name in
-      let lens = mk_lens lens_nm false self_ty tparams lbl.pld_type in
-      add_lens env lens
+      Some (mk_lens lens_nm false self_ty tparams lbl.pld_type)
   in
   function
-  | No_model _ -> (None, env)
+  | No_model _ -> (None, [], env)
   | Implicit (m, ty) ->
       let l =
         mk_lens (capitalize_id tname) (bool_mutable m) self_ty tparams ty
       in
-      (Some l, add_lens env l)
+      (Some l, [ l ], add_lens env l)
   | Fields l ->
       let model_ty = Option.get model_ty in
       let mut = List.exists (fun x -> bool_mutable x.pld_mutable) l in
-      let lens = mk_lens (capitalize_id tname) mut self_ty tparams model_ty in
-      let env = List.fold_left field_lens env l in
-      let env = add_lens env lens in
+      let default =
+        mk_lens (capitalize_id tname) mut self_ty tparams model_ty
+      in
+      let lenses = List.filter_map field_lens l in
+      let env = List.fold_left add_lens env lenses in
+      let env = add_lens env default in
       let env = Namespace.add_gospel_type env tname tparams None in
-      (Some lens, Namespace.add_record env tname tparams l)
+      (Some default, default :: lenses, Namespace.add_record env tname tparams l)
 
 let is_mutable = function
   | Parse_uast.No_model m | Implicit (m, _) -> m = Mutable
@@ -658,7 +660,7 @@ let type_decl ~ocaml lenv env t =
   let info = Uast_utils.mk_info ~alias:tmanifest ~mut (Qid tname) in
   let self_ty = PTtyapp (info, tvars) in
 
-  let default, env =
+  let default, lenses, env =
     update_model_env env self_ty tname tparams model_ty model
   in
 
@@ -673,7 +675,7 @@ let type_decl ~ocaml lenv env t =
     fun env ->
       let tspec =
         Option.fold ~none:Tast.empty_tspec
-          ~some:(unique_tspec (scope env) model lenv self_ty inv_ty)
+          ~some:(unique_tspec (scope env) model lenv self_ty lenses inv_ty)
           t.tspec
       in
       Tast.mk_tdecl tname tparams tkind tmanifest t.tattributes tspec t.tloc

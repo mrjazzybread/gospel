@@ -272,6 +272,16 @@ let get_default_lens env qid =
   let id = Uast_utils.leaf qid in
   IdTable.find env.default_lens_env id.id_tag
 
+module Lookup_lens = Lookup (struct
+  type info = lens_info
+
+  let id_lookup info = info.lid
+  let env defs = defs.lens_env
+  let err id = W.Unbound_lens id
+end)
+
+let get_lens_info = Lookup_lens.unique_toplevel_qualid
+
 let resolve_application ~ocaml env q l =
   let q, info =
     if ocaml then ocaml_type_info env q else gospel_type_info env q

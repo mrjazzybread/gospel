@@ -1155,12 +1155,7 @@ let valid_pure loc args tops xspec ~diverge ~pure =
   let raises = xspec <> [] in
   if pure && mut then W.error ~loc W.Pure_modifies;
   if pure && diverge then W.error ~loc W.Pure_diverges;
-  if pure && raises then W.error ~loc W.Pure_raises;
-  not (mut || diverge || raises)
-
-(** [returns_unit rets] checks if the list of return values is the singleton
-    list composed of the [unit] type. *)
-let returns_unit = function [ r ] when is_unit r -> true | _ -> false
+  if pure && raises then W.error ~loc W.Pure_raises
 
 let type_val_spec spec defs args rets tops xspec pre_env post_env =
   let pre =
@@ -1386,15 +1381,9 @@ let value_spec ~loc defs lenv name ocaml_ty spec =
   in
   (* Raises a Gospel exception if the function is marked as pure when
        it is not allowed. *)
-  let is_pure =
+  let () =
     valid_pure loc sp_args tops ~pure:spec.sp_pre_spec.sp_pure
       ~diverge:spec.sp_pre_spec.sp_diverge spec.sp_xpost_spec
-  in
-  (* Raises a Gospel exception if the function returns unit but none
-       of its values are modified. *)
-  let () =
-    if is_pure && returns_unit ret_types then
-      W.error ~loc:spec.sp_loc W.Cant_return_unit
   in
   (* Type checks the pre and post conditions. *)
   type_val_spec spec defs sp_args sp_rets tops sp_xspec pre_env post_env

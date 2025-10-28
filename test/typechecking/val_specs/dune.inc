@@ -7,62 +7,6 @@
   (:checker %{project_root}/test/utils/testchecker.exe)
        _gospel)
  (action
-  (with-outputs-to cant_return_unit1.mli.output
-   (run %{checker} %{dep:cant_return_unit1.mli}))))
-
-(rule
- (alias runtest)
- (action
-  (diff cant_return_unit1.mli cant_return_unit1.mli.output)))
-
-(rule
- (deps
-  %{bin:gospel}
-  (:checker %{project_root}/test/utils/testchecker.exe)
-       _gospel)
- (action
-  (with-outputs-to cant_return_unit2.mli.output
-   (run %{checker} %{dep:cant_return_unit2.mli}))))
-
-(rule
- (alias runtest)
- (action
-  (diff cant_return_unit2.mli cant_return_unit2.mli.output)))
-
-(rule
- (deps
-  %{bin:gospel}
-  (:checker %{project_root}/test/utils/testchecker.exe)
-       _gospel)
- (action
-  (with-outputs-to cant_return_unit3.mli.output
-   (run %{checker} %{dep:cant_return_unit3.mli}))))
-
-(rule
- (alias runtest)
- (action
-  (diff cant_return_unit3.mli cant_return_unit3.mli.output)))
-
-(rule
- (deps
-  %{bin:gospel}
-  (:checker %{project_root}/test/utils/testchecker.exe)
-       _gospel)
- (action
-  (with-outputs-to cant_return_unit4.mli.output
-   (run %{checker} %{dep:cant_return_unit4.mli}))))
-
-(rule
- (alias runtest)
- (action
-  (diff cant_return_unit4.mli cant_return_unit4.mli.output)))
-
-(rule
- (deps
-  %{bin:gospel}
-  (:checker %{project_root}/test/utils/testchecker.exe)
-       _gospel)
- (action
   (with-outputs-to higher_order.mli.output
    (run %{checker} %{dep:higher_order.mli}))))
 

@@ -189,6 +189,34 @@
   (:checker %{project_root}/test/utils/testchecker.exe)
        _gospel)
  (action
+  (with-outputs-to invalid_lens4.mli.output
+   (run %{checker} %{dep:invalid_lens4.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff invalid_lens4.mli invalid_lens4.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
+  (with-outputs-to invalid_lens5.mli.output
+   (run %{checker} %{dep:invalid_lens5.mli}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff invalid_lens5.mli invalid_lens5.mli.output)))
+
+(rule
+ (deps
+  %{bin:gospel}
+  (:checker %{project_root}/test/utils/testchecker.exe)
+       _gospel)
+ (action
   (with-outputs-to invalid_ret_number1.mli.output
    (run %{checker} %{dep:invalid_ret_number1.mli}))))
 

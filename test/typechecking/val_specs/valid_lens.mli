@@ -50,3 +50,17 @@ val f7 : t2 -> t1
 (*@ x = f7 y
     modifies y @ T2
     produces x @ T1 *)
+
+type t3
+(*@ model left : prop
+    model right : prop *)
+
+val f8 : t3 -> t3
+(*@ x = f8 y
+    modifies y @ T3
+    produces x @ T3 *)
+
+val f9 : t3 -> t3
+(*@ x = f9 y
+    modifies y @ Left
+    produces x @ Right *)

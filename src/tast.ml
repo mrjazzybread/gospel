@@ -84,17 +84,27 @@ type function_ = {
   fun_loc : Location.t;  (** Location *)
 }
 
+type lens_info = {
+  lid : Ident.t;
+      (* The name of the lens.  Invariant: The name is always capitalized *)
+  lpersistent : bool; (* Marks if the lens is persistent. *)
+  locaml : Id_uast.pty; (* The OCaml type this lens lifts *)
+  lvars : Ident.t list; (* The type parameters of the OCaml type *)
+  lmodel : Id_uast.pty; (* The logical model exposed by this lens *)
+}
+
 type type_spec = {
   ty_invariant : (Id_uast.id * term list) option;
   ty_model : Id_uast.model;
+  ty_lenses : lens_info list;
   ty_text : string;
   ty_loc : Location.t;
 }
 
-let mk_type_spec ty_invariant ty_model ty_text ty_loc =
-  { ty_invariant; ty_model; ty_text; ty_loc }
+let mk_type_spec ty_invariant ty_model ty_lenses ty_text ty_loc =
+  { ty_invariant; ty_model; ty_text; ty_lenses; ty_loc }
 
-let empty_tspec = mk_type_spec None (No_model Immutable) "" Location.none
+let empty_tspec = mk_type_spec None (No_model Immutable) [] "" Location.none
 
 type s_type_declaration = {
   tname : Id_uast.id;

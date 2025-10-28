@@ -43,6 +43,7 @@ type t = {
   id_fixity : Preid.fixity;
   id_attrs : string list; (* Variable attributes *)
   id_loc : Location.t;
+  id_old : bool;
   id_tag : Tag.t;
       (* Unique identifier. During typechecking, this is what
        Inferno uses to check if two variables are the same. *)
@@ -73,3 +74,7 @@ val is_primitive : t -> bool
 val from_preid : Preid.t -> t
 (** [from_preid pid] Turns an identifier created during parsing into a uniquely
     tagged name. *)
+
+val mk_updated : t -> t
+(** [mk_updated t] creates a new identifier equal to [t] where the [id_old] flag
+    is set to false. *)

@@ -56,6 +56,7 @@ type t = {
   id_fixity : Preid.fixity;
   id_attrs : string list;
   id_loc : Location.t;
+  id_old : bool;
   id_tag : Tag.t;
 }
 
@@ -65,7 +66,7 @@ let pp ppf id =
   | _ -> Format.fprintf ppf "(%s)%a" id.id_str Preid.pp_attrs id.id_attrs
 
 let to_string id = id.id_str
-let equal x y = Tag.equal x.id_tag y.id_tag
+let equal x y = Tag.equal x.id_tag y.id_tag && x.id_old = y.id_old
 let hash x = Tag.hash x.id_tag
 
 let mk_id ?loc:(id_loc = Location.none) id_str =
@@ -74,6 +75,7 @@ let mk_id ?loc:(id_loc = Location.none) id_str =
     id_fixity = Preid.Normal;
     id_attrs = [];
     id_loc;
+    id_old = true;
     id_tag = Tag.gen_id ();
   }
 
@@ -87,5 +89,8 @@ let from_preid p =
     id_fixity = p.pid_fixity;
     id_attrs = p.pid_attrs;
     id_loc = p.pid_loc;
+    id_old = true;
     id_tag = Tag.gen_id ();
   }
+
+let mk_updated id = { id with id_old = false }

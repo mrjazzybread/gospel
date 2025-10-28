@@ -560,13 +560,15 @@ let axiom_cstr ax =
 (** [sp_var arg] turns a value of type [sp_var] into a [tsymbol]. If [arg] is an
     unnamed variable, return [None]. *)
 let sp_var = function
-  | Ghost (id, pty) -> Some (mk_ts id pty)
+  | Ghost (id, pty) -> [ mk_ts id pty ]
   | OCaml v ->
       let id = match v.var_name with Qid id -> id | _ -> assert false in
       (* TODO: Once we add explicit lenses we must differentiate
          between the type in the pre and post condition. *)
-      Some (mk_ts id (fst v.ty_gospel_prod))
-  | _ -> None
+      let old_id = mk_ts id (fst v.ty_gospel_cons) in
+      let pre_id = mk_ts (Ident.mk_updated id) (fst v.ty_gospel_prod) in
+      [ old_id; pre_id ]
+  | _ -> []
 
 let xspec (spec : Id_uast.xpost_spec) =
   let spec_cstr =
@@ -574,8 +576,8 @@ let xspec (spec : Id_uast.xpost_spec) =
     mk_xpost spec.sp_exn spec.sp_xargs spec.sp_xrets spec.sp_xtops sp_xpost
       spec.sp_xloc
   in
-  let args = List.filter_map sp_var spec.sp_xargs in
-  let rets = List.filter_map sp_var spec.sp_xrets in
+  let args = List.concat_map sp_var spec.sp_xargs in
+  let rets = List.concat_map sp_var spec.sp_xrets in
   build_def (args @ rets) spec_cstr
 
 (** Creates a constraint ensuring that the terms within [pre] and [post] are
@@ -590,8 +592,8 @@ let spec_cstr (spec : Id_uast.val_spec) =
     Tast.mk_vspec spec.sp_args spec.sp_rets spec.sp_tops sp_pre sp_post
       sp_checks xpost_spec spec.sp_diverge spec.sp_pure spec.sp_text spec.sp_loc
   in
-  let args = List.filter_map sp_var spec.sp_args in
-  let rets = List.filter_map sp_var spec.sp_rets in
+  let args = List.concat_map sp_var spec.sp_args in
+  let rets = List.concat_map sp_var spec.sp_rets in
 
   (* Remark: Return values are added to the scope of both the pre and
      post conditions, although return values are not allowed to be

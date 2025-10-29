@@ -62,11 +62,13 @@ let read_gospel_file f =
 (** [check_file file] parses and type checks [file] and creates a corresponding
     [.gospel] file in the directory [comp_dir].
     @raise Warnings.Error if there is a parsing or typing error in [file]. *)
-let check_file ?(comp_dir = "") ?(env = Namespace.empty_env) ~verbose file =
+let check_file ?(comp_dir = "") ?(env = Namespace.empty_env) ~compile ~verbose
+    file =
   let module_nm, tast, mods = type_sigs ~verbose env file in
-  let comp =
-    open_out_bin (Format.sprintf "%s%s%s" comp_dir module_nm gospel_ext)
-  in
-  Marshal.to_channel comp mods [];
-  close_out comp;
+  if compile then (
+    let comp =
+      open_out_bin (Format.sprintf "%s%s%s" comp_dir module_nm gospel_ext)
+    in
+    Marshal.to_channel comp mods [];
+    close_out comp);
   (tast, mods)

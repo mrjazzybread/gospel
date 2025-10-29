@@ -17,10 +17,13 @@ module W = Warnings
 let () =
   let _ =
     let () = Ident.Tag.set_project_name Ident.stdlib_project in
-    let _, defs = Bin_utils.check_file ~verbose:false "gospelstdlib.mli" in
+    let _, defs =
+      Bin_utils.check_file ~verbose:false ~compile:true "gospelstdlib.mli"
+    in
     let env = Namespace.init_env defs in
     let _, defs =
-      Bin_utils.check_file ~verbose:false ~env "ocamlprimitives.mli"
+      Bin_utils.check_file ~verbose:false ~compile:true ~env
+        "ocamlprimitives.mli"
     in
     defs
   in

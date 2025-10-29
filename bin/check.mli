@@ -8,4 +8,4 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 
-val run : bool -> string list -> unit
+val run : bool -> bool -> string list -> unit

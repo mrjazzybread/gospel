@@ -28,6 +28,7 @@ val read_gospel_file : string -> Namespace.mod_defs
 val check_file :
   ?comp_dir:string ->
   ?env:Namespace.env ->
+  compile:bool ->
   verbose:bool ->
   string ->
   Tast.s_signature * Namespace.mod_defs

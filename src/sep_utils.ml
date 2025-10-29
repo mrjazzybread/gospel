@@ -16,21 +16,31 @@ module Set = Set.Make (String)
 
 type namespace = psymbol Env.t
 
-let empty_env () : namespace = Env.create 100
+let empty_env () : namespace =
+  let env = Env.create 100 in
+  let val_ps =
+    { ps_name = Constants.val_lens_id; ps_args = []; ps_sep = false }
+  in
+  let () = Env.add env Constants.val_lens_id.id_tag val_ps in
+  env
 
-let get_pred ns ty =
-  match ty with
-  | Id_uast.PTtyapp (ts, _) ->
-      let id = Uast_utils.leaf ts.app_qid in
+let get_pred ns = function
+  | Id_uast.Lidapp linfo ->
+      let id = Uast_utils.leaf linfo.lid in
       Env.find ns id.id_tag
   | _ -> assert false
 
-let map_pred ns tid ps_name is_mutable ps_args =
-  let ps = { ps_name; ps_args; ps_sep = is_mutable } in
-  Env.add ns tid ps
+let map_pred ns lens =
+  let ps =
+    {
+      ps_name = lens.lid;
+      ps_args = [ lens.locaml; lens.lmodel ];
+      ps_sep = not lens.lpersistent;
+    }
+  in
+  Env.add ns lens.lid.id_tag ps
 
 let change_id map id = Ident.mk_id (map id.id_str) ~loc:id.id_loc
-let rep_pred = String.capitalize_ascii
 
 let is_var v1 t =
   match t.t_node with

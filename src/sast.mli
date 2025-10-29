@@ -48,16 +48,6 @@ type triple = {
 }
 (** Separation Logic Triple *)
 
-type pkind = Pure | Heap
-
-type rep_pred = {
-  pred_name : Ident.t;
-  pred_poly : Ident.t list;
-  pred_args : Tast.tsymbol list;
-  pred_kind : pkind;
-}
-(** Representation Predicates *)
-
 (** Type Definitions *)
 type tdef =
   | Abstract
@@ -82,7 +72,7 @@ type axiom = {
 
 (** Top level definitions *)
 type definition_node =
-  | Pred of rep_pred
+  | Pred of Tast.lens_info
   | Type of type_decl
   | Triple of triple
   | Val of Tast.s_val_description

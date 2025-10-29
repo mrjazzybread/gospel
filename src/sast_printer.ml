@@ -55,11 +55,11 @@ let triple fmt t =
     t.triple_post
 
 let rep_pred fmt p =
-  pp fmt "@[Predicate %a%a%a@]" Ident.pp p.pred_name
+  pp fmt "@[Predicate %a%a :%a@]" Ident.pp p.Tast.lid
     (list ~first:sp ~sep:sp Tast_printer.print_tv)
-    p.pred_poly
-    (list ~first:sp ~sep:sp (Tast_printer.ts ~top_level:true))
-    p.pred_args
+    p.lvars
+    (list ~first:sp ~sep:arrow Tast_printer.print_ty)
+    [ p.locaml; p.lmodel ]
 
 let tdef fmt = function
   | Abstract -> ()

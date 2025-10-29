@@ -18,7 +18,7 @@ let pp = Format.fprintf
 type 'a file = { fname : string; fmodule : string; fdefs : 'a }
 
 (** Directory in which compiled Gospel files will be placed. *)
-let comp_dir = "_gospel"
+let comp_dir = "_gospel/"
 
 (** [error msg file] receives an error message template [msg] that expects the
     name of a file and exits the program with exit code [1] and prints [msg]

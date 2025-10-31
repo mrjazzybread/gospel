@@ -1,11 +1,11 @@
 (coq.theory
  (name Stdlib_stdpp)
- (package gospel)
+ (package gospel_cfml)
  (theories Stdlib stdpp)
  (modules gospelstdlib_mli_stdpp gospelstdlib_verified_stdpp))
 
 (coq.theory
  (name Stdlib_TLC)
- (package gospel)
+ (package gospel_iris)
  (theories Stdlib TLC)
  (modules gospelstdlib_mli_tlc gospelstdlib_verified_tlc))

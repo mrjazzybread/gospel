@@ -44,13 +44,13 @@ let change_id map id = Ident.mk_id (map id.id_str) ~loc:id.id_loc
 
 let is_var v1 t =
   match t.t_node with
-  | Tvar v2 | Ttyapply (v2, _) -> Ident.equal v1.ts_id (Uast_utils.leaf v2)
+  | Tvar (v2, _) -> Ident.equal v1.ts_id (Uast_utils.leaf v2)
   | _ -> false
 
 let rec app_list =
   let open Uast_utils in
   function
-  | Tvar v | Ttyapply (v, _) ->
+  | Tvar (v, _) ->
       let id = Uast_utils.leaf v in
       let is_equal_or_iff =
         (id.id_str = "infix =" || id.id_str = "infix <->") && Ident.is_stdlib id
@@ -71,7 +71,7 @@ let rec map_tvars changed tbl t =
   let f = map_tvars changed tbl in
   let t_node =
     match t.t_node with
-    | Tvar v when Env.mem tbl (Uast_utils.leaf v).id_tag ->
+    | Tvar (v, []) when Env.mem tbl (Uast_utils.leaf v).id_tag ->
         let () = changed := true in
         Env.find tbl (Uast_utils.leaf v).id_tag
     | Tapply (t1, t2) -> Tapply (f t1, f t2)

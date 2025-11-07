@@ -50,18 +50,17 @@ let print_tids fmt = function
   | l -> parens (list ~sep:comma (ts ~top_level:false)) fmt l
 
 let is_symbol ~prefix = function
-  | Tvar (Qid v) when prefix = v.id_fixity -> true
+  | Tvar (Qid v, []) when prefix = v.id_fixity -> true
   | _ -> false
 
-let symbol s = match s with Tvar (Qid v) -> v.id_str | _ -> assert false
+let symbol s = match s with Tvar (Qid v, []) -> v.id_str | _ -> assert false
 let is_infix = is_symbol ~prefix:Preid.Infix
 let is_prefix = is_symbol ~prefix:Preid.Prefix
 let is_mixfix = is_symbol ~prefix:Preid.Mixfix
 
 let needs_paren arg =
   match arg.t_node with
-  | Tconst _ | Ttrue | Tfalse | Ttyapply _ | Tvar _ | Tfield _ | Trecord _
-  | Tscope _ ->
+  | Tconst _ | Ttrue | Tfalse | Tvar _ | Tfield _ | Trecord _ | Tscope _ ->
       false
   | _ -> true
 
@@ -85,7 +84,7 @@ and term fmt t =
     | Tfalse -> pp fmt "false"
     | TTrue -> pp fmt "True"
     | TFalse -> pp fmt "False"
-    | Tvar q | Ttyapply (q, _) -> qualid fmt q
+    | Tvar (q, _) -> qualid fmt q
     | Tlet (pats, t1, t2) ->
         pp fmt "let %a =@ %a in@ @[%a@]" pat pats term t1 term t2
     | Tconst c -> Uast_printer.constant fmt c

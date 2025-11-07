@@ -303,7 +303,7 @@ let rec hastype (t : Id_uast.term) (r : variable) =
         (* We can ignore the return value of [instance] since it will always
             return the empty list since all local variables are bound with
             [def], which creates a monomorphic scheme. *)
-        Tvar (Qid id)
+        Tvar (Qid id, [])
     | Tvar (q, params, pty) ->
         (* In the case of a top level definition outside the scope of this term,
             we use the type provided during the name resolution stage. *)
@@ -312,7 +312,7 @@ let rec hastype (t : Id_uast.term) (r : variable) =
         (* If the type of this variable uses any flexible inferno type
            variables that were not unified, then we create an explicit
            application of [q] to the types it receives as argument. *)
-        if params = [] then Tvar q else Ttyapply (q, ptys)
+        Tvar (q, ptys)
     | Tlet (pat, t1, t2) ->
         (* let id1, id2, ... = t1 in t2 *)
         (* Associative list that maps each identifier in [pat] to an

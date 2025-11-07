@@ -76,8 +76,8 @@ let map_term env is_old t =
     let f t = change_vars is_old t in
     let map_node =
       match t.t_node with
-      | Tvar v when (not is_old) && is_present env v ->
-          Tvar (Env.find env (Uast_utils.leaf v).id_tag)
+      | Tvar (v, l) when (not is_old) && is_present env v ->
+          Tvar (Env.find env (Uast_utils.leaf v).id_tag, l)
       | Tlet (v, t1, t2) -> Tlet (v, f t1, f t2)
       | Told t -> (change_vars true t).t_node
       | Tapply (t1, t2) -> Tapply (f t1, f t2)
@@ -121,7 +121,7 @@ let lifted_arg ns env is_pre arg =
       let arg_ts = mk_ts arg_log arg_typ in
       let pred = get_pred ns lens.lens_desc in
       let arg_prog = to_prog v in
-      let to_term v = mk_term (Tvar (Qid v.ts_id)) v.ts_ty Location.none in
+      let to_term v = mk_term (Tvar (Qid v.ts_id, [])) v.ts_ty Location.none in
       let arg_spatial =
         let arg_pred = Lift (pred, to_term arg_prog, to_term arg_ts) in
         Some { arg_pred; arg_log = arg_ts; ro }

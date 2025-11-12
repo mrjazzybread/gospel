@@ -1461,6 +1461,9 @@ and signature s env =
 
 and gospel_sig env = function
   | Parse_uast.Sig_function f ->
+      if f.fun_name.pid_str = "/\\" then
+        Format.fprintf Format.std_formatter "%b\n"
+          (f.fun_name.pid_fixity = Normal);
       let f, vars = function_ f (scope env) in
       let f, fun_ty = Solver.function_ vars f in
       let env = add_fun env f.fun_name f.fun_tvars fun_ty in

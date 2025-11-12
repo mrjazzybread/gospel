@@ -59,7 +59,7 @@ val hash : t -> int
 
 (* ---------------------------------- *)
 
-val mk_id : ?loc:Location.t -> string -> t
+val mk_id : ?loc:Location.t -> ?fixity:Preid.fixity -> string -> t
 val stdlib_project : string
 val stdlib_id : t
 

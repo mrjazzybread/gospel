@@ -594,8 +594,8 @@ let fun_env =
   let op_info fid = { fid; fparams = []; fty = op_ty } in
   let conj = "/\\" in
   let disj = "\\/" in
-  let conj_id = Ident.mk_id conj in
-  let disj_id = Ident.mk_id disj in
+  let conj_id = Ident.mk_id ~fixity:Preid.Infix conj in
+  let disj_id = Ident.mk_id ~fixity:Preid.Infix disj in
   Env.empty |> Env.add conj (op_info conj_id) |> Env.add disj (op_info disj_id)
 
 (** The empty environment. The only names that it contains with are primitive

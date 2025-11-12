@@ -698,7 +698,7 @@ lident_rich:
 ;
 
 lident_fun_id:
-| LEFTPAR id = lident_op RIGHTPAR  { mk_pid id $loc }
+| LEFTPAR id = lident_op RIGHTPAR  { id }
 
 lident_op_id:
 | id = lident_fun_id               { id }
@@ -707,17 +707,17 @@ lident_op_id:
 ;
 
 lident_op:
-| op = op_symbol                              { op }
-| op = op_symbol UNDERSCORE                   { op }
-| EQUAL                                       { "=" }
-| LTGT                                        { "<>" }
-| op = OPPREF UNDERSCORE?                     { op }
-| DOT LEFTPAR RIGHTPAR                        { ".()" }
-| LEFTSQ UNDERSCORE RIGHTSQ                   { "[_]" }
-| LEFTSQ ARROW RIGHTSQ                        { "[->]" }
-| LEFTSQ UNDERSCORE DOTDOT UNDERSCORE RIGHTSQ { "[_.._]" }
-| LEFTSQ            DOTDOT UNDERSCORE RIGHTSQ { "[.._]" }
-| LEFTSQ UNDERSCORE DOTDOT            RIGHTSQ { "[_..]" }
+| op = op_symbol                              { mk_pid ~fixity:Infix op $loc }
+| op = op_symbol UNDERSCORE                   { mk_pid ~fixity:Prefix op $loc }
+| EQUAL                                       { mk_pid ~fixity:Infix "=" $loc }
+| LTGT                                        { mk_pid ~fixity:Infix "<>" $loc }
+| op = OPPREF UNDERSCORE?                     { mk_pid ~fixity:Prefix op $loc }
+| DOT LEFTPAR RIGHTPAR                        { mk_pid ~fixity:Mixfix ".()" $loc }
+| LEFTSQ UNDERSCORE RIGHTSQ                   { mk_pid ~fixity:Mixfix "[_]" $loc }
+| LEFTSQ ARROW RIGHTSQ                        { mk_pid ~fixity:Mixfix "[->]" $loc }
+| LEFTSQ UNDERSCORE DOTDOT UNDERSCORE RIGHTSQ { mk_pid ~fixity:Mixfix "[_.._]" $loc }
+| LEFTSQ            DOTDOT UNDERSCORE RIGHTSQ { mk_pid ~fixity:Mixfix "[.._]" $loc }
+| LEFTSQ UNDERSCORE DOTDOT            RIGHTSQ { mk_pid ~fixity:Mixfix "[_..]" $loc }
 ;
 
 (* Qualified idents *)

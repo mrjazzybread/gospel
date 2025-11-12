@@ -69,10 +69,10 @@ let to_string id = id.id_str
 let equal x y = Tag.equal x.id_tag y.id_tag && x.id_old = y.id_old
 let hash x = Tag.hash x.id_tag
 
-let mk_id ?loc:(id_loc = Location.none) id_str =
+let mk_id ?loc:(id_loc = Location.none) ?(fixity = Preid.Normal) id_str =
   {
     id_str;
-    id_fixity = Preid.Normal;
+    id_fixity = fixity;
     id_attrs = [];
     id_loc;
     id_old = true;

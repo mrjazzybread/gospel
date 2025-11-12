@@ -32,7 +32,7 @@ type term_node =
   | Tfalse
   | TTrue
   | TFalse
-  | Tvar of Id_uast.qualid * Types.ty list
+  | Tvar of Id_uast.qualid * (tvar * Types.ty) list
   | Tlet of pat * term * term
   | Tconst of Parse_uast.constant
   | Tapply of term * term

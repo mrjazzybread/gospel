@@ -132,7 +132,7 @@ let top_level_pty params ty =
   let@ vars = assoc_vars params in
   (* Turn the type [ty] into an inferno type variable *)
   let@ ty = pty_to_deep_flex vars ty in
-  k (ty, List.map snd vars)
+  k (ty, List.map2 (fun x (_, y) -> (x, y)) params vars)
 
 (** [binder_to_deep pty] If [pty] is not [Some t], creates an Inferno variable
     that is equal to [t]. If not, create an unconstrained inferno variable *)
@@ -308,7 +308,14 @@ let rec hastype (t : Id_uast.term) (r : variable) =
         (* In the case of a top level definition outside the scope of this term,
             we use the type provided during the name resolution stage. *)
         let@ ty, l = top_level_pty params pty in
-        let+ () = r -- ty and+ ptys = map_constraints decode l in
+        let+ () = r -- ty
+        and+ ptys =
+          map_constraints
+            (fun (x, y) ->
+              let+ y = decode y in
+              (x, y))
+            l
+        in
         (* If the type of this variable uses any flexible inferno type
            variables that were not unified, then we create an explicit
            application of [q] to the types it receives as argument. *)

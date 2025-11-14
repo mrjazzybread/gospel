@@ -207,8 +207,9 @@ module Sequence : sig
       elements of [s], starting at position 2. *)
 
   (*@ axiom tl_def :
-        ∀ s.
-        tl s = s[1 ..] *)
+        ∀ s t x.
+        s = cons x t ->
+        tl s = t *)
 
   (*@ function append (s1 : 'a t) (s2 : 'a t) : 'a t *)
   (** [append s s'] is [s ++ s']. *)

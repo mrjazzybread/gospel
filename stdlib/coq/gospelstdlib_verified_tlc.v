@@ -1,734 +1,511 @@
-Set Implicit Arguments.
-
 Set Warnings "-deprecated".
 Set Warnings "-default".
 Set Warnings "-syntax".
-From TLC Require Import LibString LibList LibCore LibListZ LibEpsilon LibSet LibOrder.
 
-Require Import Stdlib.ZArith.BinInt TLC.LibLogic TLC.LibRelation TLC.LibInt TLC.LibContainer.
+Require Import gospelstdlib_mli_tlc.
 
-Require Import Stdlib.ZArith.BinIntDef.
+Require Import TLC.LibCore TLC.LibSet.
+Require Import TLC.LibListZ.
 
 Local Open Scope comp_scope.
 
-Require gospelstdlib_mli_tlc.
+Module Proofs : gospelstdlib_mli_tlc.Obligations.
 
-Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
+  Import Declarations.
 
-    Definition sequence A := list A.
+  Global Instance _set_inst : _set_sig :=
+    { set := LibSet.set }.
 
-    Definition bag A := A -> nat.
+  Global Instance _sequence_inst : _sequence_sig :=
+    { sequence := list }.
 
-    Definition set A := set A.
+  Global Instance _bag_inst : _bag_sig :=
+    { bag := fun A => A -> nat }.
 
-    Definition option := option.
+  Global Instance _option_inst : _option_sig :=
+    { option := Datatypes.option }.
 
-    Definition Some A `{Inhab A} (x : A) := Some x.
+  Global Instance _Some_inst : _Some_sig :=
+    { Some := fun A _ x => Datatypes.Some x }.
 
-    Definition None A `{Inhab A} := @None A.
+  Global Instance _None_inst : _None_sig :=
+    { None := fun A _ => Datatypes.None }.
 
-    Definition map A B := A -> B.
+  Global Instance _succ_inst : _succ_sig :=
+    { succ := fun x => x + 1 }.
 
-    Definition succ := Z.succ.
-    Definition pred := Z.pred.
-    Definition neg := Z.opp.
-    Definition plus := Z.add.
-    Definition minus := Z.sub.
-    Definition mult := Z.mul.
-    Definition div  := Z.div.
-    Definition _mod := Z.modulo.
-    Definition pow := Z.pow.
-    Definition abs := Z.abs.
-    Definition min := Z.min.
-    Definition max := Z.max.
-    Definition gt := gt.
-    Definition ge := ge.
-    Definition lt := lt.
-    Definition le := le.
-    Parameter max_int : Z.
-    Parameter min_int : Z.
-    Definition app A {Ih:Inhab A} := @app A.
+  Global Instance _pred_inst : _pred_sig :=
+    { pred := fun x => x - 1 }.
 
-    Definition seq_get
-      {A} {Ih:Inhab A} (s : sequence A) (n : int) : A :=
-      s[n].
+  Global Instance __mod_inst : __mod_sig :=
+    { _mod := Z.modulo }.
 
-    Ltac unfold_all :=
-      unfold pred in *;
-      unfold neg in * ;
-      unfold plus in *;
-      unfold minus in *;
-      unfold mult in *;
-      unfold div  in *;
-      unfold _mod in *;
-      unfold pow in * ;
-      unfold abs in * ;
-      unfold min in * ;
-      unfold max in * ;
-      unfold gt in *  ;
-      unfold ge in *  ;
-      unfold lt in *  ;
-      unfold le in *  ;
-      unfold app in * ;
-      unfold seq_get in *.
+  Global Instance _pow_inst : _pow_sig :=
+    { pow := Z.pow }.
 
+  Global Instance _abs_inst : _abs_sig :=
+    { abs := Z.abs }.
 
-    Definition seq_sub {A} {Ih : Inhab A} (s : sequence A) (i1 : Z) (i2 : Z) : sequence A :=
-      LibListZ.take (i2 - i1) (LibListZ.drop i1 s).
+  Global Instance _min_inst : _min_sig :=
+    { min := Z.min }.
 
+  Global Instance _max_inst : _max_sig :=
+    { max := Z.max }.
 
-    Definition seq_sub_l  (A : Type) {Ih : Inhab A} (s : sequence A) (
-        i : Z
-      ) : sequence A:=
-      seq_sub s i (length s).
+  Global Instance _app_inst : _app_sig :=
+    { app := fun A _ s1 s2 => s1 ++ s2 }.
 
-    Definition seq_sub_r  (A : Type) {Ih : Inhab A} (s : sequence A) (
-        i : Z
-      ) : sequence A:=
-      seq_sub s (0)%Z i.
+  Global Instance _seq_get_inst : _seq_get_sig :=
+    { seq_get := fun A _ s i => s[i] }.
 
-    Definition map_set  (A : Type) (B : Type) {Ih : Inhab A} {Ih : Inhab B} (f : A -> B) (x : A) (y : B) : A -> B:=
-      fun arg : A =>
-        if classicT (arg = x) then y else f arg.
+  Global Instance _seq_sub_inst : _seq_sub_sig :=
+    { seq_sub := fun A _ s i1 i2 => take (i2 - i1) (drop i1 s) }.
 
-    Definition monoid {A} `{Inhab A} (f : A -> A -> A) (n : A) : Prop :=
-      neutral_l f n /\ neutral_r f n /\ assoc f.
+  Global Instance _seq_sub_l_inst : _seq_sub_l_sig :=
+    { seq_sub_l := fun A _ s i => seq_sub s i (length s) }.
 
-    Lemma monoid_def :
-          forall {A : Type},
-  forall {Ih_A : Inhab A},
-  forall f : A -> A -> A,
-  forall neutral : A,
-  (
-    (monoid f neutral) <-> (
-      (
-        (
-          forall x : A,
-          ((((f neutral x) = (f x neutral))) /\ (((f x neutral) = x)))
-        ) /\ (
-          forall x : A,
-          forall y : A,
-          forall z : A,
-          ((f x (f y z)) = (f (f x y) z))
-        )
-      )
-    )
-  ).
-    Proof.
-      intros A Ih f neutral.
-      unfold monoid.
-      unfold neutral_l, neutral_r, assoc.
-      split.
-      - intros [H1 [H2 H3]]. split; intros x.
-        + rewrite H1. rewrite H2. auto.
-        + auto.
-      - intros (H1 & H2).
-        repeat split; intros x; specialize H1 with x as [H3 H4];
+  Global Instance _seq_sub_r_inst : _seq_sub_r_sig :=
+    { seq_sub_r := fun A _ s i => seq_sub s (0)%Z i }.
+
+  Global Instance _monoid_inst : _monoid_sig :=
+    { monoid := fun A _ f n => neutral_l f n /\ neutral_r f n /\ assoc f }.
+
+  #[refine] Global Instance _monoid_def_inst : _monoid_def_sig := { }.
+  Proof.
+    intros A Ih f neutral.
+    split.
+    - intros [H1 [H2 H3]]. split; intros x.
+      + rewrite H1. rewrite H2. auto.
+      + auto.
+    - intros (H1 & H2).
+      repeat split; intros x; specialize H1 with x as [H3 H4];
         try (rewrite H3); auto.
+  Qed.
+
+  Global Instance _comm_monoid_inst : _comm_monoid_sig :=
+    { comm_monoid := fun A _ f n => monoid f n /\ comm f}.
+
+  #[refine] Global Instance _comm_monoid_def_inst : _comm_monoid_def_sig := { }.
+  Proof.
+    simpl. tauto.
+  Qed.
+
+  Module Sequence.
+
+    Import Sequence.
+
+    Global Instance _length_inst : _length_sig :=
+      { length := fun A _ l => LibListZ.length l }.
+
+    Global Instance _in_range_inst : _in_range_sig :=
+      { in_range := fun A _ s i => 0 <= i < length s }.
+
+    #[refine] Global Instance _in_range_def_inst : _in_range_def_sig := { }.
+    Proof.
+      simpl. tauto.
     Qed.
 
-    Definition comm_monoid {A} `{Inhab A} (f : A -> A -> A) (n : A) : Prop :=
-      monoid f n /\ comm f.
-
-    Lemma comm_monoid_def :
-      forall {a70 : Type},
-      forall {Ih_a70 : Inhab a70},
-      forall f : a70 -> a70 -> a70,
-      forall neutral : a70,
-        Corelib.Init.Logic.iff (comm_monoid f neutral) (
-            Corelib.Init.Logic.and (monoid f neutral) (
-                forall x : a70,
-                forall y : a70,
-                  eq (f x y) (f y x)
-              )
-          ).
+    #[refine] Global Instance _length_nonneg_inst : _length_nonneg_sig := { }.
     Proof.
-      intros A Ih f neutral.
-      unfold comm_monoid, monoid, comm.
+      intros. simpl. math.
+    Qed.
+
+    #[refine] Global Instance _append_length_inst : _append_length_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rew_list.
+      auto.
+    Qed.
+
+    #[refine] Global Instance _append_elems_left_inst : _append_elems_left_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rewrite read_app.
+      rewrite If_l.
+      + auto.
+      + math.
+    Qed.
+
+    #[refine] Global Instance _append_elems_right_inst : _append_elems_right_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rewrite read_app.
+      rewrite If_r.
+      + auto.
+      + math.
+    Qed.
+
+    #[refine] Global Instance _subseq_l_inst : _subseq_l_sig := { }.
+    Proof.
+      auto.
+    Qed.
+
+    #[refine] Global Instance _subseq_r_inst : _subseq_r_sig := { }.
+    Proof.
+      auto.
+    Qed.
+
+    #[refine] Global Instance _subseq_inst : _subseq_sig := { }.
+    Proof.
+      simpl.
+      intros A IhA s i i1 i2 (H1 & H2 & H3 & H4).
+      rewrite read_take; try (split; math).
+      - rewrite read_drop; try (split; math).
+        f_equal.
+        math.
+      - rewrite LibListZ.length_drop; math.
+    Qed.
+
+    #[refine] Global Instance _subseq_len_inst : _subseq_len_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rewrite LibListZ.length_take. 1: math.
+      rewrite LibListZ.length_drop; math.
+    Qed.
+
+    Fixpoint init_aux {A} (n : nat) (f : Z -> A) : list A :=
+      match n with
+      |O => nil
+      |S n' => LibList.app (init_aux n' f) (((f n') :: nil)) end.
+
+    Global Instance _init_inst : _init_sig :=
+      { init := fun A _ n f =>
+          If n < 0 then arbitrary else
+          init_aux (Z.to_nat n) f }.
+
+    Lemma init_pos :
+      forall A {Ih : Inhab A} n (f : Z -> A),
+        n >= 0 -> init n f = init_aux (Z.to_nat n) f.
+    Proof.
+      simpl.
+      intros A Ih n f H.
+      unfold init. rewrite If_r. auto. math.
+    Qed.
+
+
+    Lemma init_aux_length :
+      forall A n (f : Z -> A),
+        LibListZ.length (init_aux n f) = n.
+    Proof.
+      intros A n f.
+      induction n as [|n' Ih].
+      all: simpl; rew_list. math.
+      rewrite Ih. math.
+    Qed.
+
+    #[refine] Global Instance _init_length_inst : _init_length_sig := { }.
+    Proof.
+      simpl.
+      intros A Ih n f H.
+      unfold init.
+      rewrite If_r.
+      - unfold length. rewrite init_aux_length. math.
+      - math.
+    Qed.
+
+    Lemma init_i :
+      forall A (n : nat) (i : Z) (f : Z -> A),
+      forall {Ih : Inhab A},
+        0 <= i ->
+        i < n ->
+        (init_aux n f)[i] = f i.
+    Proof.
+      intros A n i f Inh H1 H2.
+      induction n as [|n' Ih].
+      - math.
+      - simpl. rewrite read_app.
+        rewrite init_aux_length.
+        assert (P : i < n' \/ ~ i < n').
+        apply classic.
+        destruct P as [P|P].
+        + rewrite If_l. auto. math.
+        +  assert (Q : i = n'). { math. } rewrite If_r.
+           * rewrite Q. rewrite Z.sub_diag. apply read_zero.
+           * math.
+    Qed.
+
+    #[refine] Global Instance _init_elems_inst : _init_elems_sig := { }.
+    Proof.
+      simpl.
+      intros A Inh n f i [H1 H2].
+      rewrite If_r. 2: try math.
+      apply init_i; math.
+    Qed.
+
+    Global Instance _empty_inst : _empty_sig :=
+      { empty := fun A _ => nil }.
+
+    #[refine] Global Instance _empty_length_inst : _empty_length_sig := { }.
+    Proof.
+      auto.
+    Qed.
+
+    Global Instance _singleton_inst : _singleton_sig :=
+      { singleton := fun A _ x => Datatypes.cons x nil }.
+
+    #[refine] Global Instance _singleton_def_inst : _singleton_def_sig := { }.
+    Proof.
+      simpl.
+      intros A IhA x f H1.
+      repeat (rewrite If_r; try math;
+              simpl; rew_list).
+      f_equal.
+      rewrite <- H1.
+      auto.
+    Qed.
+
+
+    Global Instance _cons_inst : _cons_sig :=
+      { cons := fun A _ => List.cons }.
+
+    #[refine] Global Instance _cons_def_inst : _cons_def_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rew_list. auto.
+    Qed.
+
+    Global Instance _snoc_inst : _snoc_sig :=
+      { snoc := fun A _ s x => s ++ singleton x }.
+
+    #[refine] Global Instance _snoc_def_inst : _snoc_def_sig := { }.
+    Proof.
+      auto.
+    Qed.
+
+    Global Instance _hd_inst : _hd_sig :=
+      { hd := fun A _ s => seq_get s 0 }.
+
+    #[refine] Global Instance _hd_def_inst : _hd_def_sig := { }.
+    Proof.
+      auto.
+    Qed.
+
+    Global Instance _tl_inst : _tl_sig :=
+      { tl := fun A _ s => List.tl s }.
+
+    #[refine] Global Instance _tl_def_inst : _tl_def_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      subst. auto.
+    Qed.
+
+    Global Instance _append_inst : _append_sig :=
+      { append := fun A _ => app }.
+
+    #[refine] Global Instance _append_def_inst : _append_def_sig := { }.
+    Proof.
+      auto.
+    Qed.
+
+    Global Instance _multiplicity_inst : _multiplicity_sig :=
+      { multiplicity := fun A _ e s =>
+          LibListZ.count (fun x => x = e) s }.
+
+    #[refine] Global Instance _mult_empty_inst : _mult_empty_sig := { }.
+    Proof.
+      auto.
+    Qed.
+
+    #[refine] Global Instance _mult_cons_inst : _mult_cons_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rew_listx.
+      rewrite If_l. 2: auto.
+      rewrite Z.add_comm. auto.
+    Qed.
+
+    #[refine] Global Instance _mult_cons_neutral_inst : _mult_cons_neutral_sig := { }.
+    Proof.
+      simpl.
+      intros A Ih s x1 x2 H1.
+      rew_listx.
+      rewrite If_r.
+      + math.
+      + auto.
+    Qed.
+
+    #[refine] Global Instance _mult_length_inst : _mult_length_sig := { }.
+    Proof.
+      simpl.
+      split.
+      - apply count_nonneg.
+      - induction s as [|e s' Ih].
+        + rew_listx. math.
+        + rew_listx.
+          assert (E : e = x \/ e <> x). apply classic.
+          destruct E;
+            [rewrite If_l | rewrite If_r]; auto; math.
+    Qed.
+
+    Global Instance _mem_inst : _mem_sig :=
+      { mem := fun A _ x s => LibList.mem x s }.
+
+    Global Instance _belongs_inst : _belongs_sig :=
+      { belongs := fun A _ => mem }.
+
+    #[refine] Global Instance _mem_fun_def_inst : _mem_fun_def_sig := { }.
+    Proof.
       tauto.
     Qed.
 
-    Module Sequence.
-
-      Definition t A := sequence A.
-
-      Definition length {A} `{Inhab A} (s : t A) := LibListZ.length s.
-
-      Definition in_range  (A : Type) `{Inhab A} (s : sequence A) i : Prop:=
-        0 <= i < length s.
-
-      Lemma in_range_def :
-        forall (A : Type) (Ih_A : Inhab A) (s : sequence A) (i : int),
-          Sequence.in_range s i <-> 0 <= i < Sequence.length s.
-      Proof.
-        unfold in_range.
-        tauto.
-      Qed.
-
-      Lemma length_nonneg :
-        forall A11 : Type,
-        forall {Ih : Inhab A11},
-        forall s : sequence A11,
-          le (0)%Z (length s).
-      Proof.
-        intros.
-        unfold le.
-        unfold length.
-        math.
-      Qed.
-
-      Lemma append_length :
-        forall A17 : Type,
-        forall {Ih : Inhab A17},
-        forall s : sequence A17,
-        forall s' : sequence A17,
-          Corelib.Init.Logic.eq (length (app s s')) (plus (length s) (length s')).
-      Proof.
-        intros.
-        unfold_all.
-        unfold length.
-        unfold app.
-        rew_list.
-        math.
-      Qed.
-
-      Lemma append_elems_left :
-        forall A26 : Type,
-        forall {Ih : Inhab A26},
-        forall s : sequence A26,
-        forall s' : sequence A26,
-        forall i : Z,
-          in_range s i ->
-          Corelib.Init.Logic.eq (seq_get (app s s') i) (seq_get s i).
-      Proof.
-        unfold in_range.
-        intros.
-        unfold_all.
-        unfold length in *.
-        rewrite read_app.
-        rewrite If_l.
-        + auto.
-        + math.
-      Qed.
-
-      Lemma append_elems_right :
-        forall (A : Type) (Ih_A : Inhab A) (s s' : sequence A) (i : int),
-          Sequence.length s <= i < Sequence.length s + Sequence.length s' ->
-          seq_get (app s s') i = seq_get s' (i - Sequence.length s).
-      Proof.
-        unfold length.
-        intros.
-        unfold_all.
-        rewrite read_app.
-        rewrite If_r.
-        + auto.
-        + math.
-      Qed.
-
-      Lemma subseq_l :
-        forall {a40 : Type},
-        forall {_Ga40 : Inhab a40},
-        forall s : sequence a40,
-        forall i : Z,
-          in_range s i ->
-          Corelib.Init.Logic.eq (seq_sub_l s i) (seq_sub s i (length s)).
-      Proof.
-        auto.
-      Qed.
-
-      Lemma subseq_r :
-        forall {a44 : Type},
-        forall {Ih_a44 : Inhab a44},
-        forall s : sequence a44,
-        forall i : Z,
-          in_range s i -> Corelib.Init.Logic.eq (seq_sub_r s i) (seq_sub s (0)%Z i).
-      Proof.
-        auto.
-      Qed.
-
-      Lemma subseq :
-        forall (A : Type) (Ih_A : Inhab A) (s : sequence A) (i i1 i2 : int),
-          0 <= i1 /\ i1 <= i /\ i < i2 <= Sequence.length s ->
-          seq_get s i = seq_get (seq_sub s i1 i2) (i - i1).
-      Proof.
-        unfold_all.
-        unfold length.
-        unfold seq_sub.
-        intros A IhA s i i1 i2 [H1 [H2 [H3 H4]]].
-        rewrite read_take; try (split; math).
-        - rewrite read_drop; try (split; math).
-          f_equal.
-          math.
-        - rewrite LibListZ.length_drop; math.
-      Qed.
-
-      Lemma subseq_len :
-        forall (A : Type) (Ih_A : Inhab A) (s : sequence A) (i1 i2 : int),
-          0 <= i1 /\ i1 <= i2 < Sequence.length s ->
-          Sequence.length (seq_sub s i1 i2) = i2 - i1.
-      Proof.
-        unfold length.
-        unfold_all.
-        intros A IhA s i1 i2 [H1 [H2 H3]].
-        unfold seq_sub.
-        rewrite LibListZ.length_take; try math.
-        rewrite LibListZ.length_drop; try math.
-      Qed.
-
-      Fixpoint init_aux {A} (n : nat) (f : Z -> A) : sequence A :=
-        match n with
-        |O => nil
-        |S n' =>  LibList.app (init_aux n' f) ((cons (f n') nil)) end.
-
-      Definition init {A} {Ih : Inhab A} (n : Z) (f : Z -> A) : sequence A :=
-        If n < 0 then arbitrary else
-        init_aux (Z.to_nat n) f.
-
-      Lemma init_pos :
-        forall A {Ih : Inhab A} n (f : Z -> A),
-          n >= 0 -> init n f = init_aux (Z.to_nat n) f.
-      Proof.
-        intros A Ih n f H.
-        unfold init. rewrite If_r. auto. math.
-      Qed.
-
-      Lemma init_aux_length :
-        forall A n (f : Z -> A),
-          LibListZ.length (init_aux n f) = n.
-      Proof.
-        intros A n f.
-        induction n as [|n' Ih].
-        + simpl. rew_list. math.
-        + simpl. rew_list.
-          rewrite Ih. math.
-      Qed.
-
-      Lemma init_length :
-        forall (A : Type) (Ih_A : Inhab A) (n : int) (f : int -> A),
- n >= 0 -> Sequence.length (Sequence.init n f) = n.
-      Proof.
-        intros A Ih n f H.
-        unfold init.
-        rewrite If_r.
-        - unfold length. rewrite init_aux_length. math.
-        - math.
-      Qed.
-
-      Lemma init_i :
-        forall A (n : nat) (i : Z) (f : Z -> A),
-        forall {Ih : Inhab A},
-          0 <= i ->
-          i < n ->
-          (init_aux n f)[i] = f i.
-      Proof.
-        intros A n i f Inh H1 H2.
-        induction n as [|n' Ih].
-        - math.
-        - simpl. rewrite read_app.
-          rewrite init_aux_length.
-          assert (P : i < n' \/ ~ i < n').
-          apply classic.
-          destruct P as [P|P].
-          + rewrite If_l. auto. math.
-          +  assert (Q : i = n'). { math. } rewrite If_r.
-             * rewrite Q. rewrite Z.sub_diag. apply read_zero.
-             * math.
-      Qed.
-
-      Lemma init_elems :
-        forall (A : Type) (Ih_A : Inhab A) (n : int) (f : int -> A) (i : int),
-          0 <= i < n -> seq_get (Sequence.init n f) i = f i.
-      Proof.
-        intros A Inh n f i [H1 H2].
-        unfold seq_get.
-        unfold init.
-        unfold le in *.
-        unfold lt in *.
-        rewrite If_r; try math.
-        apply init_i; math.
-      Qed.
-
-      Definition empty {A} {Ih : Inhab A} := @nil A.
-      Lemma empty_length :
-        forall A {Ih : Inhab A}, Corelib.Init.Logic.eq (length (@empty A Ih)) (0)%Z.
-      Proof.
-        intro A.
-        unfold length. rew_list. auto.
-      Qed.
-
-      Definition singleton (A : Type) {Ih : Inhab A} (x : A) : sequence A:=
-        init (1)%Z (fun _ : Z => x).
-
-
-      Lemma singleton_def :
-        forall {a82 : Type},
-        forall {Ih_a82 : Inhab a82},
-        forall x : a82,
-        forall f : Z -> a82,
-          Corelib.Init.Logic.eq (f (0)%Z) x ->
-          Corelib.Init.Logic.eq (singleton x) (init (1)%Z f).
-      Proof.
-        intros A IhA x f H1.
-        unfold singleton, init.
-        repeat (rewrite If_r; try math;
-        simpl; rew_list).
-        f_equal.
-        rewrite <- H1.
-        auto.
-      Qed.
-
-      Definition cons (A : Type) {Ih : Inhab A} (x : A) (s : sequence A) : sequence A:=
-        x :: s.
-
-      Lemma cons_def :
-        forall {a88 : Type},
-        forall {Ih_a88 : Inhab a88},
-        forall x : a88,
-        forall s : sequence a88,
-          Corelib.Init.Logic.eq (cons x s) (app (singleton x) s).
-      Proof.
-        intros A Ih x s.
-        unfold app, cons, singleton, init.
-        rewrite If_r; try math.
-        simpl. rew_list. auto.
-      Qed.
-
-      Definition snoc (A : Type) {Ih : Inhab A}(s : sequence A) (x : A) : sequence A:=
-        app s (singleton x).
-
-      Lemma snoc_def :
-        forall {a94 : Type},
-        forall {Ih_a94 : Inhab a94},
-        forall s : sequence a94,
-        forall x : a94,
-          Corelib.Init.Logic.eq (snoc s x) (app s (singleton x)).
-      Proof.
-        auto.
-      Qed.
-
-      Definition hd (A : Type) {Ih : Inhab A} (s : sequence A) : A:= seq_get s (0)%Z.
-
-      Lemma hd_def :
-        forall {a99 : Type},
-        forall {Ih_a99 : Inhab a99},
-        forall s : sequence a99,
-          Corelib.Init.Logic.eq (hd s) (seq_get s (0)%Z).
-      Proof.
-        auto.
-      Qed.
-
-      Definition tl (A : Type){Ih : Inhab A} (s : sequence A) : sequence A:=
-        seq_sub_l s (1)%Z.
-
-
-      Lemma tl_def :
-        forall {a102 : Type},
-        forall {Ih_a102 : Inhab a102},
-        forall s : sequence a102,
-          Corelib.Init.Logic.eq (tl s) (seq_sub_l s (1)%Z).
-      Proof.
-        auto.
-      Qed.
-
-      Definition append  (A : Type){Ih : Inhab A} (s1 : sequence A) (s2 : sequence A) : sequence A:=
-        app s1 s2.
-
-
-      Lemma append_def :
-        forall {a107 : Type},
-        forall {Ih_a107 : Inhab a107},
-        forall s1 : sequence a107,
-        forall s2 : sequence a107,
-          Corelib.Init.Logic.eq (append s1 s2) (app s1 s2).
-      Proof.
-        auto.
-      Qed.
-
-      Definition multiplicity {A}{Ih : Inhab A} (e : A) (s : sequence A) : Z :=
-        LibListZ.count (fun x => x = e) s.
-
-      Lemma mult_empty :
-        forall A73 : Type,
-        forall {Ih : Inhab A73},
-        forall x : A73,
-          Corelib.Init.Logic.eq (multiplicity x (@empty A73 Ih)) (0)%Z.
-      Proof.
-        intros A Ih x.
-        unfold multiplicity.
-        rew_listx.
-        auto.
-      Qed.
-
-      Lemma mult_cons :
-        forall A79 : Type,
-        forall {Ih : Inhab A79},
-        forall s : sequence A79,
-        forall x : A79,
-          Corelib.Init.Logic.eq (plus (1)%Z (multiplicity x s)) (
-              multiplicity x (cons x s)
-            ).
-      Proof.
-        intros A Ih s x.
-        unfold multiplicity.
-        unfold plus.
-        unfold cons.
-        rew_listx.
-        rewrite If_l; auto.
-        math.
-      Qed.
-
-      Lemma mult_cons_neutral :
-        forall A {Ih : Inhab A} s (x1 : A) x2,
-          Corelib.Init.Logic.not (Corelib.Init.Logic.eq x1 x2) ->
-          Corelib.Init.Logic.eq (multiplicity x1 s) (multiplicity x1 (cons x2 s)).
-      Proof.
-        intros A Ih s x1 x2 H1.
-        unfold multiplicity.
-        unfold cons.
-        rew_listx.
-        rewrite If_r.
-        + math.
-        + auto.
-      Qed.
-
-      Lemma mult_length :
-        forall A92 : Type,
-        forall {Ih: Inhab A92},
-        forall x : A92,
-        forall s : sequence A92,
-          Corelib.Init.Logic.and (le (0)%Z (multiplicity x s)) (
-              le (multiplicity x s) (length s)
-            ).
-      Proof.
-        intros A I x s.
-        unfold le.
-        unfold multiplicity.
-        unfold length.
-        split.
-        - apply count_nonneg.
-        - induction s as [|e s' Ih].
-          + rew_listx. math.
-          + rew_listx.
-            assert (E : e = x \/ e <> x). apply classic.
-            destruct E;
-              [rewrite If_l | rewrite If_r]; auto; math.
-      Qed.
-
-      Definition mem  (A : Type) {Ih : Inhab A} (x : A) (s : sequence A) : Prop:= LibList.mem x s.
-
-      Definition belongs {A} `{Inhab A} (x : A) s :=
-        mem x s.
-
-      Lemma mem_fun_def :
-        forall {A : Type},
-        forall {Ih_A : Inhab A},
-        forall x : A,
-        forall s : sequence A,
-          ((belongs x s) <-> (mem x s)).
-      Proof.
-        tauto.
-      Qed.
-
-      Lemma mem_def :
-        forall (A : Type) (Ih_A : Inhab A) (s : sequence A) (x : A),
-          Sequence.belongs x s <-> (Sequence.multiplicity x s > 0).
-      Proof.
-        intros A IhA s x.
-        unfold_all.
-        unfold multiplicity.
-        unfold belongs, mem.
-        split; intros H1.
-        + change (LibListZ.count (= x) s > 0%nat).
-          rewrite <- LibListZ.Exists_eq_count_pos.
-          rewrite Exists_eq_exists_mem.
-          exists x; auto.
-        + change (LibListZ.count (= x) s > 0%nat) in H1.
-          rewrite <- LibListZ.Exists_eq_count_pos in H1.
-          rewrite Exists_eq_exists_mem in H1.
-          destruct H1 as [y [H1 H2]].
-          subst. auto.
-      Qed.
-
-      Definition neg_belongs {A} `{Inhab A} (x : A) s :=
-        not (belongs x s).
-
-      Lemma nmem_def :
-        forall {A : Type},
-        forall {Ih_A : Inhab A},
-        forall s : sequence A,
-        forall x : A,
-          (not (belongs x s) <-> (neg_belongs x s)).
-      Proof.
-        unfold neg_belongs.
-        tauto.
-      Qed.
-
-      Definition Forall {A} `{Inhab A} (P : A -> Prop) (s : sequence A) :=
-        Forall P s.
-
-      Lemma forall_def :
-        forall {A : Type},
-        forall {Ih_A : Inhab A},
-        forall p : A -> Prop,
-        forall s : sequence A,
-          (Forall p s <-> forall x : A, mem x s -> p x).
-      Proof.
-        intros A Ih p s.
-        unfold mem, Forall.
-        rewrite Forall_eq_forall_mem. tauto.
-      Qed.
-
-      Definition Exists {A} `{Inhab A} (P : A -> Prop) (s : sequence A) :=
-        Exists P s.
-
-      Lemma exists_def :
-        forall {A : Type},
-        forall {Ih_A : Inhab A},
-        forall p : A -> Prop,
-        forall s : sequence A,
-          (Exists p s <-> exists x : A, (mem x s /\ p x)).
-      Proof.
-        intros A Ih p s.
-        unfold Exists, mem.
+    #[refine] Global Instance _mem_def_inst : _mem_def_sig := { }.
+    Proof.
+      simpl.
+      intros A IhA s x.
+      split; intros H1.
+      + change (LibListZ.count (= x) s > 0%nat).
+        rewrite <- LibListZ.Exists_eq_count_pos.
         rewrite Exists_eq_exists_mem.
-        tauto.
-      Qed.
+        exists x; auto.
+      + change (LibListZ.count (= x) s > 0%nat) in H1.
+        rewrite <- LibListZ.Exists_eq_count_pos in H1.
+        rewrite Exists_eq_exists_mem in H1.
+        destruct H1 as [y [H1 H2]].
+        subst. auto.
+    Qed.
 
-      Definition map {A} {B} {Ih:Inhab A} {Ih:Inhab B} := @LibList.map A B.
+    Global Instance _neg_belongs_inst : _neg_belongs_sig :=
+      { neg_belongs := fun A _ x s => ~ (belongs x s) }.
 
-      Lemma map_elems :
-        forall A100 : Type,
-        forall A102 : Type,
-        forall {Ih : Inhab A100},
-        forall {Ih : Inhab A102},
-        forall i : Z,
-        forall f : A100 -> A102,
-        forall s : sequence A100,
-          in_range s i -> eq (seq_get (map f s) i) (f (seq_get s i)).
-      Proof.
-        intros A B IhA IhB i f s [H1 H2].
-        unfold seq_get.
-        unfold le in *. unfold lt in *.
-        repeat (rewrite If_r; try math).
-        unfold map.
-        apply LibListZ.read_map. unfold length in *.
-        rew_index. split; auto.
-      Qed.
+    #[refine] Global Instance _nmem_def_inst : _nmem_def_sig := { }.
+    Proof.
+      simpl. tauto.
+    Qed.
 
-      Lemma map_length :
-        forall {B : Type},
-        forall {A : Type},
-        forall {Ih_B : Inhab B},
-        forall {Ih_A : Inhab A},
-        forall f : B -> A,
-        forall s : sequence B,
-          (length (map f s) = length s).
-      Proof.
-        intros.
-        unfold length, map.
-        rew_listx.
-        auto.
-      Qed.
+    Global Instance _Forall_inst : _Forall_sig :=
+      { Forall := fun A _ P s => LibList.Forall P s }.
 
-      Definition filter {A} {Ih : Inhab A} := @LibList.filter A.
+    #[refine] Global Instance _forall_def_inst : _forall_def_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rewrite Forall_eq_forall_mem. tauto.
+    Qed.
 
-      Lemma filter_elems :
-        forall {A : Type},
-        forall {Ih_A : Inhab A},
-        forall f : A -> Prop,
-        forall s : sequence A,
-        forall x : A,
-          mem x s -> f x -> mem x (filter f s).
-      Proof.
-        intros A IhA f s.
-        unfold mem in *. unfold multiplicity in *.
-        unfold gt in *.
-        unfold filter in *.
-        induction s as [|e t IHt]; intros x H1 H2.
-        - inversion H1.
-        - rew_listx.
-          inversion H1; subst; auto.
-      Qed.
+    Global Instance _Exists_inst : _Exists_sig :=
+      { Exists := fun A _ P s => LibList.Exists P s }.
 
+    #[refine] Global Instance _exists_def_inst : _exists_def_sig := { }.
+    Proof.
+      simpl.
+      intros A Ih p s.
+      rewrite Exists_eq_exists_mem.
+      tauto.
+    Qed.
 
-      Definition filter_map
-        {A} {B} {IhA : Inhab A} {IhB : Inhab B}
-        (f : A -> option B) (s : sequence A) : sequence B :=
-        let g :=
-          fun x =>
-            match f x with
-            |Datatypes.Some x => x |Datatypes.None => arbitrary end in
-        LibList.map g (LibList.filter (fun x => f x <> None) s).
+    Global Instance _map_inst : _map_sig :=
+      { map := fun A B _ _ => @LibList.map A B }.
 
-      Lemma filter_map_elems :
-        forall {B : Type},
-        forall {A : Type},
-        forall {Ih_B : Inhab B},
-        forall {Ih_A : Inhab A},
-        forall f : B -> option A,
-        forall s : sequence B,
-        forall y : A,
-          ((exists x : B, ((f x = Some y) /\ mem x s)) <-> mem y (filter_map f s)).
-      Proof.
-        intros B A IhB IhA f s y.
-        unfold filter_map.
-        split; intros H1.
-        - destruct H1 as [x [H1 H2]].
-          apply mem_map' with x.
-          + apply mem_filter; auto.
-            rewrite H1. discriminate.
-          + rewrite H1. auto.
-        - apply LibList.mem_Nth
-            with A (LibList.map (*very awkward :|*)
-                      (fun x : B =>
-                         match f x with
-                         | Datatypes.Some x0 => x0
-                         | Datatypes.None => arbitrary
-                         end)
-                      (LibList.filter
-                         (fun x : B => f x <> None)
-                         s)) y in H1.
-          destruct H1 as [n H1].
-          apply Nth_map_inv in H1.
-          destruct H1 as [x [H1 H2]].
-          exists x. apply Nth_mem in H2.
-          rewrite mem_filter_eq in H2.
-          destruct H2 as [H2 H3].
-          split; auto.
-          destruct (f x).
-          + rewrite H1. auto.
-          + contradiction.
-      Qed.
+    #[refine] Global Instance _map_elems_inst : _map_elems_sig := { }.
+    Proof.
+      simpl.
+      intros A B IhA IhB i f s [H1 H2].
+      repeat (rewrite If_r; try math).
+      unfold map.
+      apply LibListZ.read_map. unfold length in *.
+      rew_index. split; auto.
+    Qed.
 
-      Definition get {A} {Ih : Inhab A} := @seq_get A Ih.
+    #[refine] Global Instance _map_length_inst : _map_length_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rew_listx.
+      auto.
+    Qed.
 
-      Lemma get_def :
-        forall {a156 : Type},
-        forall {Ih_a156 : Inhab a156},
-        forall s : sequence a156,
-        forall i : Z,
-          Corelib.Init.Logic.eq (get s i) (seq_get s i).
-      Proof.
-        auto.
-      Qed.
+    Global Instance _filter_inst : _filter_sig :=
+      { filter := fun A _ => @LibList.filter A }.
 
-      Fixpoint set_aux {A} (s : sequence A) (n : nat) (x : A) : sequence A :=
-        match s, n with
-        |nil, _ => arbitrary
-        |_ :: t, O => x :: t
-        |e :: t, S n' => e :: set_aux t n' x
-        end.
+    #[refine] Global Instance _filter_elems_inst : _filter_elems_sig := { }.
+    Proof.
+      simpl.
+      intros A IhA f s.
+      unfold mem in *. unfold multiplicity in *.
+      induction s as [|e t IHt]; intros x H1 H2.
+      - inversion H1.
+      - rew_listx.
+        inversion H1; subst; auto.
+    Qed.
 
-      Definition set {A} {Ih : Inhab A} (s : sequence A) (n : Z) (x : A) : sequence A :=
-        If n < 0 then arbitrary else set_aux s (Z.to_nat n) x.
+    Global Instance _filter_map_inst : _filter_map_sig :=
+      { filter_map :=
+          fun A B _ _ f s =>
+            let g :=
+              fun x =>
+                match f x with
+                |Datatypes.Some x => x |Datatypes.None => arbitrary end in
+            LibList.map g (LibList.filter (fun x => f x <> None) s)
+      }.
 
-      Lemma set_aux_len :
-        forall A `{Inhab A} (s : sequence A) (i : nat) x,
+    #[refine] Global Instance _filter_map_elems_inst : _filter_map_elems_sig := { }.
+    Proof.
+      simpl.
+      intros B A IhB IhA f s y.
+      unfold filter_map.
+      split; intros H1.
+      - destruct H1 as [x [H1 H2]].
+        apply mem_map' with x.
+        + apply mem_filter; auto.
+          rewrite H1. discriminate.
+        + rewrite H1. auto.
+      - apply LibList.mem_Nth
+          with A (LibList.map (*very awkward :|*)
+                    (fun x : B =>
+                       match f x with
+                       | Datatypes.Some x0 => x0
+                       | Datatypes.None => arbitrary
+                       end)
+                    (LibList.filter
+                       (fun x : B => f x <> Datatypes.None)
+                       s)) y in H1.
+        destruct H1 as [n H1].
+        apply Nth_map_inv in H1.
+        destruct H1 as [x [H1 H2]].
+        exists x. apply Nth_mem in H2.
+        rewrite mem_filter_eq in H2.
+        destruct H2 as [H2 H3].
+        split; auto.
+        destruct (f x).
+        + rewrite H1. auto.
+        + contradiction.
+    Qed.
+
+    Global Instance _get_inst : _get_sig :=
+      { get := fun A _ => seq_get }.
+
+    #[refine] Global Instance _get_def_inst : _get_def_sig := { }.
+    Proof.
+      auto.
+    Qed.
+
+    Fixpoint set_aux {A} (s : sequence A) (n : nat) (x : A) : sequence A :=
+      match s, n with
+      |nil, _ => arbitrary
+      |_ :: t, O => x :: t
+      |e :: t, S n' => e :: set_aux t n' x
+      end.
+
+    Global Instance _set_inst : _set_sig :=
+      { set :=
+          fun A _ s i x =>
+            If i < 0 then arbitrary else set_aux s (Z.to_nat i) x
+      }.
+
+    Lemma set_aux_len :
+        forall A (s : sequence A) (i : nat) x,
           0 <= i < Z.to_nat (LibListZ.length s) ->
           LibListZ.length (set_aux s i x) =
             LibListZ.length s.
       Proof.
-        intros A IhA s.
+        intros A s.
         induction s as [|h s Ih];
           intros i x H1;
           rew_listx in H1.
@@ -759,18 +536,12 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
             * math.
       Qed.
 
-      Lemma set_elem :
-        forall A121 : Type,
-        forall {Ih : Inhab A121},
-        forall s : sequence A121,
-        forall i : Z,
-        forall x : A121,
-          in_range s i ->
-          Corelib.Init.Logic.eq (seq_get (set s i x) i) x.
+      #[refine] Global Instance _set_elem_inst : _set_elem_sig := { }.
       Proof.
+        simpl.
         intros A IHA s i x [H1 H2].
-        unfold le in *. unfold lt in *. unfold seq_get in *. unfold length in *.
-        unfold set. rewrite If_r; try math.
+        unfold set.
+        rewrite If_r; try math.
         apply set_aux_elem.
         split; math.
       Qed.
@@ -792,51 +563,40 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
           destruct n1 as [|n1'].
           + destruct n2 as [|n2'].
             * math.
-            * rewrite read_cons_pos; try math.
-              rewrite read_cons_pos; try math.
+            * rewrite read_cons_pos. 2: try math.
+              rewrite read_cons_pos. 2: try math.
               auto.
           + destruct n2 as [|n2'].
-            * assert (A1 : i2 = 0). { math. }
-              rewrite A1. rew_list. reflexivity.
-            * rewrite read_cons_pos; try math.
-              rewrite read_cons_pos; try math.
-              assert (A1 : n1' = to_nat (i1 - 1)).
-              { math. }
+            * assert (A1 : i2 = 0). 1: math.
+              rewrite A1. rew_list.
+              auto.
+            * rewrite read_cons_pos. 2: math.
+              rewrite read_cons_pos. 2: math.
+              assert (A1 : n1' = to_nat (i1 - 1)). 1: math.
               rewrite A1.
               rewrite Ih; auto; math.
       Qed.
 
-      Lemma set_elem_other :
-        forall A130 : Type,
-        forall {Ih : Inhab A130},
-        forall s : sequence A130,
-        forall i1 : Z,
-        forall i2 : Z,
-        forall x : A130,
-          Corelib.Init.Logic.not (Corelib.Init.Logic.eq i1 i2) ->
-          in_range s i1 ->
-          in_range s i2 ->
-          Corelib.Init.Logic.eq (seq_get (set s i1 x) i2) (seq_get s i2).
+      #[refine] Global Instance _set_elem_other_inst : _set_elem_other_sig := { }.
       Proof.
-        unfold in_range.
+        simpl.
         intros A IhA s i1 i2 x H1 H2 H3.
-        unfold le in *. unfold lt in *. unfold length in *.
-        unfold seq_get. unfold set. repeat (rewrite If_r; try math).
+        repeat (rewrite If_r; try math).
         apply set_aux_elem_other; math.
       Qed.
 
-      Definition rev {A} {Ih : Inhab A} := @LibList.rev A .
+      Global Instance _rev_inst : _rev_sig :=
+        { rev := fun A _ => @LibList.rev A }.
 
-      Lemma rev_length :
-        forall A134 : Type,
-        forall {Ih: Inhab A134},
-        forall s : sequence A134,
-          Corelib.Init.Logic.eq (length s) (length (rev s)).
+      #[refine] Global Instance _rev_length_inst : _rev_length_sig := { }.
       Proof.
-        intros A Ih s. unfold length. unfold rev. rew_list. auto.
+        simpl.
+        intros.
+        rew_list.
+        auto.
       Qed.
 
-      Lemma bah :
+            Lemma bah :
         forall A `{Inhab A} (s : sequence A) i,
           0 <= i < LibListZ.length s ->
           s[i] = LibList.nth (abs i) s.
@@ -857,19 +617,10 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
             rewrite Ih; auto; math.
       Qed.
 
-      Lemma rev_elems :
-        forall A143 : Type,
-        forall {Ih : Inhab A143},
-        forall i : Z,
-        forall s : sequence A143,
-          in_range s i ->
-          Corelib.Init.Logic.eq (seq_get (rev s) i) (
-              seq_get s (minus (minus (length s) 1) (i)%Z)
-            ).
+      #[refine] Global Instance _rev_elems_inst : _rev_elems_sig := {}.
       Proof.
-        unfold in_range.
+        simpl.
         intros A IhA i s [H1 H2].
-        unfold_all.
         unfold seq_get.
         unfold length in *.
         unfold rev.
@@ -885,99 +636,46 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         + rew_list. math.
       Qed.
 
-      Definition fold_left A B {IhA : Inhab A} {IhB : Inhab B} (f : A -> B -> A) (x : A) (s : sequence B) : A  :=
-        LibList.fold_left (fun x y => f y x) x s.
+      Global Instance _fold_left_inst : _fold_left_sig :=
+        { fold_left := fun A B _ _ f x s => LibList.fold_left (fun x y => f y x) x s }.
 
-
-      Lemma fold_left_empty :
-        forall {a203 : Type},
-        forall {a204 : Type},
-        forall {Ih_a203 : Inhab a203},
-        forall {Ih_a204 : Inhab a204},
-        forall f : a204 -> a203 -> a204,
-        forall acc : a204,
-          Corelib.Init.Logic.eq (fold_left f acc (@empty a203 Ih_a203)) acc.
+      #[refine] Global Instance _fold_left_empty_inst : _fold_left_empty_sig := { }.
       Proof.
-        intros A1 A2 Ih1 Ih2 f acc.
-        unfold fold_left.
-        rew_list.
-        auto.
-      Qed.
-
-      Lemma fold_left_cons :
-        forall {a215 : Type},
-        forall {a216 : Type},
-        forall {Ih_a215 : Inhab a215},
-        forall {Ih_a216 : Inhab a216},
-        forall f : a216 -> a215 -> a216,
-        forall acc : a216,
-        forall x : a215,
-        forall l : sequence a215,
-          Corelib.Init.Logic.eq (fold_left f acc (cons x l)) (fold_left f (f acc x) l).
-      Proof.
-        intros A B IhA IhB f acc x l.
-        unfold fold_left, cons.
+        simpl.
+        intros.
         rew_listx.
         auto.
       Qed.
 
-
-      Definition fold_right
-        {A} {B} `{Inhab A} `{Inhab B}
-        (f : A -> B -> B) s acc :=
-        LibList.fold_right f acc s.
-
-      Lemma fold_right_empty :
-        forall {a221 : Type},
-        forall {a222 : Type},
-        forall {Ih_a221 : Inhab a221},
-        forall {Ih_a222 : Inhab a222},
-        forall acc : a222,
-        forall f : a221 -> a222 -> a222,
-          Corelib.Init.Logic.eq (fold_right f (@empty a221 Ih_a221) acc) acc.
+      #[refine] Global Instance _fold_left_cons_inst : _fold_left_cons_sig := { }.
       Proof.
-        intros A B IhA IhB acc f.
-        unfold fold_right.
-        unfold empty.
-        rew_list.
-        auto.
+        simpl.
+        intros. rew_listx. auto.
       Qed.
 
-      Lemma fold_right_cons :
-        forall {a232 : Type},
-        forall {a234 : Type},
-        forall {Ih_a232 : Inhab a232},
-        forall {Ih_a234 : Inhab a234},
-        forall acc : a234,
-        forall f : a232 -> a234 -> a234,
-        forall x : a232,
-        forall l : sequence a232,
-          Corelib.Init.Logic.eq (fold_right f (cons x l) acc) (
-              f x (fold_right f l acc)
-            ).
+      Global Instance _fold_right_inst : _fold_right_sig :=
+        { fold_right := fun A B _ _ f s acc => LibList.fold_right f acc s }.
+
+      #[refine] Global Instance _fold_right_empty_inst : _fold_right_empty_sig := { }.
       Proof.
-        intros A B IhA IhB acc f x l.
-        unfold fold_right, cons.
+        simpl.
+        intros.
         rew_listx.
         auto.
       Qed.
 
-      Lemma extensionality :
-        forall A171 : Type,
-        forall {Ih : Inhab A171},
-        forall s1 : sequence A171,
-        forall s2 : sequence A171,
-          Corelib.Init.Logic.eq (length s1) (length s2) ->
-          (
-            forall i : Z,
-              in_range s1 i ->
-              Corelib.Init.Logic.eq (seq_get s1 i) (seq_get s2 i)
-          ) -> s1 = s2.
+      #[refine] Global Instance _fold_right_cons_inst : _fold_right_cons_sig := { }.
       Proof.
-        unfold in_range.
-        intros A IhA s1 s2 H1 H2.
-        unfold le in *. unfold lt in *. unfold length in *.
-        unfold seq_get in *.
+        simpl.
+        intros.
+        rew_listx.
+        auto.
+      Qed.
+
+      #[refine] Global Instance _extensionality_inst : _extensionality_sig := { }.
+      Proof.
+        simpl.
+        intros a IhA s1 s2 H1 H2.
         apply eq_of_extens_range with IhA.
         auto.
         intros n. specialize H2 with n.
@@ -985,880 +683,504 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         apply H2. math.
       Qed.
 
-      Definition permut {A} `{Inhab A} (s1 : sequence A) (s2 : sequence A) :=
-        (forall x : A, Corelib.Init.Logic.iff (mem x s1) (mem x s2)).
+      Global Instance _permut_inst : _permut_sig :=
+        { permut :=
+            fun A _ s1 s2 =>
+              forall x, mem x s1 <-> mem x s2 }.
 
-      Lemma permut_mem :
-        forall {a300 : Type},
-        forall {Ih_a300 : Inhab a300},
-        forall s1 : sequence a300,
-        forall s2 : sequence a300,
-          permut s1 s2 ->
-          (forall x : a300, Corelib.Init.Logic.iff (mem x s1) (mem x s2)).
+      #[refine] Global Instance _permut_mem_inst : _permut_mem_sig := { }.
       Proof.
         tauto.
       Qed.
 
-      Definition permut_sub {A} `{Inhab A}
-        (s1 : sequence A) (s2 : sequence A) (i : Z) (j : Z) :=
-        permut (seq_sub s1 i j) (seq_sub s2 i j) /\
-          eq (seq_sub_r s1 i) (seq_sub_r s2 i) /\
-          eq (seq_sub_l s1 j) (seq_sub_l s2 j).
+      Global Instance _permut_sub_inst : _permut_sub_sig :=
+        { permut_sub :=
+            fun A _ s1 s2 i j =>
+                permut (seq_sub s1 i j) (seq_sub s2 i j) /\
+                  (seq_sub_r s1 i) = (seq_sub_r s2 i) /\
+                  (seq_sub_l s1 j) = (seq_sub_l s2 j)
+        }.
 
-      Lemma permut_sub_def :
-        forall {a314 : Type},
-        forall {Ih_a314 : Inhab a314},
-        forall s1 : sequence a314,
-        forall s2 : sequence a314,
-        forall i : Z,
-        forall j : Z,
-          permut (seq_sub s1 i j) (seq_sub s2 i j) ->
-          eq (seq_sub_r s1 i) (seq_sub_r s2 i) ->
-          eq (seq_sub_l s1 j) (seq_sub_l s2 j) -> permut_sub s1 s2 i j.
+      #[refine] Global Instance _permut_sub_def_inst : _permut_sub_def_sig := { }.
       Proof.
-        unfold permut_sub. tauto.
-      Qed.
-
-    End Sequence.
-
-    Module Bag.
-
-      Definition t := bag.
-
-      Definition multiplicity {A} `{Inhab A} (x : A) (b : bag A) : Z :=
-        b x.
-
-      Lemma well_formed :
-        forall a173 : Type,
-        forall {a173Ih : Inhab a173},
-        forall b : bag a173,
-        forall x : a173,
-          ge (multiplicity x b) (0)%Z.
-      Proof.
-        intros A Ih b x.
-        unfold_all.
-        unfold multiplicity.
-        math.
-      Qed.
-
-      Definition empty {A} {aIh : Inhab A} := fun (_ : A) => 0%nat.
-
-      Lemma empty_mult :
-        forall {a240 : Type},
-        forall {Ih_a240 : Inhab a240},
-        forall x : a240,
-          Corelib.Init.Logic.eq (multiplicity x (@empty a240 Ih_a240)) (0)%Z.
-      Proof.
-        auto.
-      Qed.
-
-      Definition init {A} `{Inhab A} (f : A -> Z) : bag A :=
-        fun x => Z.to_nat(f x).
-
-      Lemma init_axiom :
-        forall a182 : Type,
-        forall {a182Ih : Inhab a182},
-        forall f : a182 -> Z,
-        forall x : a182,
-          Corelib.Init.Logic.eq (max (0)%Z (f x)) (multiplicity x (init f)).
-      Proof.
-        unfold_all.
-        unfold multiplicity, init.
-        math.
-      Qed.
-
-      Definition add {A} `{Inhab A} (x : A) b : bag A :=
-        fun y => If y = x then (1 + b y)%nat else b y.
-
-      Lemma add_mult_x :
-        forall a188 : Type,
-        forall {a188Ih : Inhab a188},
-        forall b : bag a188,
-        forall x : a188,
-          Corelib.Init.Logic.eq (multiplicity x (add x b)) (
-              plus (1)%Z (multiplicity x b)
-            ).
-      Proof.
-        intros A IhA b x.
-        unfold_all.
-        unfold multiplicity, add.
-        rewrite If_l; auto.
-        math.
-      Qed.
-
-      Lemma add_mult_neg_x :
-        forall a196 : Type,
-        forall {a196Ih : Inhab a196},
-        forall x : a196,
-        forall y : a196,
-        forall b : bag a196,
-          Corelib.Init.Logic.not (Corelib.Init.Logic.eq x y) ->
-          Corelib.Init.Logic.eq (multiplicity y (add x b)) (multiplicity y b).
-        intros A IhA x y b H1.
-        unfold multiplicity, add.
-        rewrite If_r; auto.
-      Qed.
-
-      Definition singleton  {a : Type} { aIh : Inhab a } (x : a) : bag a:=
-        add x (@empty a aIh).
-
-      Definition singleton_set {A} {I : Inhab A} := @singleton A I.
-
-      Lemma singleton_fun_def :
-        forall {A : Type},
-        forall {Ih_A : Inhab A},
-        forall x : A,
-          ((singleton_set x) = (singleton x)).
-      Proof.
+        simpl.
         tauto.
       Qed.
 
-      Lemma singleton_def :
-        forall {a269 : Type},
-        forall {Ih_a269 : Inhab a269},
-        forall x : a269,
-          Corelib.Init.Logic.eq (singleton x) (add x (@empty a269 Ih_a269)).
-      Proof.
-        auto.
-      Qed.
+  End Sequence.
 
-      Definition mem  (a : Type) { aIh : Inhab a } (x : a) (b : bag a) : Prop:=
-        gt (multiplicity x b) (0)%Z.
+  Module Bag.
 
-      Definition belongs {A} {Ih : Inhab A} := @mem A Ih.
+    Import Bag.
 
-      Lemma mem_def :
-        forall {a251 : Type},
-        forall {Ih_a251 : Inhab a251},
-        forall x : a251,
-        forall b : bag a251,
-          Corelib.Init.Logic.iff (mem x b) (gt (multiplicity x b) (0)%Z).
-      Proof.
-        tauto.
-      Qed.
+    Global Instance _multiplicity_inst : _multiplicity_sig :=
+      { multiplicity := fun A _ x b => b x }.
 
-      Lemma mem_fun_def :
-        forall {A : Type},
-        forall {Ih_A : Inhab A},
-        forall x : A,
-        forall s : bag A,
-          ((belongs x s) <-> (mem x s)).
-      Proof.
-        tauto.
-      Qed.
+    #[refine] Global Instance _well_formed_inst : _well_formed_sig := { }.
+    Proof.
+      simpl.
+      math.
+    Qed.
 
-      Definition neg_belongs {A} `{Inhab A} (x : A) s := not (mem x s).
+    Global Instance _empty_inst : _empty_sig :=
+      { empty := fun A _ _ => 0%nat }.
 
-      Lemma nmem_def :
-        forall {A : Type},
-        forall {Ih_A : Inhab A},
-        forall s : bag A,
-        forall x : A,
-          ((neg_belongs x s) <-> (not (belongs x s))).
-      Proof.
-        unfold neg_belongs. tauto.
-      Qed.
+    #[refine] Global Instance _empty_mult_inst : _empty_mult_sig := { }.
+    Proof.
+      auto.
+    Qed.
 
-      Definition remove {A} `{Inhab A} (x : A) b : bag A :=
-        fun y => If y = x then Nat.pred (b y) else b y.
+    Global Instance _init_inst : _init_sig :=
+      { init := fun A _ f => fun x => Z.to_nat (f x) }.
 
-      Lemma remove_mult_x :
-        forall a205 : Type,
-        forall {a205Ih : Inhab a205},
-        forall b : bag a205,
-        forall x : a205,
-          Corelib.Init.Logic.eq (multiplicity x (remove x b)) (
-              max (0)%Z (minus (multiplicity x b) (1)%Z)
-            ).
-      Proof.
-        intros A IhA b x.
-        unfold_all.
-        unfold multiplicity, remove.
-        rewrite If_l; auto.
-        math.
-      Qed.
+    #[refine] Global Instance _init_axiom_inst : _init_axiom_sig := { }.
+    Proof.
+      simpl. math.
+    Qed.
 
-      Lemma remove_mult_neg_x :
-        forall a213 : Type,
-        forall {a213Ih : Inhab a213},
-        forall x : a213,
-        forall y : a213,
-        forall b : bag a213,
-          Corelib.Init.Logic.not (Corelib.Init.Logic.eq x y) ->
-          Corelib.Init.Logic.eq (multiplicity y (remove x b)) (multiplicity y b).
-      Proof.
-        intros A IhA x y b H1.
-        unfold multiplicity, remove.
-        rewrite If_r; auto.
-      Qed.
+    Global Instance _add_inst : _add_sig :=
+      { add := fun A _ x b => fun y => If y = x then (1 + b y)%nat else b y }.
 
-      Definition union {A} `{Inhab A} (b1 : bag A) b2 :=
-        fun x => Nat.max (b1 x) (b2 x).
+    #[refine] Global Instance _add_mult_x_inst : _add_mult_x_sig := { }.
+    Proof.
+      Opaque Z.add.
+      simpl.
+      intros A IhA b x.
+      unfold multiplicity, add.
+      rewrite If_l; auto.
+      math.
+    Qed.
 
-      Lemma union_all :
-        forall a221 : Type,
-        forall {a221Ih : Inhab a221},
-        forall b : bag a221,
-        forall b' : bag a221,
-        forall x : a221,
-          Corelib.Init.Logic.eq (max (multiplicity x b) (multiplicity x b')) (
-              multiplicity x (union b b')
-            ).
-      Proof.
-        unfold_all.
-        unfold union, multiplicity.
-        math.
-      Qed.
+    #[refine] Global Instance _add_mult_neg_x_inst : _add_mult_neg_x_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rewrite If_r; auto.
+    Qed.
 
-      Definition sum {A} `{Inhab A} (b1 : bag A) b2 :=
-        fun x => (b1 x + b2 x)%nat.
+    Global Instance _singleton_inst : _singleton_sig :=
+      { singleton := fun A _ x => fun y => If y = x then 1%nat else 0%nat }.
 
-      Lemma sum_all :
-        forall a229 : Type,
-        forall {a229Ih : Inhab a229},
-        forall b : bag a229,
-        forall b' : bag a229,
-        forall x : a229,
-          Corelib.Init.Logic.eq (plus (multiplicity x b) (multiplicity x b')) (
-              multiplicity x (sum b b')
-            ).
-      Proof.
-        unfold plus, multiplicity, sum.
-        math.
-      Qed.
+    Global Instance _singleton_set_inst : _singleton_set_sig :=
+      { singleton_set := fun A _ => singleton }.
 
-      Definition inter {A} `{Inhab A} (b1 : bag A) b2 :=
-        fun x => Nat.min (b1 x) (b2 x).
+    #[refine] Global Instance _singleton_fun_def_inst : _singleton_fun_def_sig := { }.
+    Proof.
+      auto.
+    Qed.
 
-      Lemma inter_all :
-        forall a237 : Type,
-        forall {a237Ih : Inhab a237},
-        forall b : bag a237,
-        forall b' : bag a237,
-        forall x : a237,
-          Corelib.Init.Logic.eq (min (multiplicity x b) (multiplicity x b')) (
-              multiplicity x (inter b b')
-            ).
-      Proof.
-        unfold min, multiplicity, inter.
-        math.
-      Qed.
+    #[refine] Global Instance _singleton_def_inst : _singleton_def_sig := { }.
+    Proof.
+      auto.
+    Qed.
 
-      Definition diff {A} `{Inhab A} (b1 : bag A) b2 :=
-        fun x => (b1 x - b2 x)%nat.
+    Global Instance _mem_inst : _mem_sig :=
+      { mem := fun A _ x b => multiplicity x b > 0 }.
 
-      Lemma diff_all :
-        forall a245 : Type,
-        forall {a245Ih : Inhab a245},
-        forall b : bag a245,
-        forall b' : bag a245,
-        forall x : a245,
-          Corelib.Init.Logic.eq (
-              max (0)%Z (minus (multiplicity x b) (multiplicity x b'))
-            ) (multiplicity x (diff b b')).
-      Proof.
-        unfold multiplicity, max, minus, diff.
-        math.
-      Qed.
+    Global Instance _belongs_inst : _belongs_sig :=
+      { belongs := fun A _ => mem }.
 
-      Definition disjoint  (a : Type) { aIh : Inhab a } (b : bag a) (
-          b' : bag a
-        ) : Prop:=
-        forall x : a,
-          mem x b -> Corelib.Init.Logic.not (mem x b').
+    #[refine] Global Instance _mem_def_inst : _mem_def_sig := { }.
+    Proof.
+      tauto.
+    Qed.
 
+    #[refine] Global Instance _mem_fun_def_inst : _mem_fun_def_sig := { }.
+    Proof.
+      tauto.
+    Qed.
 
-      Lemma disjoint_def :
-        forall {a314 : Type},
-        forall {Ih_a314 : Inhab a314},
-        forall b : bag a314,
-        forall b' : bag a314,
-          Corelib.Init.Logic.iff (disjoint b b') (
-              forall x : a314,
-                mem x b -> Corelib.Init.Logic.not (mem x b')
-            ).
-      Proof.
-        tauto.
-      Qed.
+    Global Instance _neg_belongs_inst : _neg_belongs_sig :=
+      { neg_belongs := fun A _ x s => not (mem x s) }.
 
-      Definition subset  (a : Type) { aIh : Inhab a } (b : bag a) (b' : bag a) : Prop:=
-        forall x : a,
-          le (multiplicity x b) (multiplicity x b').
+    #[refine] Global Instance _nmem_def_inst : _nmem_def_sig := { }.
+    Proof.
+      simpl. tauto.
+    Qed.
 
+    Global Instance _remove_inst : _remove_sig :=
+      { remove := fun A _ x b y => If y = x then Nat.pred (b y) else b y }.
 
-      Lemma subset_def :
-        forall {a328 : Type},
-        forall {Ih_a328 : Inhab a328},
-        forall b : bag a328,
-        forall b' : bag a328,
-          Corelib.Init.Logic.iff (subset b b') (
-              forall x : a328,
-                le (multiplicity x b) (multiplicity x b')
-            ).
-      Proof.
-        tauto.
-      Qed.
+    #[refine] Global Instance _remove_mult_x_inst : _remove_mult_x_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rewrite If_l; auto.
+      math.
+    Qed.
 
-      Definition filter {A} `{Inhab A} p (b : bag A) :=
-        fun x => If p x then b x else 0%nat.
+    #[refine] Global Instance _remove_mult_neg_x_inst : _remove_mult_neg_x_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rewrite If_r; auto.
+    Qed.
 
-      Lemma filter_mem :
-        forall (A : Type) (Ih_A : Inhab A) (b : bag A) (x : A) (f : A -> Prop),
-          f x -> Bag.multiplicity x (Bag.filter f b) = Bag.multiplicity x b.
-      Proof.
-        intros A IhA b x f H1.
-        unfold multiplicity, filter.
-        rewrite If_l; auto.
-      Qed.
+    Global Instance _union_inst : _union_sig :=
+      { union := fun A _ b1 b2 x => Nat.max (b1 x) (b2 x) }.
 
-      Lemma filter_mem_neg :
-        forall (A : Type) (Ih_A : Inhab A) (b : bag A) (x : A) (f : A -> Prop),
-          ~ f x -> Bag.multiplicity x (Bag.filter f b) = 0.
-      Proof.
-        intros A Ih b x f H1.
-        unfold multiplicity, filter.
-        rewrite If_r; auto.
-      Qed.
+    #[refine] Global Instance _union_all_inst : _union_all_sig := { }.
+    Proof.
+      simpl. math.
+    Qed.
 
-      Definition cover {A} (b : bag A) l :=
+    Global Instance _sum_inst : _sum_sig :=
+      { sum := fun A _ b1 b2 x => (b1 x + b2 x)%nat }.
+
+    #[refine] Global Instance _sum_all_inst : _sum_all_sig := { }.
+    Proof.
+      simpl. math.
+    Qed.
+
+    Global Instance _inter_inst : _inter_sig :=
+      { inter := fun A Ih b1 b2 => fun x => Nat.min (b1 x) (b2 x) }.
+
+    #[refine] Global Instance _inter_all_inst : _inter_all_sig := { }.
+    Proof.
+      simpl. math.
+    Qed.
+
+    Global Instance _diff_inst : _diff_sig :=
+      { diff := fun A _ b1 b2 x => (b1 x - b2 x)%nat }.
+
+    #[refine] Global Instance _diff_all_inst : _diff_all_sig := { }.
+    Proof.
+      simpl. math.
+    Qed.
+
+    Global Instance _disjoint_inst : _disjoint_sig :=
+      { disjoint := fun A _ b1 b2 => forall x, mem x b1 -> not (mem x b2) }.
+
+    #[refine] Global Instance _disjoint_def_inst : _disjoint_def_sig := { }.
+    Proof.
+      tauto.
+    Qed.
+
+    Global Instance _subset_inst : _subset_sig :=
+      { subset := fun A _ b1 b2 => forall x, multiplicity x b1 <= multiplicity x b2 }.
+
+    #[refine] Global Instance _subset_def_inst : _subset_def_sig := { }.
+    Proof.
+      tauto.
+    Qed.
+
+    Global Instance _filter_inst : _filter_sig :=
+      { filter := fun A _ P b => fun x => If P x then b x else 0%nat }.
+
+    #[refine] Global Instance _filter_mem_inst : _filter_mem_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rewrite If_l; auto.
+    Qed.
+
+    #[refine] Global Instance _filter_mem_neg_inst : _filter_mem_neg_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rewrite If_r; auto.
+    Qed.
+
+    Definition cover {A} (b : bag A) l :=
         forall x, b x = LibList.count (fun y => y = x) l.
 
-      Import LibEpsilon.
-
-      Definition cardinal {A} `{Inhab A} (b : bag A) : Z :=
-         epsilon (fun n : nat => exists l, cover b l /\ n = LibList.length l).
-
-      Definition finite  (A : Type) { aIh : Inhab A } (b : bag A) : Prop:=
-          exists l, forall x,
-            mem x b -> Sequence.mem x l.
-
-
-      Definition finite_def :
-        forall {a349 : Type},
-        forall {Ih_a349 : Inhab a349},
-        forall b : bag a349,
-          Corelib.Init.Logic.iff (finite b) (
-              Corelib.Init.Logic.ex (
-                  fun s : sequence a349 =>
-                    forall x : a349,
-                      mem x b -> Sequence.mem x s
-                )
-            ).
-        tauto.
-      Qed.
-
-
-      Parameter card_nonneg :
-        forall a273 : Type,
-        forall {a273Ih : Inhab a273},
-        forall b : bag a273,
-          ge (cardinal b) (0)%Z.
-
-      Parameter card_empty :
-        forall a276 : Type,
-        forall {a276Ih : Inhab a276},
-          Corelib.Init.Logic.eq (cardinal (@empty a276 a276Ih)) (0)%Z.
-
-      Parameter card_singleton :
-        forall a280 : Type,
-        forall {a280Ih : Inhab a280},
-        forall x : a280,
-          Corelib.Init.Logic.eq (cardinal (singleton x)) (1)%Z.
-
-      Parameter card_union :
-        forall a289 : Type,
-        forall {a289Ih : Inhab a289},
-        forall b1 : bag a289,
-        forall b2 : bag a289,
-          finite b1 ->
-          finite b2 ->
-          Corelib.Init.Logic.eq (cardinal (union b1 b2)) (
-              plus (cardinal b1) (cardinal b2)
-            ).
-
-      Parameter card_add :
-        forall a296 : Type,
-        forall {a296Ih : Inhab a296},
-        forall x : a296,
-        forall b : bag a296,
-          finite b ->
-          Corelib.Init.Logic.eq (cardinal (add x b)) (plus (cardinal b) (1)%Z).
-
-      Parameter card_map :
-        forall (A : Type) (Ih_A : Inhab A) (f : A -> Prop) (b : bag A),
-          Bag.finite b -> Bag.cardinal (Bag.filter f b) <= Bag.cardinal b.
-
-      Definition of_seq {A} `{Inhab A}
-        (s : sequence A) : bag A :=
-        fun x => LibList.count (= x) s.
-
-      Lemma of_seq_multiplicity :
-        forall a308 : Type,
-        forall {a308Ih : Inhab a308},
-        forall s : sequence a308,
-        forall x : a308,
-          Corelib.Init.Logic.eq (Sequence.multiplicity x s) (
-              multiplicity x (of_seq s)
-            ).
-      Proof.
-        unfold multiplicity.
-        unfold Sequence.multiplicity.
-        unfold of_seq.
-        unfold LibListZ.count.
-        math.
-      Qed.
-
-
-      Parameter fold :
-        forall {a : Type},
-        forall {b : Type},
-        forall {Ih_a : Inhab a},
-        forall {Ih_b : Inhab b},
-          (a -> b -> b) -> bag a -> b -> b.
-
-    End Bag.
-
-    Definition set_create {A} {Ih : Inhab A} := fun (_:A) => False.
-
-    Module _Set.
-      Import LibSet.
-
-      Definition t := set.
-
-      Definition mem {A} {Ih : Inhab A} (x : A) (s : set A) : Prop :=  x \in s.
-
-      Definition belongs {A} {I : Inhab A} := @mem A I.
-
-      Definition neg_belongs {A} `{Inhab A} (x : A) s := ~ belongs x s.
-
-      Lemma mem_fun_def :
-        forall {A : Type},
-        forall {Ih_A : Inhab A},
-        forall x : A,
-        forall s : set A,
-          ((belongs x s) <-> (mem x s)).
-      Proof.
-        tauto.
-      Qed.
-
-      Lemma nmem_def :
-        forall {A : Type},
-        forall {Ih_A : Inhab A},
-        forall s : set A,
-        forall x : A,
-          (not (belongs x s) <-> (neg_belongs x s)).
-      Proof.
-        unfold neg_belongs. tauto.
-      Qed.
-
-      Definition empty {A} {Ih : Inhab A} : set A := empty.
-      Lemma empty_mem :
-        forall A {Ih : Inhab A} x,
-          ~ mem x (@empty A Ih).
-        intros. unfold empty. auto.
-      Qed.
-
-      Definition add {A} {Ih : Inhab A} (x : A) (s : set A) : set A := s \u (single x).
-      Lemma add_mem :
-        forall A {Ih : Inhab A} s (x : A), mem x (add x s).
-        intros. unfold mem. unfold add. rewrite set_in_union_eq.
-        right. rewrite in_single_eq. auto.
-      Qed.
-
-      Lemma add_mem_neq :
-        forall a323 : Type,
-        forall {a323Ih : Inhab a323},
-        forall s : set a323,
-        forall x : a323,
-        forall y : a323,
-          Corelib.Init.Logic.not (Corelib.Init.Logic.eq x y) ->
-          Corelib.Init.Logic.iff (mem x s) (mem x (add y s)).
-      Proof.
-        intros A Ih s x y Neq.
-        split; intro H; unfold add in *; unfold mem in *.
-        - rewrite set_in_union_eq. auto.
-        - rewrite set_in_union_eq in H. destruct H.
-          + auto.
-          + rewrite in_single_eq in H. contradiction.
-      Qed.
-
-      Definition singleton  (a : Type) { aIh : Inhab a } (x : a) : set a:=
-        add x (@empty a aIh).
-
-      Definition singleton_set {A} `{Inhab A} (x : A) := singleton x.
-
-      Lemma singleton_def :
-        forall {A : Type},
-        forall {Ih_A : Inhab A},
-        forall x : A,
-          ((singleton_set x) = (add x empty)).
-      Proof.
-        tauto.
-      Qed.
-
-      Lemma singleton_fun_def :
-        forall {A : Type},
-        forall {Ih_A : Inhab A},
-        forall x : A,
-          ((singleton_set x) = (singleton x)).
-      Proof.
-        tauto.
-      Qed.
-
-      Definition remove {A} {Ih : Inhab A} (x : A) (s : set A) : set A :=
-        s \-- x.
-
-      Lemma remove_mem :
-        forall a329 : Type,
-        forall {a329Ih : Inhab a329},
-        forall s : set a329,
-        forall x : a329,
-          Corelib.Init.Logic.not (mem x (remove x s)).
-      Proof.
-        intros A Ih s x.
-        unfold remove, mem, singleton, empty, add.
-        rewrite set_in_remove_eq.
-        unfold not. intros [H1 H2].
-        destruct H2. rewrite set_in_single_eq. auto.
-      Qed.
-
-      Lemma remove_mem_neq :
-        forall a336 : Type,
-        forall {a336Ih : Inhab a336},
-        forall s : set a336,
-        forall x : a336,
-        forall y : a336,
-          Corelib.Init.Logic.not (Corelib.Init.Logic.eq x y) ->
-          Corelib.Init.Logic.iff (mem x s) (mem x (remove y s)).
-        intros A Ih s x y Neq. split; intro H;
-          unfold mem, remove, singleton, add, empty in *;
-          rewrite set_in_remove_eq in *.
-        split. auto. unfold not. intros H1. contradiction.
-        - destruct H. auto.
-      Qed.
-
-      Definition union {A} {Ih : Inhab A} (s1 : set A) (s2 : set A) : set A :=
-        s1 \u s2.
-
-      Lemma union_mem :
-        forall a343 : Type,
-        forall {a343Ih : Inhab a343},
-        forall s : set a343,
-        forall s' : set a343,
-        forall x : a343,
-          Corelib.Init.Logic.or (mem x s) (mem x s') -> mem x (union s s').
-      Proof.
-        intros A Ih s s' x [H | H]; unfold mem, union in *;
-          rewrite set_in_union_eq; [left | right]; auto.
-      Qed.
-
-
-      Lemma union_mem_neg :
-        forall a350 : Type,
-        forall {a350Ih : Inhab a350},
-        forall s : set a350,
-        forall s' : set a350,
-        forall x : a350,
-          Corelib.Init.Logic.not (mem x s) ->
-          Corelib.Init.Logic.not (mem x s') -> Corelib.Init.Logic.not (mem x (union s s')).
-      Proof.
-        intros A Ih s s' x H1 H2.
-        unfold mem, union in *.
-        unfold not. intros H3.
-        rewrite set_in_union_eq in H3.
-        destruct H3 as [H3 | H3]; contradiction.
-      Qed.
-
-      Definition inter {A} {Ih : Inhab A} (s1 : set A) (s2 : set A) : set A := s1 \n s2.
-
-      Lemma inter_mem :
-        forall a357 : Type,
-        forall {a357Ih : Inhab a357},
-        forall s : set a357,
-        forall s' : set a357,
-        forall x : a357,
-          mem x s -> mem x s' -> mem x (inter s s').
-      Proof.
-        intros A Ih s s' x H1 H2.
-        unfold mem, inter in *.
-        rewrite set_in_inter_eq. split; auto.
-      Qed.
-
-
-      Lemma inter_mem_neq :
-        forall (A : Type) (Ih_A : Inhab A) (s s' : set A) (x : A),
-          ~ (_Set.belongs x s \/ _Set.belongs x s') ->
-          neg_belongs x (_Set.inter s s').
-      Proof.
-        intros a Ih s s' x H1.
-        unfold neg_belongs, belongs, mem, inter in *.
-        rewrite set_in_inter_eq.
-        unfold not in *. intros [H2 H3].
-        destruct H1. auto.
-      Qed.
-
-
-      Definition disjoint  (a : Type) { aIh : Inhab a } (s : set a) (
-          s' : set a
-        ) : Prop:=
-        Corelib.Init.Logic.eq (inter s s') (@empty a aIh).
-
-      Lemma disjoint_def :
-        forall {a443 : Type},
-        forall {Ih_a443 : Inhab a443},
-        forall s : set a443,
-        forall s' : set a443,
-          Corelib.Init.Logic.iff (disjoint s s') (
-              Corelib.Init.Logic.eq (inter s s') (@empty a443 Ih_a443)
-            ).
-      Proof.
-        tauto.
-      Qed.
-
-      Definition diff {A} {Ih : Inhab A} (s1 : set A) (s2 : set A) : set A :=
-        LibContainer.remove s1 s2.
-
-      Lemma diff_mem :
-        forall a373 : Type,
-        forall {a373Ih : Inhab a373},
-        forall s : set a373,
-        forall s' : set a373,
-        forall x : a373,
-          mem x s' -> Corelib.Init.Logic.not (mem x (diff s s')).
-      Proof.
-        intros A Ih s s' x H1.
-        unfold mem, diff in *.
-        rewrite set_in_remove_eq. unfold not.
-        intros [H2 H3]. contradiction.
-      Qed.
-
-      Lemma diff_mem_fst :
-        forall a380 : Type,
-        forall {a380Ih : Inhab a380},
-        forall s : set a380,
-        forall s' : set a380,
-        forall x : a380,
-          Corelib.Init.Logic.not (mem x s') ->
-          Corelib.Init.Logic.iff (mem x s) (mem x (diff s s')).
-      Proof.
-        intros A Ih s s' x H1.
-        unfold mem, diff in *.
-        split; intro H2; rewrite set_in_remove_eq in *.
-        split; auto.
-        - destruct H2 as [H2 H3]. auto.
-      Qed.
-
-      Definition subset  (a : Type) { aIh : Inhab a } (s : set a) (s' : set a) : Prop:=
-        forall x : a,
-          mem x s -> mem x s'.
-
-
-      Lemma subset_def :
-        forall {a464 : Type},
-        forall {Ih_a464 : Inhab a464},
-        forall s : set a464,
-        forall s' : set a464,
-          Corelib.Init.Logic.iff (subset s s') (forall x : a464, mem x s -> mem x s').
-      Proof.
-        tauto.
-      Qed.
-
-      Definition map {A} {B} {Iha : Inhab A} {Ihb : Inhab B} (f : A -> B) (s : set A) : set B :=
-        fun (x : B) => exists (y : A), f y = x /\ (y \in s).
-
-      Lemma set_map :
-        forall {a473 : Type},
-        forall {a474 : Type},
-        forall {Ih_a473 : Inhab a473},
-        forall {Ih_a474 : Inhab a474},
-        forall f : a474 -> a473,
-        forall s : set a474,
-        forall x : a473,
-          Corelib.Init.Logic.iff (mem x (map f s)) (
-              Corelib.Init.Logic.ex (
-                  fun y : a474 =>
-                    Corelib.Init.Logic.and (eq (f y) x) (mem y s)
-                )
-            ).
-      Proof.
-        intros A IhA B IhB f s x.
-        unfold mem, map in *. split; auto.
-      Qed.
-
-      Definition partition {A} `{Inhab A} p (s : set A) :=
-        (set_st (fun x => p x /\ x \in s),
-          set_st (fun x => ~p x /\ x \in s)).
-
-      Lemma partition_l_mem :
-        forall (A : Type) (Ih_A : Inhab A) (f : A -> Prop)
-               (s : set A) (x : A) (p1 p2 : set A),
-          _Set.belongs x s ->
-          f x -> _Set.partition f s = (p1, p2) -> _Set.belongs x p1.
-      Proof.
-        unfold belongs, mem, partition.
-        intros A IhA f s x p1 p2 H1 H2 H3.
-        injection H3.
-        intros H4 H5.
-        rewrite <- H5.
-        rew_set.
-        auto.
-      Qed.
-
-      Lemma partition_r_mem :
-        forall (A : Type) (Ih_A : Inhab A) (f : A -> Prop)
-               (s : set A) (x : A) (p1 p2 : set A),
-          _Set.belongs x s ->
-          ~ f x -> _Set.partition f s = (p1, p2) -> _Set.belongs x p2.
-      Proof.
-        intros A IhA f s x p1 p2 H1 H2 H3.
-        injection H3.
-        intros H4 H5.
-        rewrite <- H4.
-        unfold belongs, mem.
-        rew_set.
-        auto.
-      Qed.
-
-      Definition cardinal {A} {Ih : Inhab A} (s : set A) : Z := Z.of_nat (card s).
-
-      Definition finite  (a : Type) { aIh : Inhab a } (s : set a) : Prop :=
-        LibSet.finite s.
-
-      Lemma finite_def :
-        forall {a504 : Type},
-        forall {Ih_a504 : Inhab a504},
-        forall s : set a504,
-          Corelib.Init.Logic.iff (finite s) (
-              Corelib.Init.Logic.ex (
-                  fun seq : sequence a504 =>
-                    forall x : a504,
-                      mem x s -> Sequence.mem x seq
-                )
-            ).
-      Proof.
-        tauto.
-      Qed.
-
-      Lemma cardinal_nonneg :
-        forall a399 : Type,
-        forall {a399Ih : Inhab a399},
-        forall s : set a399,
-          ge (cardinal s) (0)%Z.
-      Proof.
-        intros A Ih s.
-        unfold ge, cardinal.
-        math.
-      Qed.
-
-
-      Lemma cardinal_empty :
-        forall a403 : Type,
-        forall {a403Ih : Inhab a403},
-          Corelib.Init.Logic.eq (cardinal (@empty a403 a403Ih)) (0)%Z.
-      Proof.
-        intros A IhA.
-        unfold cardinal, empty.
-        rewrite <- Nat2Z.inj_0.
-        f_equal.
-        apply card_empty.
-      Qed.
-
-      Lemma cardinal_remove_mem :
-        forall {A : Type},
-        forall {Ih_A : Inhab A},
-        forall s : set A,
-        forall x : A,
-          finite s ->
-          belongs x s -> ((cardinal (remove x s)) = (((cardinal s) - (1)%Z))).
-      Proof.
-        unfold belongs, mem, cardinal, minus, remove, singleton, empty, add.
-        intros A Ih s x H1 H2.
-        rewrite card_diff_single; auto.
-        assert (Q: 1%nat <= card s).
-        { apply card_ge_one with x; auto. }
-        { rewrite Nat2Z.inj_sub. auto. math. }
-      Qed.
-
-      Lemma cardinal_remove_not_mem :
-        forall {A : Type},
-        forall {Ih_A : Inhab A},
-        forall s : set A,
-        forall x : A,
-          finite s -> neg_belongs x s -> ((cardinal (remove x s)) = (cardinal s)).
-      Proof.
-        unfold neg_belongs, belongs, mem, cardinal, minus, remove, singleton, empty, add, finite.
-        intros A I s x H1 H2.
-        repeat f_equal.
-        rewrite set_in_extens_eq.
-        intro y.
-        split; intros H3.
-        - rewrite in_remove_eq in H3.
-          destruct H3. auto.
-        - rewrite in_remove_eq. split; auto.
-          change (y <> x). intros H4.
-          subst. auto.
-      Qed.
-
-      Lemma cardinal_add :
-        forall {A : Type},
-        forall {Ih_A : Inhab A},
-        forall s : set A,
-        forall x : A,
-          finite s ->
-          neg_belongs x s -> ((cardinal (add x s)) = (((cardinal s) + 1))).
-      Proof.
-        unfold cardinal, neg_belongs, belongs, mem, add.
-        intros A Ih s x H1 H2.
-        - rewrite card_disjoint_union_single. 2, 3: auto. math.
-      Qed.
-
-        Lemma cardinal_add_mem :
-          forall {A : Type},
-          forall {Ih_A : Inhab A},
-          forall s : set A,
-          forall x : A,
-            finite s -> belongs x s -> ((cardinal (add x s)) = (cardinal s)).
-        Proof.
-          unfold cardinal, neg_belongs, belongs, mem, add.
-          intros.
-          repeat f_equal.
-          rew_set.
-          split; intros.
-          + rew_set in H1. destruct H1; subst; auto.
-          + rew_set. auto.
-        Qed.
-
-      Definition of_seq {A} {Ih : Inhab A} (s: sequence A) : set A :=
-        fun x => LibList.mem x s.
-
-      Lemma of_seq_set :
-        forall a433 : Type,
-        forall {a433Ih : Inhab a433},
-        forall x : a433,
-        forall s : sequence a433,
-          Corelib.Init.Logic.iff (Sequence.mem x s) (mem x (of_seq s)).
-      Proof.
-        intros A Ih x s.
-        unfold mem.
-        unfold of_seq.
-        split; intros H; auto.
-      Qed.
-
-      Lemma of_seq_mem :
-        forall {a618 : Type},
-        forall {Ih_a618 : Inhab a618},
-        forall s : sequence a618,
-        forall x : a618,
-          Corelib.Init.Logic.iff (mem x (of_seq s)) (Sequence.mem x s).
-      Proof.
-        tauto.
-      Qed.
-
-
-      Definition to_seq {A} `{Inhab A} (s : set A) : sequence A :=
-        LibSet.to_list s.
-
-      Lemma count_no_dup :
+    Import LibEpsilon.
+
+    Global Instance _cardinal_inst : _cardinal_sig :=
+      { cardinal := fun A _ b => epsilon (fun n : nat => exists l, cover b l /\ n = LibList.length l) }.
+
+    Global Instance _finite_inst : _finite_sig :=
+      { finite :=
+          fun A _ b =>
+            exists l, forall x,
+              mem x b -> Sequence.mem x l }.
+
+    #[refine] Global Instance _finite_def_inst : _finite_def_sig := { }.
+    Proof.
+      tauto.
+    Qed.
+
+    Global Declare Instance _card_nonneg_inst : _card_nonneg_sig.
+    Global Declare Instance _card_empty_inst : _card_empty_sig.
+    Global Declare Instance _card_singleton_inst : _card_singleton_sig.
+    Global Declare Instance _card_union_inst : _card_union_sig.
+    Global Declare Instance _card_add_inst : _card_add_sig.
+    Global Declare Instance _card_map_inst : _card_map_sig.
+
+    Global Instance _of_seq_inst : _of_seq_sig :=
+      { of_seq := fun A _ s => fun x => LibList.count (= x) s }.
+
+    #[refine] Global Instance _of_seq_multiplicity_inst : _of_seq_multiplicity_sig := { }.
+    Proof.
+      simpl.
+      unfold LibListZ.count.
+      math.
+    Qed.
+
+  End Bag.
+
+  Module _Set.
+    Import _Set.
+    Import LibSet.
+
+    Global Instance _mem_inst : _mem_sig :=
+      { mem := fun A _ x (s : set A) => x \in s }.
+
+    Global Instance _belongs_inst : _belongs_sig :=
+      { belongs := fun A _ => mem }.
+
+    Global Instance _neg_belongs_inst : _neg_belongs_sig :=
+      { neg_belongs := fun A _ x s => ~ belongs x s }.
+
+    #[refine] Global Instance _mem_fun_def_inst : _mem_fun_def_sig := { }.
+    Proof.
+      tauto.
+    Qed.
+
+    #[refine] Global Instance _nmem_def_inst : _nmem_def_sig := { }.
+    Proof.
+      simpl. tauto.
+    Qed.
+
+    Global Instance _empty_inst : _empty_sig :=
+      { empty := fun A _ => LibContainer.empty }.
+
+    #[refine] Global Instance _empty_mem_inst : _empty_mem_sig := { }.
+    Proof.
+      simpl.
+      auto.
+    Qed.
+
+    Global Instance _add_inst : _add_sig :=
+      { add := fun A _ x s => s \u (single x) }.
+
+    #[refine] Global Instance _add_mem_inst : _add_mem_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rew_set.
+      auto.
+    Qed.
+
+    #[refine] Global Instance _add_mem_neq_inst : _add_mem_neq_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rew_set.
+      tauto.
+    Qed.
+
+    Global Instance _singleton_inst : _singleton_sig :=
+      { singleton := fun A _ x => single x }.
+
+    Global Instance _singleton_set_inst : _singleton_set_sig :=
+      { singleton_set := fun A _ => singleton }.
+
+    #[refine] Global Instance _singleton_def_inst : _singleton_def_sig := { }.
+    Proof.
+      simpl. intros.
+      rewrite union_empty_l. auto.
+    Qed.
+
+    #[refine] Global Instance _singleton_fun_def_inst : _singleton_fun_def_sig := { }.
+    Proof.
+      tauto.
+    Qed.
+
+    Global Instance _remove_inst : _remove_sig :=
+      { remove := fun A _ x s => s \-- x }.
+
+    #[refine] Global Instance _remove_mem_inst : _remove_mem_sig := { }.
+    Proof.
+      simpl.
+      intros A Ih s x.
+      rewrite set_in_remove_eq.
+      rew_set. tauto.
+    Qed.
+
+    #[refine] Global Instance _remove_mem_neq_inst : _remove_mem_neq_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rew_set. tauto.
+    Qed.
+
+    Global Instance _union_inst : _union_sig :=
+      { union := fun A _ s1 s2 => s1 \u s2 }.
+
+    #[refine] Global Instance _union_mem_inst : _union_mem_sig := { }.
+    Proof.
+      auto.
+    Qed.
+
+    #[refine] Global Instance _union_mem_neg_inst : _union_mem_neg_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rew_set. tauto.
+    Qed.
+
+    Global Instance _inter_inst : _inter_sig :=
+      { inter := fun A _ s1 s2 => s1 \n s2 }.
+
+    #[refine] Global Instance _inter_mem_inst : _inter_mem_sig := { }.
+    Proof.
+      simpl. intros.
+      rew_set. auto.
+    Qed.
+
+    #[refine] Global Instance _inter_mem_neq_inst : _inter_mem_neq_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rew_set. tauto.
+    Qed.
+
+    Global Instance _disjoint_inst : _disjoint_sig :=
+      { disjoint := fun A _ s1 s2 => inter s1 s2 = empty }.
+
+    #[refine] Global Instance _disjoint_def_inst : _disjoint_def_sig := { }.
+    Proof.
+      tauto.
+    Qed.
+
+    Global Instance _diff_inst : _diff_sig :=
+      { diff := fun A _ s1 s2 => LibContainer.remove s1 s2 }.
+
+    #[refine] Global Instance _diff_mem_inst : _diff_mem_sig := { }.
+    Proof.
+      simpl.
+      intros A Ih s1 s2 x H1.
+      rew_set.
+      intros [H2 H3].
+      contradiction.
+    Qed.
+
+    #[refine] Global Instance _diff_mem_fst_inst : _diff_mem_fst_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rew_set. tauto.
+    Qed.
+
+    Global Instance _subset_inst : _subset_sig :=
+      { subset := fun A _ s1 s2 => forall x, mem x s1 -> mem x s2 }.
+
+    #[refine] Global Instance _subset_def_inst : _subset_def_sig := { }.
+    Proof.
+      tauto.
+    Qed.
+
+    Global Instance _map_inst : _map_sig :=
+      { map := fun A B _ _ f (s : set A) x =>
+                 exists (y : A), f y = x /\ (y \in s) }.
+
+    #[refine] Global Instance _set_map_inst : _set_map_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      tauto.
+    Qed.
+
+    Global Instance _partition_inst : _partition_sig :=
+      { partition :=
+          fun A _ p (s : set A) =>
+            (set_st (fun x => p x /\ x \in s),
+              set_st (fun x => ~p x /\ x \in s)) }.
+
+    #[refine] Global Instance _partition_l_mem_inst : _partition_l_mem_sig := { }.
+    Proof.
+      simpl.
+      intros A Ih f s x p1 p2 H1 H2 H3.
+      injection H3.
+      intros. subst. rew_set. auto.
+    Qed.
+
+    #[refine] Global Instance _partition_r_mem_inst : _partition_r_mem_sig := { }.
+    Proof.
+      simpl.
+      intros A Ih f s x p1 p2 H1 H2 H3.
+      injection H3.
+      intros. subst.
+      rew_set. auto.
+    Qed.
+
+    Global Instance _cardinal_inst : _cardinal_sig :=
+      { cardinal := fun A _ s => Z.of_nat (card s) }.
+
+    Global Instance _finite_inst : _finite_sig :=
+      { finite := fun A _ s => LibSet.finite s }.
+
+    #[refine] Global Instance _finite_def_inst : _finite_def_sig := { }.
+    Proof.
+      tauto.
+    Qed.
+
+    #[refine] Global Instance _cardinal_nonneg_inst : _cardinal_nonneg_sig := { }.
+    Proof.
+      simpl. intros. math.
+    Qed.
+
+    #[refine] Global Instance _cardinal_empty_inst : _cardinal_empty_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rewrite card_empty. math.
+    Qed.
+
+    #[refine] Global Instance _cardinal_remove_mem_inst : _cardinal_remove_mem_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rewrite card_diff_single. 2, 3: auto.
+      assert (Q : 1%nat <= card s).
+      { apply card_ge_one with x; auto. }
+      math.
+    Qed.
+
+    #[refine] Global Instance _cardinal_remove_not_mem_inst : _cardinal_remove_not_mem_sig := { }.
+    Proof.
+      simpl.
+      intros A Ih s x H1 H2.
+      repeat f_equal.
+      rew_set.
+      intro y.
+      rew_set.
+      split; intros H3.
+      + tauto.
+      + split. 1: auto.
+        intros H4. subst. auto.
+    Qed.
+
+    #[refine] Global Instance _cardinal_add_inst : _cardinal_add_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      rewrite card_disjoint_union_single. 2, 3: auto. math.
+    Qed.
+
+    #[refine] Global Instance _cardinal_add_mem_inst : _cardinal_add_mem_sig := { }.
+    Proof.
+      simpl.
+      intros.
+      repeat f_equal.
+      rew_set.
+      split; intros; rew_set in *. 2: auto.
+      destruct H1; subst; auto.
+    Qed.
+
+    Global Instance _of_seq_inst : _of_seq_sig :=
+      { of_seq := fun A _ s => fun x => LibList.mem x s }.
+
+    #[refine] Global Instance _of_seq_mem_inst : _of_seq_mem_sig := { }.
+    Proof.
+      tauto.
+    Qed.
+
+    Global Instance _to_seq_inst : _to_seq_sig :=
+      { to_seq := fun A _ s => LibSet.to_list s }.
+
+          Lemma count_no_dup :
         forall A (x : A) l,
           noduplicates l ->
           count (=x) l = 1 <-> LibList.mem x l.
@@ -1886,18 +1208,10 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
               { intros H4. subst. contradiction. }
       Qed.
 
-      Lemma to_seq_mem :
-        forall {a657 : Type},
-        forall {Ih_a657 : Inhab a657},
-        forall s : set a657,
-          finite s ->
-          (
-            forall x : a657,
-              Corelib.Init.Logic.iff (mem x s) (eq (Sequence.multiplicity x (to_seq s)) (1)%Z)
-          ).
+      #[refine] Global Instance _to_seq_mem_inst : _to_seq_mem_sig := { }.
       Proof.
+        simpl.
         intros A Ih s F x.
-        unfold to_seq, mem, Sequence.multiplicity, finite in *.
         remember (to_list s) as l eqn:E.
         apply eq_to_list_inv in E; auto.
         unfold list_repr in E.
@@ -1907,40 +1221,26 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
       Qed.
 
       Import LibMonoid.
-      Definition fold {A} {B} `{Inhab A} `{Inhab B} (f : A -> B)
-                      (m : B -> B -> B) (s : set A) (acc : B) : B :=
-        let monoid :=
-          {|
-            monoid_oper := m;
-            monoid_neutral := acc;
-          |} in
-        LibContainer.fold monoid f s.
+      Global Instance _fold_inst : _fold_sig :=
+        { fold := fun A B _ _ f m s acc =>
+            let monoid :=
+              {|
+                monoid_oper := m;
+                monoid_neutral := acc;
+              |} in
+            LibContainer.fold monoid f s }.
 
-      Lemma fold_def :
-        forall {a : Type},
-        forall {b : Type},
-        forall {Ih_a : Inhab a},
-        forall {Ih_b : Inhab b},
-        forall f : a -> b,
-        forall m : b -> b -> b,
-        forall s : set a,
-        forall acc : b,
-          finite s ->
-          comm_monoid m acc ->
-          eq (fold f m s acc) (
-              Sequence.fold_right (fun x : a => fun acc : b => m (f x) acc) (to_seq s) acc
-            ).
+      #[refine] Global Instance _fold_def_inst : _fold_def_sig := { }.
       Proof.
-        unfold comm_monoid. unfold monoid.
+        simpl.
         intros A B IhA IhB f m s acc F [[H1 [H2 H3]] H4].
-        unfold fold. unfold Sequence.fold_right.
         remember ({|
                       monoid_oper := m;
                       monoid_neutral := acc
                     |}) as op eqn:E.
         rewrite fold_eq_fold_list_repr with
-          (A:=A) (B:=B) (m:=op) (f:=f) (E:=s) (L:=to_seq s).
-        - induction (to_seq s) as [|h t Ih].
+          (A:=A) (B:=B) (m:=op) (f:=f) (E:=s) (L:=to_list s).
+        - induction (to_list s) as [|h t Ih].
           + rew_listx. subst. auto.
           + rew_listx. rewrite Ih.
             subst. auto.
@@ -1948,64 +1248,40 @@ Module Stdlib : gospelstdlib_mli_tlc.Stdlib.
         - unfold to_seq. apply list_repr_to_list_of_finite. auto.
       Qed.
 
-    End _Set.
+  End _Set.
 
-    Module Map.
+  Global Instance _map_set_inst : _map_set_sig :=
+    { map_set :=
+        fun A B _ _ f x y =>
+        fun arg : A =>
+          if classicT (arg = x) then y else f arg }.
 
-      Definition t := map.
+  #[refine] Global Instance _map_set_def_inst : _map_set_def_sig := { }.
+  Proof.
+    simpl.
+    intros.
+    rewrite If_l; auto.
+  Qed.
 
-      Definition domain :
-        forall {a : Type},
-        forall {b : Type},
-        forall {_Ga : Inhab a},
-        forall {_Gb : Inhab b},
-          b -> (a -> b) -> set a.
-      Proof.
-        refine
-          (fun A B G1 G2 d m =>
-             set_st (fun x => m x <> d)
-          ).
-      Defined.
+  #[refine] Global Instance _map_set_def_neq_inst : _map_set_def_neq_sig := { }.
+  Proof.
+    simpl.
+    intros. rewrite If_r; auto.
+  Qed.
 
-      Lemma domain_mem :
-        forall {a545 : Type},
-        forall {a546 : Type},
-        forall {Ih_a545 : Inhab a545},
-        forall {Ih_a546 : Inhab a546},
-        forall x : a546,
-        forall m : a546 -> a545,
-        forall default : a545,
-          Corelib.Init.Logic.not (eq (m x) default) -> _Set.mem x (domain default m).
-      Proof.
-        intros A B G1 G2 x m d H1.
-        unfold _Set.mem.
-        unfold domain.
-        rewrite in_set_st_eq.
-        auto.
-      Qed.
-    End Map.
+  Module Map.
 
-    Lemma map_set_def :
-      forall (A B : Type) (Ih_A : Inhab A) (Ih_B : Inhab B)
-             (f : A -> B) (x : A) (y : B),
-        map_set f x y x = y.
+    Import Map.
+
+    Global Instance _domain_inst : _domain_sig :=
+      { domain := fun A B _ _ d m => set_st (fun x => m x <> d) }.
+
+    #[refine] Global Instance _domain_mem_inst : _domain_mem_sig := { }.
     Proof.
-      intros. unfold map_set. rewrite If_l; auto.
-    Qed.
-
-    Lemma map_set_def_neq :
-      forall {A : Type},
-      forall {B : Type},
-      forall {Ih_A : Inhab A},
-      forall {Ih_B : Inhab B},
-      forall f : A -> B,
-      forall x : A,
-      forall y : B,
-      forall z : A,
-        (x <> z) -> ((map_set f x y z) = (f z)).
-    Proof.
+      simpl.
       intros.
-      unfold map_set. rewrite If_r; auto.
+      rewrite in_set_st_eq.
+      auto.
     Qed.
-
- End Stdlib.
+  End Map.
+End Proofs.

@@ -27,7 +27,7 @@ type priority = int
 type 'a t
 (**A priority queue is an abstract mutable data structure. It can be thought of
    as a bag of elements, where each element carries a certain priority. *)
-(*@ mutable model : ('a * integer) bag *)
+(*@ mutable model : (val * integer) bag *)
 
 val create : unit -> 'a t
 (**[create()] creates an empty priority queue.

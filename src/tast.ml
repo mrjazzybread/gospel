@@ -103,7 +103,8 @@ type type_spec = {
 let mk_type_spec ty_invariant ty_model ty_lenses ty_text ty_loc =
   { ty_invariant; ty_model; ty_text; ty_lenses; ty_loc }
 
-let empty_tspec = mk_type_spec None (No_model Immutable) [] "" Location.none
+let empty_tspec lenses =
+  mk_type_spec None (No_model Immutable) lenses "" Location.none
 
 type s_type_declaration = {
   tname : Id_uast.id;

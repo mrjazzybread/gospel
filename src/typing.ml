@@ -12,7 +12,6 @@ module Env = Map.Make (String)
 open Id_uast
 module W = Warnings
 open Namespace
-open Uast_utils
 
 type local_env = {
   term_var : Ident.t Env.t;
@@ -455,6 +454,22 @@ let type_kind ~ocaml env tid tparams lenv = function
       let env = if ocaml then env else add_record env tid tparams fields in
       (env, PTtype_record fields)
 
+let default_lens env pty =
+  let rec default_lens = function
+    | PTtyvar _ -> Constants.lens_val.lens_desc
+    | PTarrow (t1, t2) ->
+        let arg = default_lens t1 in
+        let ret = default_lens t2 in
+        Larrow (arg, ret)
+    | PTtyapp (v, _) ->
+        let lens_info = Namespace.get_default_lens env v.app_qid in
+        Lidapp
+          (Uast_utils.mk_linfo (Qid lens_info.lid) lens_info.lpersistent
+             lens_info.lvars lens_info.locaml lens_info.lmodel)
+    | PTtuple l -> Ltuple (List.map default_lens l)
+  in
+  { lens_desc = default_lens pty; lens_loc = Location.none }
+
 let unique_tspec env model local_env self_ty lenses inv_ty tspec =
   (* [invariants [pid, l] processes a list of invariants for the give type
      where [pid] is a variable of type [self_ty]. *)
@@ -477,17 +492,34 @@ let unique_tspec env model local_env self_ty lenses inv_ty tspec =
     (Option.map invariants tspec.Parse_uast.ty_invariant)
     model lenses tspec.ty_text tspec.ty_loc
 
+let is_persistent l =
+  let rec is_persistent = function
+    | Lidapp info -> info.lpersistent
+    | Ltuple l -> List.for_all is_persistent l
+    | Larrow _ -> true
+  in
+  is_persistent l.lens_desc
+
 (** [create_model env lenv tname tparams tspec] Processes the model field(s) of
     the type specification [tspec]. *)
-let create_model env lenv tspec =
+let create_model env lenv tmanifest tspec =
   let open Parse_uast in
   let unique_pty = unique_pty ~ocaml:false ~bind:false (scope env) lenv in
+  let alias_model m =
+    match tmanifest with
+    | None -> Id_uast.No_model m
+    | Some ty ->
+        let lens = default_lens (scope env) ty in
+        let ty = Solver.apply_lens ty lens in
+        let mut = if is_persistent lens then Immutable else Mutable in
+        Implicit (mut, ty)
+  in
   match tspec with
-  | None -> Id_uast.No_model Immutable
+  | None -> alias_model Immutable
   | Some t -> (
       let model = t.ty_model in
       match model with
-      | No_model m -> No_model m
+      | No_model m -> alias_model m
       | Implicit (m, pty) ->
           let mpty = unique_pty pty in
           Implicit (m, mpty)
@@ -501,7 +533,7 @@ let create_model env lenv tspec =
     unchanged if there is no model. This lens will lift the OCaml type [self_ty]
     into the type of its model. If there is one or more named model fields, the
     model will be a record containing each model field. *)
-let update_model_env env self_ty tname tparams model_ty =
+let update_model_env env self_ty tname tparams mut model_ty =
   let capitalize_id id =
     let nm = String.capitalize_ascii id.Ident.id_str in
     Ident.mk_id nm
@@ -514,14 +546,11 @@ let update_model_env env self_ty tname tparams model_ty =
   in
   function
   | No_model _ -> (None, [], env)
-  | Implicit (m, ty) ->
-      let l =
-        mk_lens (capitalize_id tname) (bool_mutable m) self_ty tparams ty
-      in
-      (Some l, [ l ], add_lens env l)
+  | Implicit (_, model_ty) ->
+      let linfo = mk_lens (capitalize_id tname) mut self_ty tparams model_ty in
+      (Some linfo, [ linfo ], add_lens env linfo)
   | Fields l ->
       let model_ty = Option.get model_ty in
-      let mut = List.exists (fun x -> bool_mutable x.pld_mutable) l in
       let default =
         mk_lens (capitalize_id tname) mut self_ty tparams model_ty
       in
@@ -580,26 +609,6 @@ let can_be_owned tkind talias tspec =
          check if it is mutable or not. *)
       kind_mut
 
-let default_lens env pty =
-  let rec default_lens = function
-    | PTtyvar _ -> Constants.lens_val.lens_desc
-    | PTarrow (t1, t2) ->
-        let arg = default_lens t1 in
-        let ret = default_lens t2 in
-        Larrow (arg, ret)
-    | PTtyapp (v, _) ->
-        let lens_info = Namespace.get_default_lens env v.app_qid in
-        Lidapp
-          (Uast_utils.mk_linfo (Qid lens_info.lid) lens_info.lpersistent
-             lens_info.lvars lens_info.locaml lens_info.lmodel)
-    | PTtuple l -> Ltuple (List.map default_lens l)
-  in
-  { lens_desc = default_lens pty; lens_loc = Location.none }
-
-let ocaml_to_model env ocaml_ty =
-  let lens = default_lens env ocaml_ty in
-  Solver.apply_lens ocaml_ty lens
-
 (** [type_decl lenv env t] processes the type declaration [t] and adds it to
     [env]. Additionally, if the typed specification of [t] contains named
     models, we also add to [env] a record type with the same model fields as
@@ -637,9 +646,13 @@ let type_decl ~ocaml lenv env t =
   in
 
   let env, tkind = type_kind ~ocaml env tname tparams lenv t.tkind in
-  let model = create_model env lenv t.tspec in
+  let model =
+    if ocaml then create_model env lenv tmanifest t.tspec
+    else No_model Immutable
+  in
 
   let tvars = List.map (fun x -> PTtyvar x) tparams in
+  let mut = can_be_owned tkind tmanifest t.tspec in
 
   (* The [pty] object that represents this type name. This is necessary for the
      typed specification, where there will always be a variable of this type. *)
@@ -651,17 +664,14 @@ let type_decl ~ocaml lenv env t =
            record type created by [update_model_env]. *)
         let t = Uast_utils.mk_info (Qid tname) in
         Some (PTtyapp (t, tvars))
-    | No_model _ ->
-        if ocaml then Option.map (ocaml_to_model defs) tmanifest else None
+    | No_model _ -> None
   in
-
-  let mut = can_be_owned tkind tmanifest t.tspec in
 
   let info = Uast_utils.mk_info ~alias:tmanifest ~mut (Qid tname) in
   let self_ty = PTtyapp (info, tvars) in
 
   let default, lenses, env =
-    update_model_env env self_ty tname tparams model_ty model
+    update_model_env env self_ty tname tparams mut model_ty model
   in
 
   (* Closure that generates the typed declaration. Note that all this closure
@@ -674,7 +684,7 @@ let type_decl ~ocaml lenv env t =
     let inv_ty = if ocaml then model_ty else Some self_ty in
     fun env ->
       let tspec =
-        Option.fold ~none:Tast.empty_tspec
+        Option.fold ~none:(Tast.empty_tspec lenses)
           ~some:(unique_tspec (scope env) model lenv self_ty lenses inv_ty)
           t.tspec
       in

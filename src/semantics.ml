@@ -44,24 +44,14 @@ let type_declaration ~ocaml ns t =
   in
 
   let type_decl =
-    if not ocaml then
-      let tdef =
-        match t.tmanifest with Some t -> Alias t | None -> Abstract
-      in
-      Some
-        (Type
-           {
-             type_name;
-             type_args = t.tparams;
-             type_ocaml = false;
-             type_def = tdef;
-           })
-    else None
+    let tdef = match t.tmanifest with Some t -> Alias t | None -> Abstract in
+    Type
+      { type_name; type_args = t.tparams; type_ocaml = ocaml; type_def = tdef }
   in
   let model_decl = model_decl model_type in
   let pred_def = List.map (fun x -> Pred x) spec.ty_lenses in
   let () = List.iter (Sep_utils.map_pred ns) spec.ty_lenses in
-  cons type_decl (cons model_decl pred_def)
+  type_decl :: cons model_decl pred_def
 
 let is_present env v =
   let id = Uast_utils.leaf v in

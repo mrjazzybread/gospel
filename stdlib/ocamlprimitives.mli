@@ -12,6 +12,8 @@
     them with their respective [model] fields. *)
 
 type unit
+(*@ model : unit *)
+
 type int
 (*@ model : integer *)
 

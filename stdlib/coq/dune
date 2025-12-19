@@ -1,8 +1,8 @@
 (coq.theory
  (name Stdlib_stdpp)
  (package gospel_iris)
- (theories Stdlib stdpp)
- (modules gospelstdlib_mli_stdpp gospelstdlib_verified_stdpp))
+ (theories Stdlib stdpp Ltac2 iris)
+ (modules gospelstdlib_mli_stdpp gospelstdlib_verified_stdpp iris_core))
 
 (coq.theory
  (name Stdlib_TLC)

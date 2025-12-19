@@ -590,8 +590,8 @@ let default_lens env pty =
     | PTtyapp (v, _) ->
         let lens_info = Namespace.get_default_lens env v.app_qid in
         Lidapp
-          (Uast_utils.mk_linfo (Qid lens_info.lid) lens_info.lvars
-             lens_info.locaml lens_info.lmodel)
+          (Uast_utils.mk_linfo (Qid lens_info.lid) lens_info.lpersistent
+             lens_info.lvars lens_info.locaml lens_info.lmodel)
     | PTtuple l -> Ltuple (List.map default_lens l)
   in
   { lens_desc = default_lens pty; lens_loc = Location.none }
@@ -904,7 +904,10 @@ let rec resolve_lens env = function
   | Parse_uast.PTtyvar _ -> assert false
   | PTtyapp (v, []) ->
       let q, info = Namespace.get_lens_info env v in
-      let linfo = Uast_utils.mk_linfo q info.lvars info.locaml info.lmodel in
+      let linfo =
+        Uast_utils.mk_linfo q info.lpersistent info.lvars info.locaml
+          info.lmodel
+      in
       Lidapp linfo
   | PTtyapp _ -> assert false
   | PTtuple l -> Ltuple (List.map (resolve_lens env) l)

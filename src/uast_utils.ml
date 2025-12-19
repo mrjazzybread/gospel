@@ -152,6 +152,6 @@ let mk_info ?(mut = false) ?(alias = None) id =
   { Id_uast.app_qid = id; app_alias = alias; app_mut = mut }
 
 let mk_linfo lid lpersistent ltvars lmatch lmodel =
-  { Id_uast.lid; ltvars; lmatch; lpersistent; lmodel }
+  { Id_uast.lid; lpersistent; ltvars; lmatch; lmodel }
 
 let bool_mutable = function Mutable -> true | Immutable -> false

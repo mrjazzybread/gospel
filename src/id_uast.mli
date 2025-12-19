@@ -75,7 +75,13 @@ and term_desc =
 
 (* Specification *)
 
-type linfo = { lid : qualid; ltvars : id list; lmatch : pty; lmodel : pty }
+type linfo = {
+  lid : qualid;
+  lpersistent : bool;
+  ltvars : id list;
+  lmatch : pty;
+  lmodel : pty;
+}
 
 type lens_desc =
   | Lidapp of linfo

@@ -9,7 +9,7 @@ Require Import TLC.LibListZ.
 
 Local Open Scope comp_scope.
 
-Module Proofs : gospelstdlib_mli_tlc.Obligations.
+Module Proofs <: gospelstdlib_mli_tlc.Obligations.
 
   Import Declarations.
 

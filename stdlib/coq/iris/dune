@@ -1,0 +1,5 @@
+(coq.theory
+ (name Gospel.iris)
+ (package gospel_iris)
+ (theories Stdlib stdpp Ltac2 iris Gospel)
+ (modules gospelstdlib_mli_stdpp gospelstdlib_verified_stdpp base))

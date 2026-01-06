@@ -1,4 +1,0 @@
-Require gospelstdlib_mli_tlc gospelstdlib_verified_tlc Gospel.primitives.
-Include gospelstdlib_mli_tlc.
-Include gospelstdlib_verified_tlc.
-Include primitives.

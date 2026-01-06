@@ -1,11 +1,17 @@
-Require gospelstdlib_mli_stdpp gospelstdlib_verified_stdpp Gospel.primitives.
-Include gospelstdlib_mli_stdpp.
-Include gospelstdlib_verified_stdpp.
-Include primitives.
-Require Import iris.proofmode.proofmode iris.heap_lang.proofmode iris.heap_lang.notation iris.prelude.options.
+Require gospelstdlib_mli gospelstdlib_proof Gospel.primitives ocamlprimitives_mli ocamlprimitives_proof.
+Include gospelstdlib_mli.Declarations.
 
-Module Type H.
-  Parameter Σ : gFunctors.
-  Declare Instance h : heapGS Σ.
-  Notation iProp := (iProp Σ).
-End H.
+Module Stdlib.
+  Include gospelstdlib_mli.Declarations.
+End Stdlib.
+
+Include primitives.
+Include heap.
+
+Module Primitives (Heap : H).
+  Module M := ocamlprimitives_proof.Proofs Heap.
+  Include M.Declarations.
+  Include M.
+End Primitives.
+
+Require Import iris.proofmode.proofmode iris.heap_lang.proofmode iris.heap_lang.notation iris.prelude.options.

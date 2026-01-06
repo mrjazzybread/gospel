@@ -16,8 +16,11 @@ jobs:
           ocaml-compiler: 4.14
           dune-cache: true
 
+
       - name: Install dependencies
         run: |
+          opam repo add rocq-released https://rocq-prover.github.io/opam/released/
+          opam repo add iris-dev https://gitlab.mpi-sws.org/iris/opam.git
           opam install . --deps-only --with-test
 
       - name: Show configuration

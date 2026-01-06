@@ -62,9 +62,10 @@ struct
       let tdef =
         match t.tmanifest with Some t -> Alias t | None -> Abstract
       in
+      let tname = if ocaml then map_ocaml_id t.tname else t.tname in
       Type
         {
-          type_name = map_ocaml_id t.tname;
+          type_name = tname;
           type_args = t.tparams;
           type_ocaml = ocaml;
           type_def = tdef;

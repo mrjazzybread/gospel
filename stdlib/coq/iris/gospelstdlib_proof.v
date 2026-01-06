@@ -1,4 +1,4 @@
-Require Import gospelstdlib_mli_stdpp.
+Require Import gospelstdlib_mli.
 
 Require Stdlib.ZArith.BinInt stdpp.base.
 
@@ -11,7 +11,7 @@ Global Declare Instance _DECIDABLE : forall P, stdpp.base.Decision P.
 Local Open Scope Z_scope.
 From Stdlib Require Import BinInt.
 
-Module Proofs <: gospelstdlib_mli_stdpp.Obligations.
+Module Proofs <: gospelstdlib_mli.Obligations.
 
   Import Declarations.
 

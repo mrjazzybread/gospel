@@ -2,14 +2,14 @@ Set Warnings "-deprecated".
 Set Warnings "-default".
 Set Warnings "-syntax".
 
-Require Import gospelstdlib_mli_tlc.
+Require Import gospelstdlib_mli.
 
 Require Import TLC.LibCore TLC.LibSet.
 Require Import TLC.LibListZ.
 
 Local Open Scope comp_scope.
 
-Module Proofs : gospelstdlib_mli_tlc.Obligations.
+Module Proofs : gospelstdlib_mli.Obligations.
 
   Import Declarations.
 

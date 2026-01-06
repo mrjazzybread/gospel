@@ -2,4 +2,10 @@
  (name Gospel.iris)
  (package gospel_iris)
  (theories Stdlib stdpp Ltac2 iris Gospel)
- (modules gospelstdlib_mli_stdpp gospelstdlib_verified_stdpp base))
+ (modules
+  gospelstdlib_mli
+  gospelstdlib_proof
+  ocamlprimitives_mli
+  ocamlprimitives_proof
+  heap
+  base))

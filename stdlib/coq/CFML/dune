@@ -1,0 +1,5 @@
+(coq.theory
+ (name Gospel.CFML)
+ (package gospel_cfml)
+ (theories Stdlib TLC Primitives)
+ (modules gospelstdlib_mli_tlc gospelstdlib_verified_tlc))

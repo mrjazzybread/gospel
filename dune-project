@@ -5,5 +5,6 @@
 (using coq 0.10)
 (package (name gospel_checker))
 (package (name gospel))
+(package (name gospel_rocq))
 (package (name gospel_iris))
 (package (name gospel_cfml))

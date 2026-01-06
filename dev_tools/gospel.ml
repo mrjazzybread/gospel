@@ -121,14 +121,14 @@ let tast ~verbose ~comp files =
   let env = Namespace.init_env ~ocamlprimitives stdlib in
   check ~verbose ~comp [] env files
 
-let sep ~verbose files =
+let sep ~map ~verbose files =
   let tast = tast files ~comp:false ~verbose:false in
   List.map
     (fun x ->
       let env : Sep_utils.namespace =
         Marshal.from_string [%blob "../stdlib/ocamlprimitives.sep"] 0
       in
-      let sdef = Semantics.process_sigs env x.fdefs in
+      let sdef = Semantics.process_sigs map env x.fdefs in
       if verbose then Sast_printer.definitions fmt sdef;
       { x with fdefs = sdef })
     tast

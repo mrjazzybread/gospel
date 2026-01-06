@@ -31,6 +31,12 @@ val tast :
     - Any of the [.gospel] files are not compatible with the current version of
       Gospel. *)
 
-val sep : verbose:bool -> string list -> Sast.definitions file list
-(** [sep ~verbose files] is the same as the [tast] function, but instead
-    produces the typed semantics of the received Gospel files. *)
+val sep :
+  map:(string -> string) ->
+  verbose:bool ->
+  string list ->
+  Sast.definitions file list
+(** [sep ~map ~verbose files] is the same as the [tast] function, but instead
+    produces the typed semantics of the received Gospel files. The [map]
+    function is applied to the OCaml names in [files] so that their names do not
+    clash with the logical definitions. *)

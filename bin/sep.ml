@@ -9,5 +9,5 @@
 (**************************************************************************)
 
 let run files =
-  let _ = Gospel.sep ~verbose:true files in
+  let _ = Gospel.sep ~map:(fun x -> x) ~verbose:true files in
   ()

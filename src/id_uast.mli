@@ -142,7 +142,7 @@ type label_declaration = {
 type model =
   | No_model of Parse_uast.mutable_flag
   | Implicit of Parse_uast.mutable_flag * pty
-  | Fields of label_declaration list
+  | Fields of id * label_declaration list
 
 type fun_spec = {
   fun_req : term list;

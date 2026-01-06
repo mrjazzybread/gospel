@@ -148,7 +148,7 @@ let model fmt = function
   | No_model m -> Uast_printer.mutable_flag nop fmt m
   | Implicit (m, ty) ->
       pp fmt "%amodel :@ %a@\n" Uast_printer.mutable_flag_sp m print_ty ty
-  | Fields l -> (list label_declaration fmt) l
+  | Fields (_, l) -> (list label_declaration fmt) l
 
 let invariants fmt (id, l) =
   let invariant fmt t = pp fmt "@[invariant %a@]" term t in

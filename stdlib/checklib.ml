@@ -25,7 +25,7 @@ let () =
       Bin_utils.check_file ~comp:true ~verbose:false ~env "ocamlprimitives.mli"
     in
     let ns = Sep_utils.empty_env () in
-    let defs = Semantics.process_sigs ns t in
+    let defs = Semantics.process_sigs (fun x -> x) ns t in
     let out = open_out "ocamlprimitives.sep" in
     Marshal.to_channel out ns [];
     close_out out;

@@ -1355,6 +1355,14 @@ let value_spec ~loc defs lenv name ocaml_ty spec =
       spec.sp_header
   in
 
+  let header =
+    match (ret_types, header.sp_hd_ret) with
+    | [ PTtyapp (v, []) ], [ Lwild ]
+      when Uast_utils.eq_qualid v.app_qid (Qid Constants.unit_id) ->
+        { header with sp_hd_ret = [ Lunit Location.none ] }
+    | _ -> header
+  in
+
   (* If the function returns a tuple but the user only supplied one
        return value, then the list of return types will be a singleton
        list with a tuple. *)

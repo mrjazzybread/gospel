@@ -22,13 +22,13 @@ let type_declaration ~ocaml ns t =
      named model fields, then this function returns None *)
   let model_decl model_type =
     match model_type with
-    | Id_uast.Fields fields ->
+    | Id_uast.Fields (nm, fields) ->
         let fields = List.map (fun x -> (x.pld_name, x.pld_type)) fields in
         let def = Record fields in
         Some
           (Type
              {
-               type_name = t.tname;
+               type_name = nm;
                type_args = t.tparams;
                type_ocaml = false;
                type_def = def;

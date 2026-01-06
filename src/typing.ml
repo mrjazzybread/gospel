@@ -502,7 +502,7 @@ let is_persistent l =
 
 (** [create_model env lenv tname tparams tspec] Processes the model field(s) of
     the type specification [tspec]. *)
-let create_model env lenv tmanifest tspec =
+let create_model tname env lenv tmanifest tspec =
   let open Parse_uast in
   let unique_pty = unique_pty ~ocaml:false ~bind:false (scope env) lenv in
   let alias_model m =
@@ -525,7 +525,7 @@ let create_model env lenv tmanifest tspec =
           Implicit (m, mpty)
       | Fields l ->
           let l = List.map (field ~ocaml:false env lenv) l in
-          Fields l)
+          Fields (Ident.mk_id tname, l))
 
 (** [update_model_env env self_ty tname tparams model_ty] Returns the default
     lens this model declaration introduces or [None] if there is no model.
@@ -549,7 +549,7 @@ let update_model_env env self_ty tname tparams mut model_ty =
   | Implicit (_, model_ty) ->
       let linfo = mk_lens (capitalize_id tname) mut self_ty tparams model_ty in
       (Some linfo, [ linfo ], add_lens env linfo)
-  | Fields l ->
+  | Fields (model_id, l) ->
       let model_ty = Option.get model_ty in
       let default =
         mk_lens (capitalize_id tname) mut self_ty tparams model_ty
@@ -557,8 +557,10 @@ let update_model_env env self_ty tname tparams mut model_ty =
       let lenses = List.filter_map field_lens l in
       let env = List.fold_left add_lens env lenses in
       let env = add_lens env default in
-      let env = Namespace.add_gospel_type env tname tparams None in
-      (Some default, default :: lenses, Namespace.add_record env tname tparams l)
+      let env = Namespace.add_gospel_type env model_id tparams None in
+      ( Some default,
+        default :: lenses,
+        Namespace.add_record env model_id tparams l )
 
 let is_mutable = function
   | Parse_uast.No_model m | Implicit (m, _) -> m = Mutable
@@ -647,7 +649,7 @@ let type_decl ~ocaml lenv env t =
 
   let env, tkind = type_kind ~ocaml env tname tparams lenv t.tkind in
   let model =
-    if ocaml then create_model env lenv tmanifest t.tspec
+    if ocaml then create_model tname.id_str env lenv tmanifest t.tspec
     else No_model Immutable
   in
 
@@ -659,10 +661,10 @@ let type_decl ~ocaml lenv env t =
   let model_ty =
     match model with
     | Implicit (_, pty) -> Some pty
-    | Fields _ ->
+    | Fields (model_id, _) ->
         (* If the model has multiple named fields, its model is the
            record type created by [update_model_env]. *)
-        let t = Uast_utils.mk_info (Qid tname) in
+        let t = Uast_utils.mk_info (Qid model_id) in
         Some (PTtyapp (t, tvars))
     | No_model _ -> None
   in

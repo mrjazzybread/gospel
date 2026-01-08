@@ -24,7 +24,7 @@ let quant sym pp = list ~first:sym ~sep:sp ~last:period pp
 let forall_quant pp = quant forall pp
 let ex_quant pp = quant ex pp
 let ret_quant pp = quant lam pp
-let poly_quant = forall_quant Tast_printer.print_tv
+let tvars_quant = forall_quant Tast_printer.print_tv
 
 let arg_quant ~is_ret fmt l =
   let arg fmt = function
@@ -50,14 +50,15 @@ let triple_post fmt (ex, post) =
 
 let triple fmt t =
   pp fmt "@[Triple :@ %a%a@[<hov2>{ %a }@]@\n@[%a@]@\n@[<hov2>{ %a%a }@]@]"
-    poly_quant t.triple_poly (arg_quant ~is_ret:false) t.triple_args sep_terms
-    t.triple_pre triple_app t (arg_quant ~is_ret:true) t.triple_rets triple_post
-    t.triple_post
+    tvars_quant
+    (t.triple_otvars @ t.triple_gtvars)
+    (arg_quant ~is_ret:false) t.triple_args sep_terms t.triple_pre triple_app t
+    (arg_quant ~is_ret:true) t.triple_rets triple_post t.triple_post
 
 let rep_pred fmt p =
   pp fmt "@[Predicate %a%a :%a@]" Ident.pp p.Tast.lid
     (list ~first:sp ~sep:sp Tast_printer.print_tv)
-    p.lvars
+    (p.lovars @ p.lgvars)
     (list ~first:sp ~sep:arrow Tast_printer.print_ty)
     [ p.locaml; p.lmodel ]
 
@@ -78,7 +79,7 @@ let type_decl fmt t =
     t.type_args tdef t.type_def
 
 let axiom fmt ax =
-  pp fmt "Axiom %a : %a%a" Ident.pp ax.sax_name poly_quant ax.sax_tvars
+  pp fmt "Axiom %a : %a%a" Ident.pp ax.sax_name tvars_quant ax.sax_tvars
     sep_terms ax.sax_term
 
 let rec definition_node fmt = function

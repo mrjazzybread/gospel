@@ -88,8 +88,9 @@ type lens_info = {
       (* The name of the lens.  Invariant: The name is always capitalized *)
   lpersistent : bool; (* Marks if the lens is persistent. *)
   locaml : Id_uast.pty; (* The OCaml type this lens lifts *)
-  lvars : Ident.t list; (* The type parameters of the OCaml type *)
+  lovars : tvar list; (* The type parameters of the OCaml type *)
   lmodel : Id_uast.pty; (* The logical model exposed by this lens *)
+  lgvars : tvar list;
 }
 
 type type_spec = {
@@ -147,8 +148,11 @@ type val_spec = {
 type s_val_description = {
   vname : Ident.t;
   vtype : ty;
-  vtvars : tvar list;
   (* OCaml type of the value *)
+  votvars : tvar list;
+  (* OCaml type variables. *)
+  vgtvars : tvar list;
+  (* Gospel type variables. *)
   vattributes : Ppxlib.attributes;
   (* ... [@@id1] [@@id2] *)
   vspec : val_spec option;

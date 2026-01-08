@@ -151,7 +151,7 @@ let qualid_loc = function Id_uast.Qid id | Qdot (_, id) -> id.id_loc
 let mk_info ?(mut = false) ?(alias = None) id =
   { Id_uast.app_qid = id; app_alias = alias; app_mut = mut }
 
-let mk_linfo lid lpersistent ltvars lmatch lmodel =
-  { Id_uast.lid; lpersistent; ltvars; lmatch; lmodel }
+let mk_linfo lid lpersistent lmatch lotvars lmodel lgtvars =
+  { Id_uast.lid; lpersistent; lotvars; lgtvars; lmatch; lmodel }
 
 let bool_mutable = function Mutable -> true | Immutable -> false

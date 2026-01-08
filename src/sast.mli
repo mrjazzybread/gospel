@@ -39,7 +39,8 @@ type triple_val =
 
 type triple = {
   triple_name : Ident.t;  (** Name of the function. *)
-  triple_poly : Ident.t list;  (** The function's type arguments. *)
+  triple_otvars : Ident.t list;  (** The function's type arguments. *)
+  triple_gtvars : Ident.t list;
   triple_args : triple_val list;  (** The function's arguments. *)
   triple_rets : triple_val list;  (** The return values for the function. *)
   triple_pre : sep_terms;

@@ -41,14 +41,14 @@ struct
      named model fields, then this function returns None *)
     let model_decl model_type =
       match model_type with
-      | Id_uast.Fields (nm, fields) ->
+      | Id_uast.Fields (nm, tvars, fields) ->
           let fields = List.map (fun x -> (x.pld_name, x.pld_type)) fields in
           let def = Record fields in
           Some
             (Type
                {
                  type_name = nm;
-                 type_args = t.tparams;
+                 type_args = tvars;
                  type_ocaml = false;
                  type_def = def;
                })
@@ -187,7 +187,8 @@ struct
         triple_args = List.map to_prog_arg args;
         triple_rets = List.map to_prog_arg rets;
         triple_pre;
-        triple_poly = des.vtvars;
+        triple_otvars = des.votvars;
+        triple_gtvars = des.vgtvars;
         triple_post;
       }
     in

@@ -250,13 +250,13 @@ let get_exn_info env id =
   let id, info = Lookup_exn.unique_toplevel_qualid env id in
   (id, info.eargs)
 
-let mk_lens lid lpersistent locaml lvars lmodel =
-  { Tast.lid; lpersistent; locaml; lvars; lmodel }
+let mk_lens lid lpersistent locaml lovars lmodel lgvars =
+  { Tast.lid; lpersistent; locaml; lovars; lmodel; lgvars }
 
 (** The [Val] lens that can be applied to any argument *)
 let val_lens_info =
   let v = Ident.mk_id "a" in
-  mk_lens Constants.val_lens_id true (PTtyvar v) [ v ] Constants.ty_val
+  mk_lens Constants.val_lens_id true (PTtyvar v) [ v ] Constants.ty_val []
 
 let get_default_lens env qid =
   let open Ident in

@@ -465,7 +465,7 @@ let default_lens env pty =
         let lens_info = Namespace.get_default_lens env v.app_qid in
         Lidapp
           (Uast_utils.mk_linfo (Qid lens_info.lid) lens_info.lpersistent
-             lens_info.lvars lens_info.locaml lens_info.lmodel)
+             lens_info.locaml lens_info.lovars lens_info.lmodel lens_info.lgvars)
     | PTtuple l -> Ltuple (List.map default_lens l)
   in
   { lens_desc = default_lens pty; lens_loc = Location.none }
@@ -500,6 +500,23 @@ let is_persistent l =
   in
   is_persistent l.lens_desc
 
+module Tbl = Ident.IdTable
+
+let pty_list_tvars l =
+  let tbl = Tbl.create 100 in
+  let rec pty_tvars = function
+    | PTtyvar id -> Tbl.add tbl id.id_tag id
+    | PTtyapp (_, l) | PTtuple l -> List.iter pty_tvars l
+    | PTarrow (t1, t2) ->
+        pty_tvars t1;
+        pty_tvars t2
+  in
+  List.iter pty_tvars l;
+  let seq = Tbl.to_seq_values tbl in
+  List.of_seq seq
+
+let pty_tvars ty = pty_list_tvars [ ty ]
+
 (** [create_model env lenv tname tparams tspec] Processes the model field(s) of
     the type specification [tspec]. *)
 let create_model tname env lenv tmanifest tspec =
@@ -525,7 +542,10 @@ let create_model tname env lenv tmanifest tspec =
           Implicit (m, mpty)
       | Fields l ->
           let l = List.map (field ~ocaml:false env lenv) l in
-          Fields (Ident.mk_id tname, l))
+          let tvars =
+            pty_list_tvars (List.map (fun x -> x.Id_uast.pld_type) l)
+          in
+          Fields (Ident.mk_id tname, tvars, l))
 
 (** [update_model_env env self_ty tname tparams model_ty] Returns the default
     lens this model declaration introduces or [None] if there is no model.
@@ -542,25 +562,29 @@ let update_model_env env self_ty tname tparams mut model_ty =
     if lbl.pld_mutable = Mutable then None
     else
       let lens_nm = capitalize_id lbl.pld_name in
-      Some (mk_lens lens_nm false self_ty tparams lbl.pld_type)
+      let field_params = pty_tvars lbl.pld_type in
+      Some (mk_lens lens_nm false self_ty tparams lbl.pld_type field_params)
   in
   function
   | No_model _ -> (None, [], env)
   | Implicit (_, model_ty) ->
-      let linfo = mk_lens (capitalize_id tname) mut self_ty tparams model_ty in
+      let model_params = pty_tvars model_ty in
+      let linfo =
+        mk_lens (capitalize_id tname) mut self_ty tparams model_ty model_params
+      in
       (Some linfo, [ linfo ], add_lens env linfo)
-  | Fields (model_id, l) ->
+  | Fields (model_id, tvars, l) ->
       let model_ty = Option.get model_ty in
       let default =
-        mk_lens (capitalize_id tname) mut self_ty tparams model_ty
+        mk_lens (capitalize_id tname) mut self_ty tparams model_ty tvars
       in
       let lenses = List.filter_map field_lens l in
       let env = List.fold_left add_lens env lenses in
       let env = add_lens env default in
-      let env = Namespace.add_gospel_type env model_id tparams None in
+      let env = Namespace.add_gospel_type env model_id tvars None in
       ( Some default,
         default :: lenses,
-        Namespace.add_record env model_id tparams l )
+        Namespace.add_record env model_id tvars l )
 
 let is_mutable = function
   | Parse_uast.No_model m | Implicit (m, _) -> m = Mutable
@@ -661,9 +685,10 @@ let type_decl ~ocaml lenv env t =
   let model_ty =
     match model with
     | Implicit (_, pty) -> Some pty
-    | Fields (model_id, _) ->
+    | Fields (model_id, tvars, _) ->
         (* If the model has multiple named fields, its model is the
            record type created by [update_model_env]. *)
+        let tvars = List.map (fun x -> PTtyvar x) tvars in
         let t = Uast_utils.mk_info (Qid model_id) in
         Some (PTtyapp (t, tvars))
     | No_model _ -> None
@@ -900,8 +925,6 @@ let rec pair_hd_vars types vars =
           assert false)
   | _ -> assert false (* Both lists must be of the same length. *)
 
-module Tbl = Ident.IdTable
-
 type top_owned = { top_qid : qualid; top_pty : Id_uast.pty; top_lens : lens }
 
 let mk_top top_qid top_pty top_lens = { top_qid; top_pty; top_lens }
@@ -917,8 +940,8 @@ let rec resolve_lens env = function
   | PTtyapp (v, []) ->
       let q, info = Namespace.get_lens_info env v in
       let linfo =
-        Uast_utils.mk_linfo q info.lpersistent info.lvars info.locaml
-          info.lmodel
+        Uast_utils.mk_linfo q info.lpersistent info.locaml info.lovars
+          info.lmodel info.lgvars
       in
       Lidapp linfo
   | PTtyapp _ -> assert false
@@ -1419,21 +1442,23 @@ let ocaml_val env v =
   let lenv = empty_local_env () in
   let unique_ocaml_pty = unique_pty ~ocaml:true ~bind:true (scope env) lenv in
   let vtype = unique_ocaml_pty v.Parse_uast.vtype in
+  let ocaml_tvars = get_tvars lenv in
   let vspec =
     Option.map (value_spec ~loc:v.vloc (scope env) lenv v.vname vtype) v.vspec
   in
-  let vtvars = get_tvars lenv @ Option.fold ~none:[] ~some:snd vspec in
+  let gospel_tvars = Option.fold ~none:[] ~some:snd vspec in
   let v =
     {
       Tast.vname = Ident.from_preid v.vname;
       vtype;
       vattributes = v.vattributes;
-      vtvars;
+      votvars = ocaml_tvars;
+      vgtvars = gospel_tvars;
       vspec = Option.map fst vspec;
       vloc = v.vloc;
     }
   in
-  (Tast.Sig_value v, add_ocaml_val env v.vname vtvars vtype)
+  (Tast.Sig_value v, add_ocaml_val env v.vname ocaml_tvars vtype)
 
 (* -------------------------------------------------------------------------- *)
 

@@ -78,7 +78,8 @@ and term_desc =
 type linfo = {
   lid : qualid;
   lpersistent : bool;
-  ltvars : id list;
+  lotvars : id list;
+  lgtvars : id list;
   lmatch : pty;
   lmodel : pty;
 }
@@ -142,7 +143,7 @@ type label_declaration = {
 type model =
   | No_model of Parse_uast.mutable_flag
   | Implicit of Parse_uast.mutable_flag * pty
-  | Fields of id * label_declaration list
+  | Fields of id * id list * label_declaration list
 
 type fun_spec = {
   fun_req : term list;

@@ -44,8 +44,9 @@ val mk_lens :
   Ident.t ->
   bool ->
   Id_uast.pty ->
-  Ident.t list ->
+  Tast.tvar list ->
   Id_uast.pty ->
+  Tast.tvar list ->
   Tast.lens_info
 
 (* Functions to update the environment by adding a top level definition *)

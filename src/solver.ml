@@ -647,10 +647,10 @@ let ty_inst ty tvars args =
 let rec lens_cstr ocaml_ty lens =
   match (ocaml_ty, lens) with
   | _, Lidapp linfo ->
-      let@ vars = assoc_vars linfo.ltvars in
-      let@ expected = pty_to_deep_flex vars linfo.lmatch in
+      let@ ovars = assoc_vars linfo.lotvars in
+      let@ expected = pty_to_deep_flex ovars linfo.lmatch in
       let@ provided = pty_to_deep_rigid ocaml_ty in
-      let@ model = pty_to_deep_flex vars linfo.lmodel in
+      let@ model = pty_to_deep_flex [] linfo.lmodel in
       let+ () = expected -- provided and+ t = decode model in
       t
   | PTtuple l1, Ltuple l2 ->

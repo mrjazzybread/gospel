@@ -596,8 +596,8 @@ let spec_cstr (spec : Id_uast.val_spec) =
     and+ sp_post = map_constraints fmla spec.sp_post
     and+ sp_checks = map_constraints fmla spec.sp_checks
     and+ xpost_spec = map_constraints xspec spec.sp_xpost in
-    Tast.mk_vspec spec.sp_args spec.sp_rets spec.sp_tops sp_pre sp_post
-      sp_checks xpost_spec spec.sp_diverge spec.sp_pure spec.sp_text spec.sp_loc
+    Tast.mk_vspec spec.sp_args spec.sp_rets spec.sp_tops sp_pre sp_checks
+      sp_post xpost_spec spec.sp_diverge spec.sp_pure spec.sp_text spec.sp_loc
   in
   let args = List.concat_map sp_var spec.sp_args in
   let rets = List.concat_map sp_var spec.sp_rets in

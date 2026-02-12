@@ -466,12 +466,14 @@ let rec hastype (t : Id_uast.term) (r : variable) =
   and+ t_ty = decode r in
   mk_term t_node t_ty t.term_loc
 
+let solve c = Solver.solve ~rectypes:false c
+
 (** Solves an arbitrary constraint assuming types are not allowed to be
     recursive *)
 let typecheck tvars c =
   Types.add_tvars tvars;
   try
-    let t = snd (Solver.solve ~rectypes:false (let0 c)) in
+    let t = snd (solve (let0 c)) in
     let l = Types.clear_tvars () in
     (t, l)
   with
@@ -561,7 +563,9 @@ let sp_var = function
   | Ghost (id, pty) -> Some (mk_ts id pty)
   | OCaml v ->
       let id = match v.var_name with Qid id -> id | _ -> assert false in
-      Some (mk_ts id v.ty_gospel)
+      (* TODO: Once we add explicit lenses we must differentiate
+         between the type in the pre and post condition. *)
+      Some (mk_ts id (fst v.ty_gospel_prod))
   | _ -> None
 
 let xspec (spec : Id_uast.xpost_spec) =
@@ -628,5 +632,28 @@ let ty_inst ty tvars args =
     t
   in
   (* This call to solve can never fail for any valid function call. *)
-  let _, t = Solver.solve ~rectypes:false (let0 c) in
+  let _, t = solve (let0 c) in
   t
+
+let rec lens_cstr ocaml_ty lens =
+  match (ocaml_ty, lens) with
+  | _, Lidapp linfo ->
+      let@ vars = assoc_vars linfo.ltvars in
+      let@ expected = pty_to_deep_flex vars linfo.lmatch in
+      let@ provided = pty_to_deep_rigid ocaml_ty in
+      let@ model = pty_to_deep_flex vars linfo.lmodel in
+      let+ () = expected -- provided and+ t = decode model in
+      t
+  | PTtuple l1, Ltuple l2 ->
+      let+ l =
+        map_constraints (fun (x, y) -> lens_cstr x y) (List.combine l1 l2)
+      in
+      PTtuple l
+  | PTarrow (arg, ret), Larrow (larg, lret) ->
+      let+ arg = lens_cstr arg larg and+ ret = lens_cstr ret lret in
+      PTarrow (arg, ret)
+  | _ -> assert false (* TODO replace with W.error *)
+
+let apply_lens ocaml_ty lens =
+  let c = lens_cstr ocaml_ty lens in
+  fst (typecheck [] c)

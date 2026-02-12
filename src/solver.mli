@@ -36,3 +36,5 @@ val ty_inst : Id_uast.pty -> Ident.t list -> Id_uast.pty list -> Id_uast.pty
     arguments [args]. This function always succeeds as long as the length of
     [vars] and [args] is equal. Additionally, the resulting type will not
     generate any new type variables that were not already present in [args]. *)
+
+val apply_lens : Id_uast.pty -> Id_uast.lens -> Id_uast.pty

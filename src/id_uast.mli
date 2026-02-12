@@ -21,13 +21,7 @@ type pty =
   | PTtuple of pty list
   | PTarrow of pty * pty
 
-and app_model = { app_mut : bool; app_gospel : pty }
-
-and app_info = {
-  app_qid : qualid;
-  app_alias : pty option;
-  app_model : app_model option;
-}
+and app_info = { app_qid : qualid; app_alias : pty option; app_mut : bool }
 (** For every type application the user writes, we also keep track of the alias
     for that type. We need the type alias for the type checking phase and we
     need the original annotation for the so that we preserve what the user wrote
@@ -35,11 +29,7 @@ and app_info = {
     does not have a type alias.
 
     Invariant : If a type application has the type alias [t], all type
-    applications used within [t] will not have any aliases.
-
-    Invariant: If the [app_model] in a type application is [Some model] all type
-    applications in [model.app_gospel] will be [None]. In practice, this means
-    that the model of an OCaml type does not itself have a model. *)
+    applications used within [t] will not have any aliases. *)
 
 (* Logical terms and formulas *)
 
@@ -85,14 +75,14 @@ and term_desc =
 
 (* Specification *)
 
+type linfo = { lid : qualid; ltvars : id list; lmatch : pty; lmodel : pty }
+type lens = Lidapp of linfo | Ltuple of lens list | Larrow of lens * lens
+
 type ocaml_sp_var = {
   var_name : qualid; (* Variable name *)
   ty_ocaml : pty; (* OCaml type of the variable. *)
-  ty_gospel : pty; (* Gospel type of the variable. *)
-  prod : bool;
-  (* Flag indicating if the function receives ownership of the value. *)
-  cons : bool;
-  (* Flag indicating if the function returns ownership of the value. *)
+  ty_gospel_cons : pty * lens;
+  ty_gospel_prod : pty * lens; (* Gospel type of the variable. *)
   ro : bool;
       (* Read only flag. If [false], the variable is modified
            by the function.

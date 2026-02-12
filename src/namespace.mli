@@ -40,6 +40,18 @@ type record_info = {
     creation. When a record type is processed, an entry of [record_info] is
     added as well as an entry of [type_info]. *)
 
+type lens_info = {
+  lid : Ident.t;
+      (* The name of the lens.  Invariant: The name is always capitalized *)
+  lpersistent : bool; (* Marks if the lens is persistent. *)
+  locaml : Id_uast.pty; (* The OCaml type this lens lifts *)
+  lvars : Ident.t list;
+  lmodel : Id_uast.pty; (* The logical model exposed by this lens *)
+}
+
+val mk_lens :
+  Ident.t -> bool -> Id_uast.pty -> Ident.t list -> Id_uast.pty -> lens_info
+
 (* Functions to update the environment by adding a top level definition *)
 val add_fun : env -> Ident.t -> Ident.t list -> Id_uast.pty -> env
 val add_ocaml_val : env -> Ident.t -> Ident.t list -> Id_uast.pty -> env
@@ -47,13 +59,14 @@ val add_ocaml_val : env -> Ident.t -> Ident.t list -> Id_uast.pty -> env
 val add_gospel_type :
   env -> Ident.t -> Ident.t list -> Id_uast.pty option -> env
 
+val add_lens : env -> lens_info -> env
+
 val add_ocaml_type :
   env ->
   Ident.t ->
   Ident.t list ->
-  mut:bool ->
   Id_uast.pty option ->
-  Id_uast.pty option ->
+  lens_info option ->
   env
 
 val add_record :
@@ -135,6 +148,8 @@ val get_exn_info :
   mod_defs -> Parse_uast.qualid -> Id_uast.qualid * Id_uast.pty list
 (** [get_exn_info defs id] receives an exception identifier [id] and the types
     of its arguments. *)
+
+val get_default_lens : mod_defs -> Id_uast.qualid -> lens_info
 
 val gospel_open : env -> Parse_uast.qualid -> Id_uast.qualid * env
 (** [gospel_open defs id] adds the definitions in module [id] into the scope

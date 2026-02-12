@@ -203,6 +203,24 @@ let labelled_arg fmt arg =
   | OCaml v -> qualid fmt v.var_name
   | _ -> pp fmt "_"
 
+let rec lens_tuple fmt l =
+  match l with
+  | Lidapp _ -> lens fmt l
+  | Ltuple _ | Larrow _ -> (parens lens) fmt l
+
+and print_arrow_lens fmt = list ~sep:arrow lens fmt
+
+and lens fmt = function
+  | Lidapp info -> qualid fmt info.lid
+  | Larrow ((Larrow _ as ty1), ty2) ->
+      pp fmt "@[%a@]@[%a@]@[%a@]" (parens lens) ty1 arrow () lens ty2
+  | Larrow (ty1, ty2) -> print_arrow_lens fmt [ ty1; ty2 ]
+  | Ltuple l -> list ~sep:star lens_tuple fmt l
+
+let lens_application fmt var ~prod =
+  let _, l = if prod then var.ty_gospel_prod else var.ty_gospel_cons in
+  pp fmt "%a %@@ %a" qualid var.var_name lens l
+
 let labelled_args fmt = function
   | [ arg ] -> labelled_arg fmt arg
   | l -> list ~sep:comma ~first:lparens ~last:rparens labelled_arg fmt l
@@ -220,31 +238,26 @@ let spec_clauses clause_pp fmt (keyword, l) =
   let spec_clause fmt t = pp fmt "%s @[%a@]" keyword clause_pp t in
   list ~sep:newline spec_clause fmt l
 
-let ownership = spec_clauses labelled_arg
-let is_owned_var ~cons v = if cons then v.cons else v.prod
+let ownership ~prod = spec_clauses (lens_application ~prod)
 
-let is_owned ~cons v =
-  match v with
-  | Ghost _ | Wildcard | Unit -> false
-  | OCaml v -> is_owned_var ~cons v
+let filter_ocaml_values vals =
+  List.filter_map (function OCaml v -> Some v | _ -> None) vals
 
 let pre_spec fmt spec =
-  pp fmt "@[%a%a%a%a@]" condition (requires spec.sp_pre) ownership
-    ("consumes", List.filter (is_owned ~cons:true) spec.sp_args)
+  pp fmt "@[%a%a%a%a@]" condition (requires spec.sp_pre) (ownership ~prod:false)
+    ("consumes", filter_ocaml_values spec.sp_args)
     (if' spec.sp_diverge string)
     "diverges" (if' spec.sp_pure string) "pure"
 
 let post_spec fmt spec =
-  pp fmt "%a%a" ownership
-    ( "produces",
-      List.filter (is_owned ~cons:false) (spec.sp_args @ spec.sp_rets) )
+  pp fmt "%a%a" (ownership ~prod:true)
+    ("produces", filter_ocaml_values (spec.sp_args @ spec.sp_rets))
     condition (ensures spec.sp_post)
 
 let xpost_spec fmt spec =
   pp fmt "@[<hov 2>|exception %a %a ->@\n%a%a@]" qualid spec.sp_exn
-    labelled_args spec.sp_xrets ownership
-    ( "produces",
-      List.filter (is_owned ~cons:false) (spec.sp_xargs @ spec.sp_xrets) )
+    labelled_args spec.sp_xrets (ownership ~prod:true)
+    ("produces", filter_ocaml_values (spec.sp_xargs @ spec.sp_xrets))
     condition (ensures spec.sp_xpost)
 
 let ret_case spec fmt post =

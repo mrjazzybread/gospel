@@ -8,18 +8,14 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 
-type t
+type t1
 (*@ mutable *)
 
-val f : t -> unit
-(*@ f x
-    modifies x
-    requires x = x *)
+type t2
+(*@ mutable *)
 
-(* {gospel_expected|
-[1] File "no_gospel_rep3.mli", line 17, characters 17-18:
-    17 |     requires x = x *)
-                          ^
-    Error: Unbound value x
-    
-|gospel_expected} *)
+val f : t1 -> t2 -> unit
+(*@ f x y
+    modifies x
+    modifies y
+    requires (x : val) = (y : val) *)

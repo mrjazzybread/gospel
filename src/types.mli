@@ -38,10 +38,12 @@ val ty_prop : ty
 
 val mk_info :
   ?alias:ty option ->
-  ?model:ty option ->
-  ?mut:bool ->
+  ?model:Id_uast.app_model option ->
   Id_uast.qualid ->
   Id_uast.app_info
+
+val ty_val : ty
+(** Type of program variables in Gospel n*)
 
 val print_ty : Format.formatter -> Id_uast.pty -> unit
 

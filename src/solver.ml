@@ -561,7 +561,7 @@ let sp_var = function
   | Ghost (id, pty) -> Some (mk_ts id pty)
   | OCaml v ->
       let id = match v.var_name with Qid id -> id | _ -> assert false in
-      Option.map (mk_ts id) v.ty_gospel
+      Some (mk_ts id v.ty_gospel)
   | _ -> None
 
 let xspec (spec : Id_uast.xpost_spec) =

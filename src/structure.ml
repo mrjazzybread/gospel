@@ -27,6 +27,7 @@ let char_id = Ident.mk_id "char"
 let string_id = Ident.mk_id "string"
 let float_id = Ident.mk_id "float"
 let set_id = Ident.mk_id "set"
+let val_id = Ident.mk_id "val"
 let ty_bool = Tyapp (Qid bool_id, [])
 let ty_prop = Tyapp (Qid prop_id, [])
 let ty_integer = Tyapp (Qid integer_id, [])
@@ -44,6 +45,7 @@ let primitive_list =
     ("string", string_id);
     ("float", float_id);
     ("set", set_id);
+    ("val", val_id);
   ]
 
 let ty_arrow v1 v2 = Tyarrow (v1, v2)

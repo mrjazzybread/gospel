@@ -20,6 +20,7 @@ val string_id : Ident.t
 val float_id : Ident.t
 val prop_id : Ident.t
 val set_id : Ident.t
+val val_id : Ident.t
 val ty_bool : 'a structure
 val ty_integer : 'a structure
 val ty_char : 'a structure

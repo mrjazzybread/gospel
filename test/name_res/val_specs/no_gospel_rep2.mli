@@ -8,18 +8,14 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 
-type t
+type t1
 (*@ mutable *)
 
-val f : unit -> t
-(*@ x = f ()
-    produces x
-    ensures x = x *)
+type t2
+(*@ mutable *)
 
-(* {gospel_expected|
-[1] File "no_gospel_rep2.mli", line 17, characters 16-17:
-    17 |     ensures x = x *)
-                         ^
-    Error: Unbound value x
-    
-|gospel_expected} *)
+val f : unit -> t1 * t2
+(*@ x, y = f ()
+    produces x
+    produces y
+    ensures (x : val) = (y : val) *)

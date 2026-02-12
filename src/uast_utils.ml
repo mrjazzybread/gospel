@@ -137,10 +137,7 @@ let eq_qualid q1 q2 =
   Ident.equal id1 id2
 
 (** [ocaml_to_model defs ty] Turns an OCaml type into its logical
-    representation. This entails searching in the [defs] environment for the
-    logical representation of the type names used in [ty]. If any of the type
-    names used in [ty] do not have a Gospel model (or if [ty] includes arrow
-    types), this function returns [None]. *)
+    representation. This function fails if [ty] is not a valid OCaml type. *)
 let rec ocaml_to_model ty =
   let open Id_uast in
   match ty with
@@ -150,13 +147,16 @@ let rec ocaml_to_model ty =
         an OCaml type variable as if it were a Gospel type variable,
         which is unsound since OCaml types may be impure and
         therefore unusable in a logical context. *)
-      Some (PTtyvar v)
-  | PTtyapp (q, _) -> q.app_model
+      PTtyvar v
+  | PTtyapp (q, _) ->
+      let model = Option.get q.app_model in
+      model.app_gospel
   | PTtuple l ->
-      let* l = map_option ocaml_to_model l in
+      let l = List.map ocaml_to_model l in
       PTtuple l
   | PTarrow (arg, ret) ->
-      let* arg = ocaml_to_model arg and* ret = ocaml_to_model ret in
+      let arg = ocaml_to_model arg in
+      let ret = ocaml_to_model ret in
       PTarrow (arg, ret)
 
 (** [can_own ty] traverses an OCaml type and checks if one needs to claim
@@ -164,7 +164,10 @@ let rec ocaml_to_model ty =
 let rec can_own ty =
   match ty with
   | Id_uast.PTtyvar _ -> false
-  | PTtyapp (id, l) -> id.app_mut || List.exists can_own l
+  | PTtyapp (id, l) -> (
+      match id.app_model with
+      | None -> false
+      | Some model -> model.app_mut || List.exists can_own l)
   | PTtuple l -> List.exists can_own l
   | PTarrow _ ->
       (* For now, we assume that all OCaml functions are pure. *) false

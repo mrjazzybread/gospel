@@ -8,16 +8,9 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 
-type t
+type t1
+type t2
 
-val f : unit -> t
-(*@ x = f ()
-    ensures x = x *)
-
-(* {gospel_expected|
-[1] File "no_gospel_rep1.mli", line 15, characters 16-17:
-    15 |     ensures x = x *)
-                         ^
-    Error: Unbound value x
-    
-|gospel_expected} *)
+val f : t1 -> t2
+(*@ y = f x
+    ensures (x : val) = (y : val) *)

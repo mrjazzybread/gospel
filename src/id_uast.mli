@@ -128,7 +128,17 @@ type val_spec = {
   sp_loc : Location.t;
 }
 
-type model = No_model | Implicit of pty | Fields of (id * pty) list
+type label_declaration = {
+  pld_name : id;
+  pld_mutable : Parse_uast.mutable_flag;
+  pld_type : pty;
+  pld_loc : Location.t;
+}
+
+type model =
+  | No_model of Parse_uast.mutable_flag
+  | Implicit of Parse_uast.mutable_flag * pty
+  | Fields of label_declaration list
 
 type type_spec = {
   ty_ephemeral : bool;
@@ -165,13 +175,6 @@ type axiom = {
 }
 
 (* Modified OCaml constructs with specification attached *)
-
-type label_declaration = {
-  pld_name : id;
-  pld_mutable : Parse_uast.mutable_flag;
-  pld_type : pty;
-  pld_loc : Location.t;
-}
 
 type type_kind = PTtype_abstract | PTtype_record of label_declaration list
 

@@ -152,6 +152,9 @@ module Sequence : sig
         0 ≤ i1 ≤ i2 < length s ->
         length (s[i1 .. i2]) = i2 - i1 *)
 
+  (*@ function empty : 'a t *)
+  (** [empty] is the empty sequence. *)
+
   (*@ function [] : 'a t *)
   (** [[]] is the empty sequence. *)
 

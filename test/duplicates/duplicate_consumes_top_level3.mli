@@ -20,7 +20,7 @@ val f : unit -> unit
     consumes y *)
 
 (* {gospel_expected|
-[1] File "duplicate_consumes_top_level3.mli", line 19, characters 13-14:
+[1] File "./duplicate_consumes_top_level3.mli", line 19, characters 13-14:
     19 |     consumes x
                       ^
     Error: The variable x is listed as consumes twice

@@ -9,15 +9,19 @@
 (**************************************************************************)
 
 val x : int ref
+(*@ ensures True *)
+
 val y : int ref
+(*@ ensures True *)
+
 val f : unit -> unit
 (*@ preserves x
     preserves x
     preserves y *)
 
 (* {gospel_expected|
-[1] File "duplicate_preserves_top_level3.mli", line 15, characters 14-15:
-    15 |     preserves x
+[1] File "duplicate_preserves_top_level3.mli", line 19, characters 14-15:
+    19 |     preserves x
                        ^
     Error: The variable x is listed as preserved twice
     

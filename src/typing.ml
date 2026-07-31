@@ -1297,21 +1297,21 @@ let value_spec ~loc defs lenv name ocaml_ty spec =
   (* Type checks the pre and post conditions. *)
   type_val_spec spec defs sp_args sp_rets tops sp_xspec pre_env post_env
 
-let ocaml_val env v =
+let ocaml_val env v vspec =
   let lenv = empty_local_env () in
   let unique_ocaml_pty = unique_pty ~ocaml:true ~bind:true (scope env) lenv in
   let vtype = unique_ocaml_pty v.Parse_uast.vtype in
-  let vspec =
-    Option.map (value_spec ~loc:v.vloc (scope env) lenv v.vname vtype) v.vspec
+  let vspec, gvars =
+    value_spec ~loc:v.vloc (scope env) lenv v.vname vtype vspec
   in
-  let vtvars = get_tvars lenv @ Option.fold ~none:[] ~some:snd vspec in
+  let vtvars = get_tvars lenv @ gvars in
   let v =
     {
       Tast.vname = Ident.from_preid v.vname;
       vtype;
       vattributes = v.vattributes;
       vtvars;
-      vspec = Option.map fst vspec;
+      vspec;
       vloc = v.vloc;
     }
   in
@@ -1353,7 +1353,11 @@ and signature s env =
   let sdesc, env =
     match s.Parse_uast.sdesc with
     | Sig_gospel (s, _) -> gospel_sig env s
-    | Sig_val v -> ocaml_val env v
+    | Sig_val v ->
+        begin match v.vspec with
+        | None -> (Tast.Sig_untyped s, env)
+        | Some vspec -> ocaml_val env v vspec
+        end
     | Sig_type t ->
         let env, t = tdecl_list ~ocaml:true env t in
         (Tast.Sig_type t, env)

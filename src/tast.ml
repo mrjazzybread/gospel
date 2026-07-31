@@ -142,7 +142,7 @@ type s_val_description = {
   (* OCaml type of the value *)
   vattributes : Ppxlib.attributes;
   (* ... [@@id1] [@@id2] *)
-  vspec : val_spec option;
+  vspec : val_spec;
   (* specification *)
   vloc : Location.t;
 }
@@ -173,6 +173,7 @@ and s_signature_item_desc =
   | Sig_ghost_open of Id_uast.qualid
   | Sig_exception of Id_uast.exception_decl
   | Sig_attribute of Ppxlib.attribute
+  | Sig_untyped of Parse_uast.s_signature_item
 
 and s_signature_item = { sdesc : s_signature_item_desc; sloc : Location.t }
 and s_signature = s_signature_item list

@@ -9,15 +9,19 @@
 (**************************************************************************)
 
 val x : int ref
+(*@ ensures True *)
+
 val y : int ref
+(*@ ensures True *)
+
 val f : unit -> unit
 (*@ consumes x
     consumes x
     consumes y *)
 
 (* {gospel_expected|
-[1] File "duplicate_consumes_top_level3.mli", line 15, characters 13-14:
-    15 |     consumes x
+[1] File "duplicate_consumes_top_level3.mli", line 19, characters 13-14:
+    19 |     consumes x
                       ^
     Error: The variable x is listed as consumes twice
     

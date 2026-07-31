@@ -9,6 +9,8 @@
 (**************************************************************************)
 
 val x : int ref
+(*@ ensures True *)
+
 val f1 : int -> unit
 (*@ f1 y
     modifies x
@@ -32,6 +34,7 @@ module M : sig
   (*@ mutable model : integer *)
 
   val x : t
+  (*@ ensures True *)
 end
 
 val f5 : M.t -> int

@@ -9,15 +9,19 @@
 (**************************************************************************)
 
 val x : int ref
+(*@ ensures True*)
+
 val y : int ref
+(*@ ensures True*)
+
 val f : unit -> unit
 (*@ modifies x
     modifies y
     modifies x *)
 
 (* {gospel_expected|
-[1] File "duplicate_modifies_top_level2.mli", line 16, characters 13-14:
-    16 |     modifies x *)
+[1] File "duplicate_modifies_top_level2.mli", line 20, characters 13-14:
+    20 |     modifies x *)
                       ^
     Error: The variable x is listed as modified twice
     

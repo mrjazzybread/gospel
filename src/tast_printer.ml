@@ -269,7 +269,7 @@ let val_spec nm fmt spec = pp fmt "@[%a%a@]" pre_spec spec (print_post nm) spec
 
 let s_val_description fmt v =
   pp fmt "@[@[val %a :@ %a@]@\n%a@]" Ident.pp v.vname print_ty v.vtype
-    (option (gospel (val_spec v.vname)))
+    (gospel (val_spec v.vname))
     v.vspec
 
 (* Exception declarations *)
@@ -298,6 +298,7 @@ let rec signature_item fmt x =
   | Sig_exception e -> exception_decl fmt e
   | Sig_ghost_open q -> mod_open fmt q
   | Sig_attribute _ -> string fmt "[@@@ attribute]"
+  | Sig_untyped s -> Uast_printer.signature_item fmt s
 
 and module_decl fmt m =
   let (Mod_signature l) = m.mdtype.mdesc in

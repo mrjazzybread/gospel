@@ -39,9 +39,8 @@ Module Proofs <: gospelstdlib_mli.Obligations.
   Global Instance _pred_inst : _pred_sig :=
     { pred := Z.pred }.
 
-  Global Instance __mod_inst : __mod_sig :=
-    { _mod := Z.modulo }.
-
+  Global Instance __mod_inst : ____mod_sig :=
+    { ___mod := Z.modulo }.
   Global Instance _pow_inst : _pow_sig :=
     { pow := Z.pow }.
 
@@ -54,25 +53,25 @@ Module Proofs <: gospelstdlib_mli.Obligations.
   Global Instance _max_inst : _max_sig :=
     { max := Z.max }.
 
-  Global Instance _app_inst : _app_sig :=
-    { app := fun A _ s1 s2 => s1 ++ s2 }.
+  Global Instance _app_inst : ___app_sig :=
+    { __app := fun A _ s1 s2 => s1 ++ s2 }.
 
-  Global Instance _seq_get_inst : _seq_get_sig :=
-    { seq_get := fun A _ s i => s !!! Z.to_nat i }.
+  Global Instance _seq_get_inst : ___seq_get_sig :=
+    { __seq_get := fun A _ s i => s !!! Z.to_nat i }.
 
   Definition takeZ {A} (i : Z) (s : sequence A) :=
     take (Z.to_nat i) s.
 
   Definition dropZ {A} (i : Z) (s : sequence A) := drop (Z.to_nat i) s.
 
-  Global Instance _seq_sub_inst : _seq_sub_sig :=
-    { seq_sub := fun A _ s i1 i2 => takeZ (i2 - i1) (dropZ i1 s) }.
+  Global Instance _seq_sub_inst : ___seq_sub_sig :=
+    { __seq_sub := fun A _ s i1 i2 => takeZ (i2 - i1) (dropZ i1 s) }.
 
-  Global Instance _seq_sub_l_inst : _seq_sub_l_sig :=
-    { seq_sub_l := fun A _ s i => seq_sub s i (Z.of_nat (length s)) }.
+  Global Instance _seq_sub_l_inst : ___seq_sub_l_sig :=
+    { __seq_sub_l := fun A _ s i => __seq_sub s i (Z.of_nat (length s)) }.
 
-  Global Instance _seq_sub_r_inst : _seq_sub_r_sig :=
-    { seq_sub_r := fun A _ s i => seq_sub s 0 i }.
+  Global Instance _seq_sub_r_inst : ___seq_sub_r_sig :=
+    { __seq_sub_r := fun A _ s i => __seq_sub s 0 i }.
 
   Definition neutral_l {A} (f : A -> A -> A) n := forall x, f n x = x.
   Definition neutral_r {A} (f : A -> A -> A) n := forall x, f x n = x.
@@ -142,7 +141,7 @@ Module Proofs <: gospelstdlib_mli.Obligations.
     Proof.
       simpl in *.
       intros.
-      unfold length, dropZ, seq_get.
+      unfold dropZ.
       rewrite lookup_total_drop.
       rewrite Z2Nat.inj_add; auto with lia.
     Qed.
@@ -194,7 +193,6 @@ Module Proofs <: gospelstdlib_mli.Obligations.
     Proof.
       simpl.
       intros.
-      unfold seq_sub.
       rewrite length_takeZ. 1: lia.
       rewrite length_dropZ; lia.
     Qed.
@@ -211,6 +209,9 @@ Module Proofs <: gospelstdlib_mli.Obligations.
 
     Global Instance _empty_inst : _empty_sig :=
       { empty := fun A _ => @nil A }.
+
+    Global Instance ___empty_inst : ___empty_sig :=
+      { __empty := fun A _ => @nil A }.
 
     #[refine] Global Instance _empty_length_inst : _empty_length_sig := { }.
     Proof.
@@ -275,7 +276,7 @@ Module Proofs <: gospelstdlib_mli.Obligations.
     Proof.
       simpl.
       intros.
-      unfold seq_get, lengthZ in *.
+      unfold lengthZ in *.
       rewrite lookup_total_app_r. 2: lia.
       f_equal.
       rewrite Z2Nat.inj_sub; lia.
@@ -388,8 +389,8 @@ Module Proofs <: gospelstdlib_mli.Obligations.
       simpl. rewrite lookup_total_app_rZ; auto.
     Qed.
 
-    Global Instance _multiplicity_inst : _multiplicity_sig :=
-      { multiplicity :=
+    Global Instance ___multiplicity_inst : ___multiplicity_sig :=
+      { __multiplicity :=
           fun A _ x s => length (base.filter (λ y, x = y) s) }.
 
     #[refine] Global Instance _mult_empty_inst : _mult_empty_sig := { }.
@@ -449,16 +450,16 @@ Module Proofs <: gospelstdlib_mli.Obligations.
     Global Instance _mem_inst : _mem_sig :=
       { mem := fun A _ x s => x ∈ s }.
 
-    Global Instance _belongs_inst : _belongs_sig :=
-      { belongs := fun A _ x s => x ∈ s }.
+    Global Instance _belongs_inst : ___belongs_sig :=
+      { __belongs := fun A _ x s => x ∈ s }.
 
     #[refine] Global Instance _mem_fun_def_inst : _mem_fun_def_sig := { }.
     Proof.
       tauto.
     Qed.
 
-    Global Instance _neg_belongs_inst : _neg_belongs_sig :=
-      { neg_belongs := fun A _ x s => x ∉ s }.
+    Global Instance ___neg_belongs_inst : ___neg_belongs_sig :=
+      { __neg_belongs := fun A _ x s => x ∉ s }.
 
     #[refine] Global Instance _nmem_def_inst : _nmem_def_sig := { }.
     Proof.
@@ -550,8 +551,7 @@ Module Proofs <: gospelstdlib_mli.Obligations.
       - rewrite cons_lengthZ in H.
         simpl.
         destruct (decide (i = 0)) as [E | E].
-        + rewrite E.
-          unfold seq_get. auto.
+        + by rewrite E.
         + repeat (rewrite cons_seq_get; try lia).
           apply Ih. lia.
     Qed.
@@ -638,7 +638,7 @@ Module Proofs <: gospelstdlib_mli.Obligations.
     Qed.
 
     Global Instance _get_inst : _get_sig :=
-      { get := fun A _ => seq_get }.
+      { get := fun A _ => __seq_get }.
 
     #[refine] Global Instance _get_def_inst : _get_def_sig := { }.
     Proof.
@@ -767,7 +767,6 @@ Module Proofs <: gospelstdlib_mli.Obligations.
             apply H2.
             rewrite lengthZ_cons. lia.
           * specialize H2 with 0.
-            unfold seq_get in H2.
             apply H2. unfold in_range. rewrite lengthZ_cons.
             cut (0 <= length s1). 2: apply length_nonneg.
             intros H3. simpl in H3.
@@ -815,9 +814,9 @@ Module Proofs <: gospelstdlib_mli.Obligations.
     Global Instance _permut_sub_inst : _permut_sub_sig :=
       { permut_sub :=
           fun A _ s1 s2 i j =>
-            permut (seq_sub s1 i j) (seq_sub s2 i j) /\
-              (seq_sub_r s1 i) = (seq_sub_r s2 i) /\
-              (seq_sub_l s1 j) = (seq_sub_l s2 j) }.
+            permut (__seq_sub s1 i j) (__seq_sub s2 i j) /\
+              (__seq_sub_r s1 i) = (__seq_sub_r s2 i) /\
+              (__seq_sub_l s1 j) = (__seq_sub_l s2 j) }.
 
     #[refine] Global Instance _permut_sub_def_inst : _permut_sub_def_sig := { }.
     Proof.
@@ -830,16 +829,16 @@ Module Proofs <: gospelstdlib_mli.Obligations.
 
     Import Bag.
 
-    Global Instance _multiplicity_inst : _multiplicity_sig :=
-      { multiplicity := fun A _ x b => Z.of_nat (b x) }.
+    Global Instance ___multiplicity_inst : ___multiplicity_sig :=
+      { __multiplicity := fun A _ x b => Z.of_nat (b x) }.
 
     #[refine] Global Instance _well_formed_inst : _well_formed_sig := { }.
     Proof.
       simpl. lia.
     Qed.
 
-    Global Instance _empty_inst : _empty_sig :=
-      { empty := fun A _ _ => 0%nat }.
+    Global Instance ___empty_inst : ___empty_sig :=
+      { __empty := fun A _ _ => 0%nat }.
 
     #[refine] Global Instance _empty_mult_inst : _empty_mult_sig := { }.
     Proof.
@@ -855,18 +854,18 @@ Module Proofs <: gospelstdlib_mli.Obligations.
     Qed.
 
     Global Instance _mem_inst : _mem_sig :=
-      { mem := fun A _ x b => multiplicity x b > 0 }.
+      { mem := fun A _ x b => __multiplicity x b > 0 }.
 
-    Global Instance _belongs_inst : _belongs_sig :=
-      { belongs := fun A _ => mem }.
+    Global Instance ___belongs_inst : ___belongs_sig :=
+      { __belongs := fun A _ => mem }.
 
     #[refine] Global Instance _mem_fun_def_inst : _mem_fun_def_sig := { }.
     Proof.
       tauto.
     Qed.
 
-    Global Instance _neg_belongs_inst : _neg_belongs_sig :=
-      { neg_belongs := fun A _ x b => not (belongs x b) }.
+    Global Instance ___neg_belongs_inst : ___neg_belongs_sig :=
+      { __neg_belongs := fun A _ x b => not (__belongs x b) }.
 
     #[refine] Global Instance _nmem_def_inst : _nmem_def_sig := { }.
     Proof.
@@ -904,8 +903,8 @@ Module Proofs <: gospelstdlib_mli.Obligations.
           fun A _ x =>
           fun y => if decide (x = y) then 1%nat else 0%nat }.
 
-    Global Instance _singleton_set_inst : _singleton_set_sig :=
-      { singleton_set := fun A _ => singleton }.
+    Global Instance ___singleton_set_inst : ___singleton_set_sig :=
+      { __singleton_set := fun A _ => singleton }.
 
     #[refine] Global Instance _singleton_fun_def_inst : _singleton_fun_def_sig := { }.
     Proof.
@@ -936,8 +935,8 @@ Module Proofs <: gospelstdlib_mli.Obligations.
       rewrite decide_False. lia. auto.
     Qed.
 
-    Global Instance _union_inst : _union_sig :=
-      { union := fun A _ b1 b2 y => (Nat.max (b1 y) (b2 y))%nat }.
+    Global Instance ___union_inst : ___union_sig :=
+      { __union := fun A _ b1 b2 y => (Nat.max (b1 y) (b2 y))%nat }.
 
     #[refine] Global Instance _union_all_inst : _union_all_sig := { }.
     Proof.
@@ -953,8 +952,8 @@ Module Proofs <: gospelstdlib_mli.Obligations.
       simpl. lia.
     Qed.
 
-    Global Instance _inter_inst : _inter_sig :=
-      { inter := fun A _ b1 b2 => λ y, (b1 y `min` b2 y)%nat }.
+    Global Instance ___inter_inst : ___inter_sig :=
+      { __inter := fun A _ b1 b2 => λ y, (b1 y `min` b2 y)%nat }.
 
     #[refine] Global Instance _inter_all_inst : _inter_all_sig := { }.
     Proof.
@@ -977,8 +976,8 @@ Module Proofs <: gospelstdlib_mli.Obligations.
       simpl. lia.
     Qed.
 
-    Global Instance _subset_inst : _subset_sig :=
-      { subset := fun A _ b1 b2 => forall x, (b1 x <= b2 x)%nat }.
+    Global Instance ___subset_inst : ___subset_sig :=
+      { __subset := fun A _ b1 b2 => forall x, (b1 x <= b2 x)%nat }.
 
     #[refine] Global Instance _subset_def_inst : _subset_def_sig := { }.
     Proof.
@@ -1020,24 +1019,24 @@ Module Proofs <: gospelstdlib_mli.Obligations.
 
   Module _Set.
 
-    Import _Set.
+    Import ___Set.
 
-    Global Instance _empty_inst : _empty_sig :=
-      { empty := fun A _ => ∅ }.
+    Global Instance ___empty_inst : ___empty_sig :=
+      { __empty := fun A _ => ∅ }.
 
     Global Instance _mem_inst : _mem_sig :=
       { mem := fun A _ x s => x ∈ s }.
 
-    Global Instance _belongs_inst : _belongs_sig :=
-      { belongs := fun A _ x s => mem x s }.
+    Global Instance __belongs_inst : ___belongs_sig :=
+      { __belongs := fun A _ x s => mem x s }.
 
     #[refine] Global Instance _mem_fun_def_inst : _mem_fun_def_sig := { }.
     Proof.
       tauto.
     Qed.
 
-    Global Instance _neg_belongs_inst : _neg_belongs_sig :=
-      { neg_belongs := fun A _ x s => not (belongs x s) }.
+    Global Instance ___neg_belongs_inst : ___neg_belongs_sig :=
+      { __neg_belongs := fun A _ x s => not (__belongs x s) }.
 
     #[refine] Global Instance _nmem_def_inst : _nmem_def_sig := { }.
     Proof.
@@ -1075,8 +1074,8 @@ Module Proofs <: gospelstdlib_mli.Obligations.
     Global Instance _singleton_inst : _singleton_sig :=
       { singleton := fun A _ x => add x empty }.
 
-    Global Instance _singleton_set_inst : _singleton_set_sig :=
-      { singleton_set := fun A _ x => singleton x }.
+    Global Instance ___singleton_set_inst : ___singleton_set_sig :=
+      { __singleton_set := fun A _ x => singleton x }.
 
     #[refine] Global Instance _singleton_def_inst : _singleton_def_sig := { }.
     Proof.
@@ -1108,8 +1107,8 @@ Module Proofs <: gospelstdlib_mli.Obligations.
       + by apply elem_of_difference in H1 as [H1 _].
     Qed.
 
-    Global Instance _union_inst : _union_sig :=
-      { union := fun A _ s1 s2 => s1 ∪ s2 }.
+    Global Instance ___union_inst : ___union_sig :=
+      { __union := fun A _ s1 s2 => s1 ∪ s2 }.
 
     #[refine] Global Instance _union_mem_inst : _union_mem_sig := { }.
     Proof.
@@ -1121,8 +1120,8 @@ Module Proofs <: gospelstdlib_mli.Obligations.
       simpl. intros. apply not_elem_of_union. auto.
     Qed.
 
-    Global Instance _inter_inst : _inter_sig :=
-      { inter := fun A _ s1 s2 => s1 ∩ s2 }.
+    Global Instance ___inter_inst : ___inter_sig :=
+      { __inter := fun A _ s1 s2 => s1 ∩ s2 }.
 
     #[refine] Global Instance _inter_mem_inst : _inter_mem_sig := { }.
     Proof.
@@ -1144,8 +1143,8 @@ Module Proofs <: gospelstdlib_mli.Obligations.
       auto.
     Qed.
 
-    Global Instance _diff_inst : _diff_sig :=
-      { diff := fun A _ s1 s2 => s1 ∖ s2 }.
+    Global Instance ___diff_inst : ___diff_sig :=
+      { __diff := fun A _ s1 s2 => s1 ∖ s2 }.
 
     #[refine] Global Instance _diff_mem_inst : _diff_mem_sig := { }.
     Proof.
@@ -1163,8 +1162,8 @@ Module Proofs <: gospelstdlib_mli.Obligations.
       + by apply elem_of_difference in H2 as [H2 _].
     Qed.
 
-    Global Instance _subset_inst : _subset_sig :=
-      { subset := fun A _ s1 s2 => forall x, mem x s1 -> mem x s2 }.
+    Global Instance ___subset_inst : ___subset_sig :=
+      { __subset := fun A _ s1 s2 => forall x, mem x s1 -> mem x s2 }.
 
     #[refine] Global Instance _subset_def_inst : _subset_def_sig := { }.
     Proof.
@@ -1231,8 +1230,8 @@ Module Proofs <: gospelstdlib_mli.Obligations.
     Global Declare Instance _fold_def_inst : _fold_def_sig.
     End _Set.
 
-  Global Instance _map_set_inst : _map_set_sig :=
-    { map_set :=
+  Global Instance ___map_set_inst : ___map_set_sig :=
+    { __map_set :=
         fun A B _ _ f x y =>
           λ z, if (decide (x = z)) then y else f z }.
 

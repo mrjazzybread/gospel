@@ -915,7 +915,7 @@ module Fin_maps : sig
 
   (*@ axiom to_seq_mem :
       ∀ k v m.
-        (k, v) ∈ m ↔ Sequence.((k, v) ⋅ to_seq m = 1) *)
+        (k, v) ∈ m ↔ Sequence.(⋅) (k, v) (to_seq m) = 1 *)
 
   (*@ function population (m : ('k, 'v) t) : integer *)
 

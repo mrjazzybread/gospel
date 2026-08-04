@@ -1,4 +1,4 @@
-(coq.theory
+(rocq.theory
  (name Gospel)
  (package gospel_rocq)
  (theories Stdlib)

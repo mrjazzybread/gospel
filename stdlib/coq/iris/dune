@@ -1,4 +1,4 @@
-(coq.theory
+(rocq.theory
  (name Gospel.iris)
  (package gospel_iris)
  (theories Stdlib stdpp Ltac2 iris Gospel)

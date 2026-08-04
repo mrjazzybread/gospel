@@ -52,6 +52,8 @@
 
 (*@ type 'a option *)
 
+(*@ type ('k, 'v) fin_map *)
+
 (*@ function Some (x : 'a) : 'a option *)
 (*@ function None : 'a option *)
 
@@ -828,6 +830,99 @@ module Set : sig
         comm_monoid m acc ->
         fold f m s acc =
           Sequence.fold_right (λ x acc -> m (f x) acc) (to_seq s) acc *)
+end
+
+module Fin_maps : sig
+  (*@ type ('k, 'v) t = ('k, 'v) fin_map *)
+
+  (*@ function ∅ : ('k, 'v) t *)
+
+  (*@ function singleton (k : 'k) (v : 'v) : ('k, 'v) t *)
+
+  (*@ function get (m : ('k, 'v) t) (k : 'k) : 'v *)
+
+  (*@ function ([_]) (m : ('k, 'v) t) (k : 'k ) : 'v *)
+
+  (*@ axiom get_fun_def :
+        ∀ m k.
+        get m k = m[k] *)
+
+  (*@ function add (k : 'k) (v : 'v) (m : ('k, 'v) t) : ('k, 'v) t *)
+
+  (*@ axiom singleton_def :
+        ∀ k v. singleton k v = add k v ∅ *)
+
+  (*@ axiom add_get :
+        ∀ k v m. (add k v m)[k] = v  *)
+
+  (*@ axiom add_get_neq :
+        ∀ k k' v m.
+          k ≠ k' ->
+          (add k v m)[k'] = m[k'] *)
+
+  (*@ predicate mem (m : ('k, 'v) t) (k : 'k) (v : 'v) *)
+
+  (*@ predicate (∈) (elt : ('k * 'v)) (m : ('k ,'v) t)  *)
+
+  (*@ axiom mem_fun_def :
+        ∀ k v m.
+          mem m k v ↔ (k, v) ∈ m *)
+
+  (*@ axiom mem_get :
+        ∀ k v m.
+          (k, v) ∈ m ->
+          m[k] = v *)
+
+  (*@ predicate (∉) (elt : 'k * 'v) (m : ('k, 'v) t) *)
+
+  (*@ axiom nmem_def :
+        ∀ k v m.
+          (k, v) ∉ m ↔ not (k, v) ∈ m *)
+
+  (*@ axiom mem_empty :
+        ∀ k v. (k, v) ∉ ∅ *)
+
+  (*@ axiom nmem_add :
+        ∀ k v k' v' m.
+           k' ≠ k ->
+           ((k', v') ∉ m ↔
+             (k', v') ∉ add k v m) *)
+
+  (*@ function remove (k : 'k) (m : ('k, 'v) t) : ('k, 'v) t *)
+
+  (*@ axiom mem_remove :
+        ∀ k m m' v.
+          (k, v) ∉ remove k m *)
+
+  (*@ axiom nmem_remove :
+        ∀ k k' v m.
+          k ≠ k' ->
+          ((k', v) ∉ m ↔
+            (k', v) ∉ remove k m) *)
+
+  (*@ axiom fmap_extensionality :
+        ∀ m m'.
+          (∀ k v. (k, v) ∈ m ↔ (k, v) ∈ m') ->
+          m = m' *)
+
+  (*@ function map (f : 'v -> 'a) (m : ('k, 'v) t) : ('k, 'a) t *)
+
+  (*@ axiom map_mem :
+      ∀ k f v m.
+        (k, v) ∈ m ↔ (k, f v) ∈ map f m *)
+
+  (*@ function to_seq (m : ('k, 'v) t) : ('k * 'v) Sequence.t *)
+
+  (*@ axiom to_seq_mem :
+      ∀ k v m.
+        (k, v) ∈ m ↔ Sequence.((k, v) ⋅ to_seq m = 1) *)
+
+  (*@ function population (m : ('k, 'v) t) : integer *)
+
+  (*@ axiom population_to_seq :
+        ∀ m.
+          population m = Sequence.length (to_seq m) *)
+
 end
 
 (*@ function ( [->] ) (f: 'a -> 'b) (x:'a) (y: 'b) : 'a -> 'b *)

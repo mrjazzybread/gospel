@@ -5,8 +5,173 @@ Require Stdlib.ZArith.BinInt stdpp.base.
 Require Stdlib.ZArith.BinInt.
 Require Import Stdlib.ZArith.BinIntDef.
 Require Import stdpp.decidable stdpp.list stdpp.gmap stdpp.propset stdpp.option.
+Require Import Stdlib.Logic.Epsilon.
 
-Global Declare Instance _DECIDABLE : forall P, stdpp.base.Decision P.
+Global Declare Instance _DECIDABLE : ∀ P, stdpp.base.Decision P.
+Global Declare Instance _EQ_DECIDABLE : ∀ A, stdpp.base.EqDecision A.
+
+  Record fmap {K V} := {
+      fm : K -> option V;
+      elts :
+        ∃ (l : list K),
+          (∀ k, k ∈ l <->
+                 fm k <> None) ∧ NoDup l}.
+
+  Instance Fmap_fmap K : FMap (@fmap K).
+  Proof.
+    intros V V' f m.
+    refine {| fm := λ k,
+               match (fm m) k with
+               |None => None
+               |Some x => Some (f x)
+               end |}.
+    destruct m as (m & l & H1 & H2).
+    simpl. exists l. split; auto.
+    intros. rewrite H1. by destruct m.
+  Defined.
+
+  Instance Lookup_fmap K V : Lookup K V (@fmap K V) :=
+    λ k m, (fm m) k.
+
+  Instance Empty_fmap K V : Empty (@fmap K V).
+  Proof.
+    refine {| fm := λ _, None |}.
+    exists []. split. 2: constructor.
+    intro. by rewrite elem_of_nil.
+  Defined.
+
+  Instance PartialAlter_fmap K V :
+    PartialAlter K V (@fmap K V).
+  Proof.
+    intros f k m.
+    refine
+      ({| fm :=λ k',
+         if decide (k = k')
+         then f ((fm m) k)
+         else (fm m) k' |}).
+    destruct m as (m & l & H1 & H2). simpl.
+    set (l':= if decide (k ∈ l)
+              then l
+              else (k :: l)).
+    exists (filter (λ k', (k' = k) -> f (m k') <> None) l').
+    split. 2: {
+      apply list.NoDup_filter.
+      destruct decide; auto.
+      constructor; auto. }
+    intros k'.
+    rewrite list_elem_of_filter.
+    destruct (decide (k = k')). 1: subst k'.
+    all: split.
+    - intros (H & ?). by apply H.
+    - intro. split; auto. subst l'.
+      destruct decide; auto. constructor.
+    - intros (? & H); subst.
+      subst l'. destruct decide; rewrite <- H1; auto.
+      rewrite elem_of_cons in H. by destruct H.
+    - intros. split. 1: by intro.
+      destruct decide; subst l'.
+      + by rewrite H1.
+      + rewrite elem_of_cons. right.
+        by rewrite H1.
+Defined.
+
+  Instance OMap_fmap K : OMap (@fmap K).
+  Proof.
+    intros V V' f m.
+    refine ({| fm :=
+                λ k, match ((fm m) k) with
+                     |None => None
+                     |Some x => f x
+                     end |}).
+    destruct m as (m & l & H1 & H2). simpl.
+    exists (filter (λ k,
+                match (m k) with
+                |None => False
+                |Some x => f x <> None end) l).
+    split. 2: by apply list.NoDup_filter.
+    intros. rewrite list_elem_of_filter.
+    remember (m k) as v eqn:E.
+    destruct v; simpl; split.
+    1, 3: intros [??]. all: try done.
+    intros. rewrite H1. by rewrite <- E.
+  Defined.
+
+  Instance Merge_fmap K : Merge (@fmap K).
+  Proof.
+    intros V V' C f m1 m2.
+    refine {| fm := λ k,
+               match m1 !! k, m2 !! k with
+               |None, None => None
+               |_, _ => f (m1 !! k) (m2 !! k) end |}.
+    destruct m1 as (m1 & l1 & H1 & H2).
+    destruct m2 as (m2 & l2 & H3 & H4).
+    unfold lookup. simpl.
+    set (l':= filter (λ k, k ∉ l2) l1 ++ l2).
+    exists (filter (λ k, f (m1 k) (m2 k) <> None) l'). subst l'.
+    split.
+    2: { apply list.NoDup_filter.
+         apply list.NoDup_app.
+         repeat split; auto.
+         - by apply list.NoDup_filter.
+         - intros ? H.
+           rewrite list_elem_of_filter in H.
+           by destruct H. }
+    intro k. rewrite list_elem_of_filter.
+    rewrite elem_of_app. rewrite list_elem_of_filter.
+    remember (m1 k) as v1 eqn:E1.
+    remember (m2 k) as v2 eqn:E2.
+    split.
+    - intros [Hf Helem].
+      destruct v1, v2; auto.
+      destruct Helem as [[??Helem]|Helem].
+      + by rewrite H1 in Helem.
+      + by rewrite H3 in Helem.
+    - destruct v1, v2; intros; split; auto.
+      1, 3: right; rewrite H3; by rewrite <- E2.
+      all: left; rewrite H3; rewrite H1;
+      rewrite <- E1; rewrite <- E2;
+      split; by intros ?.
+  Defined.
+
+  Instance MapFold_fmap K V : MapFold K V (@fmap K V).
+  Proof.
+    intros C f acc m.
+    destruct m as (m & elts).
+    apply constructive_indefinite_description in elts.
+    destruct elts as (l & ? & _).
+    induction l.
+    - apply acc.
+    - apply acc.
+  Defined.
+
+  Axiom FE : ∀ A B (f : A -> B) g, (∀ x, f x = g x) -> f = g.
+
+  Global Declare Instance PI : ∀ P, ProofIrrel P.
+
+  Instance fmap_finmap K : FinMap K (@fmap K).
+  Proof.
+    split.
+    + intros A [??] [??] ?.
+      intros. unfold lookup in H. simpl in *.
+      apply FE in H. subst.
+      by rewrite proof_irrel with elts0 elts1.
+    + done.
+    + intros A f [??] i. unfold lookup. simpl.
+      by rewrite decide_True by auto.
+    + intros A ? [??] **. unfold lookup. simpl.
+      by rewrite decide_False by auto.
+    + done.
+    + done.
+    + done.
+    + intros A B f b. destruct ∅ as (? & ? & ? & ?).
+      unfold map_fold. simpl.
+    + intros.
+  Qed.
+
+  Admitted.
+
+  Global Instance gmap_finmap `{Countable K} : FinMap K (fin_map K).
+
 
 Local Open Scope Z_scope.
 From Stdlib Require Import BinInt.
@@ -26,6 +191,9 @@ Module Proofs <: gospelstdlib_mli.Obligations.
 
   Global Instance _option_inst : _option_sig :=
     { option := fun A => Datatypes.option A }.
+
+  Global Instance _fin_map_inst : _fin_map_sig :=
+    { fin_map := fun K V => gmap K V }.
 
   Global Instance _Some_inst : _Some_sig :=
     { Some := fun A _ x => Datatypes.Some x }.
@@ -1229,6 +1397,15 @@ Module Proofs <: gospelstdlib_mli.Obligations.
     Global Declare Instance _fold_inst : _fold_sig.
     Global Declare Instance _fold_def_inst : _fold_def_sig.
     End _Set.
+
+  Module Fin_maps.
+
+    Import Declarations.Fin_maps.
+
+    Import gmap.
+
+    Global Instance ___empty_inst : ___empty_sig :=
+      { __empty := fun K V _ _ => ∅ }.
 
   Global Instance ___map_set_inst : ___map_set_sig :=
     { __map_set :=

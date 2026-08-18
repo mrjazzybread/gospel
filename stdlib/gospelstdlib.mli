@@ -911,7 +911,7 @@ module Fin_maps : sig
 
   (*@ axiom map_mem :
       ∀ k f v m.
-        (k, v) ∈ m ↔ (k, f v) ∈ map f m *)
+        (k, v) ∈ m -> (k, f v) ∈ map f m *)
 
   (*@ function to_seq (m : ('k, 'v) t) : ('k * 'v) Sequence.t *)
 

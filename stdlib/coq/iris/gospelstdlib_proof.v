@@ -5,8 +5,200 @@ Require Stdlib.ZArith.BinInt stdpp.base.
 Require Stdlib.ZArith.BinInt.
 Require Import Stdlib.ZArith.BinIntDef.
 Require Import stdpp.decidable stdpp.list stdpp.gmap stdpp.propset stdpp.option.
+Require Import Stdlib.Logic.Epsilon.
 
-Global Declare Instance _DECIDABLE : forall P, stdpp.base.Decision P.
+Global Declare Instance _DECIDABLE : ∀ P, stdpp.base.Decision P.
+Instance _EQ_DECIDABLE : ∀ A, stdpp.base.EqDecision A.
+Proof.
+  intros ???. apply _DECIDABLE.
+Defined.
+
+Definition domain {K V} (m : K -> option V) l := (∀ k, k ∈ l ↔ m k ≠ None) ∧ NoDup l.
+
+  Record fmap {K V} := {
+      fm : K -> option V;
+      elts :
+        ∃ (l : list K), domain fm l
+    }.
+
+  Instance Fmap_fmap K : FMap (@fmap K).
+  Proof.
+    intros V V' f m.
+    refine {| fm := λ k,
+               match (fm m) k with
+               |None => None
+               |Some x => Some (f x)
+               end |}.
+    destruct m as (m & l & H1 & H2).
+    simpl. exists l. split; auto.
+    intros. rewrite H1. by destruct m.
+  Defined.
+
+  Instance Lookup_fmap K V : Lookup K V (@fmap K V) :=
+    λ k m, (fm m) k.
+
+  Instance Empty_fmap K V : Empty (@fmap K V).
+  Proof.
+    refine {| fm := λ _, None |}.
+    exists []. split. 2: constructor.
+    intro. by rewrite elem_of_nil.
+  Defined.
+
+  Instance PartialAlter_fmap K V :
+    PartialAlter K V (@fmap K V).
+  Proof.
+    intros f k m.
+    refine
+      ({| fm :=λ k',
+         if decide (k = k')
+         then f ((fm m) k)
+         else (fm m) k' |}).
+    destruct m as (m & l & H1 & H2). simpl.
+    set (l':= if decide (k ∈ l)
+              then l
+              else (k :: l)).
+    exists (filter (λ k', (k' = k) -> f (m k') <> None) l').
+    split. 2: {
+      apply list.NoDup_filter.
+      destruct decide; auto.
+      constructor; auto. }
+    intros k'.
+    rewrite list_elem_of_filter.
+    destruct (decide (k = k')). 1: subst k'.
+    all: split.
+    - intros (H & ?). by apply H.
+    - intro. split; auto. subst l'.
+      destruct decide; auto. constructor.
+    - intros (? & H); subst.
+      subst l'. destruct decide; rewrite <- H1; auto.
+      rewrite elem_of_cons in H. by destruct H.
+    - intros. split. 1: by intro.
+      destruct decide; subst l'.
+      + by rewrite H1.
+      + rewrite elem_of_cons. right.
+        by rewrite H1.
+  Defined.
+
+  Instance OMap_fmap K : OMap (@fmap K).
+  Proof.
+    intros V V' f m.
+    refine ({| fm :=
+                λ k, match ((fm m) k) with
+                     |None => None
+                     |Some x => f x
+                     end |}).
+    destruct m as (m & l & H1 & H2). simpl.
+    exists (filter (λ k,
+                match (m k) with
+                |None => False
+                |Some x => f x <> None end) l).
+    split. 2: by apply list.NoDup_filter.
+    intros. rewrite list_elem_of_filter.
+    remember (m k) as v eqn:E.
+    destruct v; simpl; split.
+    1, 3: intros [??]. all: try done.
+    intros. rewrite H1. by rewrite <- E.
+  Defined.
+
+  Instance Merge_fmap K : Merge (@fmap K).
+  Proof.
+    intros V V' C f m1 m2.
+    refine {| fm := λ k,
+               match m1 !! k, m2 !! k with
+               |None, None => None
+               |_, _ => f (m1 !! k) (m2 !! k) end |}.
+    destruct m1 as (m1 & l1 & H1 & H2).
+    destruct m2 as (m2 & l2 & H3 & H4).
+    unfold lookup. simpl.
+    set (l':= filter (λ k, k ∉ l2) l1 ++ l2).
+    exists (filter (λ k, f (m1 k) (m2 k) <> None) l'). subst l'.
+    split.
+    2: { apply list.NoDup_filter.
+         apply list.NoDup_app.
+         repeat split; auto.
+         - by apply list.NoDup_filter.
+         - intros ? H.
+           rewrite list_elem_of_filter in H.
+           by destruct H. }
+    intro k. rewrite list_elem_of_filter.
+    rewrite elem_of_app. rewrite list_elem_of_filter.
+    remember (m1 k) as v1 eqn:E1.
+    remember (m2 k) as v2 eqn:E2.
+    split.
+    - intros [Hf Helem].
+      destruct v1, v2; auto.
+      destruct Helem as [[??Helem]|Helem].
+      + by rewrite H1 in Helem.
+      + by rewrite H3 in Helem.
+    - destruct v1, v2; intros; split; auto.
+      1, 3: right; rewrite H3; by rewrite <- E2.
+      all: left; rewrite H3; rewrite H1;
+        rewrite <- E1; rewrite <- E2;
+        split; by intros ?.
+  Defined.
+
+  Notation epsilon := (epsilon (inhabits [])).
+
+  Instance MapFold_fmap K V : MapFold K V (@fmap K V) :=
+    λ _ f acc m,
+      list.foldr (λ k acc, match (fm m) k with |None => acc |Some v => f k v acc end)
+        acc (epsilon (domain (fm m))).
+
+  Global Declare Instance PI : ∀ P, ProofIrrel P.
+
+  Axiom FE : ∀ A B (f : A -> B) g, (∀ x, f x = g x) -> f = g.
+
+  Lemma fmap_ind K V P :
+      (P ∅) ->
+      (∀ k v (m : @fmap K V),
+          P m ->
+          m !! k = None ->
+          epsilon (domain (fm (<[k:=v]>m))) =
+            k :: epsilon (domain (fm m)) ->
+          P (<[k:=v]>m)) ->
+      ∀ m, P m.
+  Proof.
+  Admitted.
+
+  Instance fmap_finmap K : FinMap K (@fmap K).
+  Proof.
+    split.
+    - intros V [??] [??] ?.
+      intros. unfold lookup in H. simpl in *.
+      apply FE in H. subst.
+      by rewrite proof_irrel with elts0 elts1.
+    - done.
+    - intros V f [??] i. unfold lookup. simpl.
+      by rewrite decide_True by auto.
+    - intros V ? [??] **. unfold lookup. simpl.
+      by rewrite decide_False by auto.
+    - done.
+    - done.
+    - done.
+    - intros V B f acc.
+      unfold map_fold. unfold MapFold_fmap.
+      unfold epsilon. destruct epsilon_statement as [l d]. simpl.
+      remember (@elts K V ∅) eqn:E. clear E.
+      apply d in e. clear d. destruct e as [??].
+      assert (l = []).
+      { simpl in *. destruct l; auto. specialize H with k.
+        destruct H. destruct H; auto. constructor. }
+      by subst.
+    - intros A P ? I m.
+      induction m using fmap_ind; auto.
+      apply I; auto.
+      intros. unfold map_fold, MapFold_fmap.
+      assert (Z : ∀ (m : @fmap K A), domain (fm (g <$> m)) = domain (fm m)).
+      { admit. }
+      assert (Z' : ∀ (m : @fmap K A), domain (fm (<[k:=x']>(g <$> m))) = domain (fm (<[k:=v]> m))).
+      { admit. }
+      rewrite Z.
+      rewrite Z'.
+      rewrite H1. simpl.
+      rewrite decide_True by auto.
+      f_equal. unfold epsilon.
+      destruct epsilon_statement. simpl.
+  Admitted.
 
 Local Open Scope Z_scope.
 From Stdlib Require Import BinInt.
@@ -27,6 +219,9 @@ Module Proofs <: gospelstdlib_mli.Obligations.
   Global Instance _option_inst : _option_sig :=
     { option := fun A => Datatypes.option A }.
 
+  Global Instance _fin_map_inst : _fin_map_sig :=
+    { fin_map := fun K V => @fmap K V }.
+
   Global Instance _Some_inst : _Some_sig :=
     { Some := fun A _ x => Datatypes.Some x }.
 
@@ -39,8 +234,9 @@ Module Proofs <: gospelstdlib_mli.Obligations.
   Global Instance _pred_inst : _pred_sig :=
     { pred := Z.pred }.
 
-  Global Instance __mod_inst : ____mod_sig :=
+  Global Instance ____mod_inst : ____mod_sig :=
     { ___mod := Z.modulo }.
+
   Global Instance _pow_inst : _pow_sig :=
     { pow := Z.pow }.
 
@@ -53,10 +249,10 @@ Module Proofs <: gospelstdlib_mli.Obligations.
   Global Instance _max_inst : _max_sig :=
     { max := Z.max }.
 
-  Global Instance _app_inst : ___app_sig :=
+  Global Instance ___app_inst : ___app_sig :=
     { __app := fun A _ s1 s2 => s1 ++ s2 }.
 
-  Global Instance _seq_get_inst : ___seq_get_sig :=
+  Global Instance ___seq_get_inst : ___seq_get_sig :=
     { __seq_get := fun A _ s i => s !!! Z.to_nat i }.
 
   Definition takeZ {A} (i : Z) (s : sequence A) :=
@@ -64,13 +260,13 @@ Module Proofs <: gospelstdlib_mli.Obligations.
 
   Definition dropZ {A} (i : Z) (s : sequence A) := drop (Z.to_nat i) s.
 
-  Global Instance _seq_sub_inst : ___seq_sub_sig :=
+  Global Instance ___seq_sub_inst : ___seq_sub_sig :=
     { __seq_sub := fun A _ s i1 i2 => takeZ (i2 - i1) (dropZ i1 s) }.
 
-  Global Instance _seq_sub_l_inst : ___seq_sub_l_sig :=
+  Global Instance ___seq_sub_l_inst : ___seq_sub_l_sig :=
     { __seq_sub_l := fun A _ s i => __seq_sub s i (Z.of_nat (length s)) }.
 
-  Global Instance _seq_sub_r_inst : ___seq_sub_r_sig :=
+  Global Instance ___seq_sub_r_inst : ___seq_sub_r_sig :=
     { __seq_sub_r := fun A _ s i => __seq_sub s 0 i }.
 
   Definition neutral_l {A} (f : A -> A -> A) n := forall x, f n x = x.
@@ -402,22 +598,13 @@ Module Proofs <: gospelstdlib_mli.Obligations.
       auto.
     Qed.
 
-    Lemma lengthZ_cons :
-      forall A s (x :  A),
-        lengthZ (x :: s) = 1 + lengthZ s.
-    Proof.
-      intros.
-      unfold lengthZ.
-      simpl. lia.
-    Qed.
-
     #[refine] Global Instance _mult_cons_inst : _mult_cons_sig := { }.
     Proof.
       simpl.
       intros.
       rewrite filter_cons.
       rewrite decide_True. 2: auto.
-      rewrite lengthZ_cons. auto.
+      unfold lengthZ. simpl. lia.
     Qed.
 
     #[refine] Global Instance _mult_cons_neutral_inst : _mult_cons_neutral_sig := { }.
@@ -450,7 +637,7 @@ Module Proofs <: gospelstdlib_mli.Obligations.
     Global Instance _mem_inst : _mem_sig :=
       { mem := fun A _ x s => x ∈ s }.
 
-    Global Instance _belongs_inst : ___belongs_sig :=
+    Global Instance ___belongs_inst : ___belongs_sig :=
       { __belongs := fun A _ x s => x ∈ s }.
 
     #[refine] Global Instance _mem_fun_def_inst : _mem_fun_def_sig := { }.
@@ -475,8 +662,7 @@ Module Proofs <: gospelstdlib_mli.Obligations.
         + apply not_elem_of_nil in H. tauto.
         + rewrite filter_cons.
           destruct (decide (x = y)).
-          * rewrite lengthZ_cons.
-            unfold lengthZ. lia.
+          * unfold lengthZ. simpl. lia.
           * apply Ih.
             rewrite elem_of_cons in H.
             destruct H.
@@ -765,12 +951,10 @@ Module Proofs <: gospelstdlib_mli.Obligations.
             rewrite seq_get_cons2 with s1 i h'. 2: auto.
             rewrite seq_get_cons2 with s2 i h'. 2: lia.
             apply H2.
-            rewrite lengthZ_cons. lia.
+            unfold lengthZ in *. simpl. lia.
           * specialize H2 with 0.
-            apply H2. unfold in_range. rewrite lengthZ_cons.
-            cut (0 <= length s1). 2: apply length_nonneg.
-            intros H3. simpl in H3.
-            lia.
+            apply H2. unfold in_range.
+            unfold lengthZ. simpl. lia.
     Qed.
 
     Global Instance _fold_left_inst : _fold_left_sig :=
@@ -1017,7 +1201,7 @@ Module Proofs <: gospelstdlib_mli.Obligations.
 
   End Bag.
 
-  Module _Set.
+  Module ___Set.
 
     Import ___Set.
 
@@ -1027,7 +1211,7 @@ Module Proofs <: gospelstdlib_mli.Obligations.
     Global Instance _mem_inst : _mem_sig :=
       { mem := fun A _ x s => x ∈ s }.
 
-    Global Instance __belongs_inst : ___belongs_sig :=
+    Global Instance ___belongs_inst : ___belongs_sig :=
       { __belongs := fun A _ x s => mem x s }.
 
     #[refine] Global Instance _mem_fun_def_inst : _mem_fun_def_sig := { }.
@@ -1228,9 +1412,143 @@ Module Proofs <: gospelstdlib_mli.Obligations.
     Global Declare Instance _to_seq_mem_inst : _to_seq_mem_sig.
     Global Declare Instance _fold_inst : _fold_sig.
     Global Declare Instance _fold_def_inst : _fold_def_sig.
-    End _Set.
+    End ___Set.
 
-  Global Instance ___map_set_inst : ___map_set_sig :=
+  Module Fin_maps.
+
+    Import Declarations.Fin_maps.
+
+    Global Instance ___empty_inst : ___empty_sig :=
+      { __empty := fun K V _ _ => ∅ }.
+
+    Global Instance _singleton_inst : _singleton_sig :=
+      { singleton := λ _ _ _ _ k v, {[k:=v]} }.
+
+    Global Instance _get_inst : _get_sig :=
+      { get := λ _ _ _ _ m k, m !!! k }.
+
+    Global Instance ___seq_get_inst : ___seq_get_sig :=
+      { __seq_get := λ _ _ _ _, get }.
+
+    #[refine] Global Instance _get_fun_def_inst : _get_fun_def_sig := { }.
+    Proof.
+      done.
+    Qed.
+
+    Global Instance _add_inst : _add_sig :=
+      { add := λ _ _ _ _ k v m, <[k:=v]>m }.
+
+    #[refine] Global Instance _singleton_def_inst : _singleton_def_sig := { }.
+    Proof.
+      done.
+    Qed.
+
+    #[refine] Global Instance _add_get_inst : _add_get_sig := { }.
+    Proof.
+      simpl. intros.
+      by rewrite fin_maps.lookup_total_insert_eq.
+    Qed.
+
+    #[refine] Global Instance _add_get_neq_inst : _add_get_neq_sig := { }.
+    Proof.
+      simpl. intros.
+      by rewrite fin_maps.lookup_total_insert_ne.
+    Qed.
+
+    Global Instance _mem_inst : _mem_sig :=
+      { mem := λ _ _ _ _ m k v, m !! k = Some v }.
+
+    Global Instance ___belongs_inst : ___belongs_sig :=
+      { __belongs := λ _ _ _ _ x m,
+          let (k, v) := x in mem m k v }.
+
+    #[refine] Global Instance _mem_fun_def_inst : _mem_fun_def_sig := { }.
+    Proof.
+      done.
+    Qed.
+
+    #[refine] Global Instance _mem_get_inst : _mem_get_sig := { }.
+    Proof.
+      simpl. intros.
+      by apply fin_maps.lookup_total_correct.
+    Qed.
+
+    Global Instance ___neg_belongs_inst : ___neg_belongs_sig :=
+      { __neg_belongs := λ _ _ _ _ x m, not (__belongs x m) }.
+
+    #[refine] Global Instance _nmem_def_inst : _nmem_def_sig := { }.
+    Proof.
+      done.
+    Qed.
+
+    #[refine] Global Instance _mem_empty_inst : _mem_empty_sig := { }.
+    Proof.
+      done.
+    Qed.
+
+    #[refine] Global Instance _nmem_add_inst : _nmem_add_sig := { }.
+    Proof.
+      simpl. intros.
+      by rewrite fin_maps.lookup_insert_ne.
+    Qed.
+
+    Global Instance _remove_inst : _remove_sig :=
+      { remove := λ _ _ _ _ m k, delete m k }.
+
+    #[refine] Global Instance _mem_remove_inst : _mem_remove_sig := { }.
+    Proof.
+      simpl. intros.
+      by rewrite lookup_delete_eq.
+    Qed.
+
+    #[refine] Global Instance _nmem_remove_inst : _nmem_remove_sig := { }.
+    Proof.
+      simpl. intros.
+      by rewrite lookup_delete_ne.
+    Qed.
+
+    #[refine] Global Instance _fmap_extensionality_inst : _fmap_extensionality_sig := { }.
+    Proof.
+      simpl. intros.
+      rewrite map_eq with m m'; auto.
+      intros. remember (m !! i) as v eqn:E.
+      symmetry in E.
+      destruct v.
+      - by apply H in E.
+      - remember (m' !! i) as v' eqn:E'.
+        symmetry in E'.
+        destruct v'; auto.
+        apply H in E'. by rewrite E in E'.
+    Qed.
+
+    Global Instance _map_inst : _map_sig :=
+      { map := λ _ _ _ _ _ _, base.fmap }.
+
+    #[refine] Global Instance _map_mem_inst : _map_mem_sig := { }.
+    Proof.
+      simpl. intros *???*Hl.
+      rewrite fin_maps.lookup_fmap.
+      by rewrite Hl.
+    Qed.
+
+    Global Instance _to_seq_inst : _to_seq_sig :=
+      { to_seq := λ _ _ _ _ m, map_to_list m }.
+
+    #[refine] Global Instance _to_seq_mem_inst : _to_seq_mem_sig := { }.
+    Proof.
+      simpl. intros.
+    Admitted.
+
+    Global Instance _population_inst : _population_sig :=
+      { population := λ _ _ _ _ m, Z.of_nat (size m) }.
+
+    #[refine] Global Instance _population_to_seq_inst : _population_to_seq_sig := { }.
+    Proof.
+      intros. simpl. unfold Sequence.lengthZ.
+      f_equal. symmetry. apply length_map_to_list.
+    Qed.
+  End Fin_maps.
+    Global Instance ___map_set_inst : ___map_set_sig :=
     { __map_set :=
         fun A B _ _ f x y =>
           λ z, if (decide (x = z)) then y else f z }.

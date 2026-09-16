@@ -1,5 +1,0 @@
-(rocq.theory
- (name Gospel.CFML)
- (package gospel_cfml)
- (theories Stdlib TLC Gospel)
- (modules gospelstdlib_mli gospelstdlib_verified base))

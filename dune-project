@@ -5,6 +5,3 @@
 (using rocq 0.13)
 (package (name gospel_checker))
 (package (name gospel))
-(package (name gospel_rocq))
-(package (name gospel_iris))
-(package (name gospel_cfml))

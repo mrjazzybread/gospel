@@ -42,12 +42,11 @@ type record_info = {
 
 val mk_lens :
   Ident.t ->
-  bool ->
+  Id_uast.lens_kind ->
   Id_uast.pty ->
-  Tast.tvar list ->
+  Id_uast.lens_info list ->
   Id_uast.pty ->
-  Tast.tvar list ->
-  Tast.lens_info
+  Id_uast.lens_info
 
 (* Functions to update the environment by adding a top level definition *)
 val add_fun : env -> Ident.t -> Ident.t list -> Id_uast.pty -> env
@@ -56,14 +55,14 @@ val add_ocaml_val : env -> Ident.t -> Ident.t list -> Id_uast.pty -> env
 val add_gospel_type :
   env -> Ident.t -> Ident.t list -> Id_uast.pty option -> env
 
-val add_lens : env -> Tast.lens_info -> env
+val add_lens : env -> Id_uast.lens_info -> env
 
 val add_ocaml_type :
   env ->
   Ident.t ->
   Ident.t list ->
   Id_uast.pty option ->
-  Tast.lens_info option ->
+  Id_uast.lens_info option ->
   env
 
 val add_record :
@@ -106,10 +105,7 @@ val resolve_application :
     Postcondition: If [ocaml] is [false], [app_model] will always be [None]. *)
 
 val fun_qualid :
-  Id_uast.pty Ident.IdTable.t ->
-  mod_defs ->
-  Parse_uast.qualid ->
-  Id_uast.qualid * Ident.t list * Id_uast.pty
+  mod_defs -> Parse_uast.qualid -> Id_uast.qualid * Ident.t list * Id_uast.pty
 (** [fun_qualid ocaml_vals defs q] Searches the Gospel namespace to find the
     function [q]. Also returns the function's type and the type parameters used.
 *)
@@ -117,9 +113,14 @@ val fun_qualid :
 val ocaml_val_qualid :
   mod_defs -> Parse_uast.qualid -> Id_uast.qualid * Id_uast.pty
 (** [ocaml_val defs q] Searches the OCaml namespace to find the value [q]. If
-    [q] is bound and has a valid Gospel representation, then we return its
-    resolved identifier, its OCaml type and its Gospel representation, if it
-    exists. *)
+    [q] is bound we return its resolved identifier and its OCaml type. *)
+
+val ocaml_val_qualid_opt :
+  mod_defs -> Parse_uast.qualid -> Id_uast.qualid option
+(** [ocaml_val defs q] Searches the OCaml namespace to find the value [q]. If
+    [q] is bound we return its resolved identifier. This function differs from
+    the other lookup functions in this module as it does not raise an exception
+    when it fails but rather returns [None] *)
 
 val fields_qualid :
   loc:Location.t ->
@@ -147,10 +148,10 @@ val get_exn_info :
     of its arguments. *)
 
 val get_lens_info :
-  mod_defs -> Parse_uast.qualid -> Id_uast.qualid * Tast.lens_info
+  mod_defs -> Parse_uast.qualid -> Id_uast.qualid * Id_uast.lens_info
 (** [get_lens_info defs id] find the information associated with lens [id]. *)
 
-val get_default_lens : mod_defs -> Id_uast.qualid -> Tast.lens_info
+val get_default_lens : mod_defs -> Id_uast.qualid -> Id_uast.lens_info
 
 val gospel_open : env -> Parse_uast.qualid -> Id_uast.qualid * env
 (** [gospel_open defs id] adds the definitions in module [id] into the scope

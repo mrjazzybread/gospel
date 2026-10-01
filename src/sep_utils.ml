@@ -25,17 +25,17 @@ let empty_env () : namespace =
   env
 
 let get_pred ns = function
-  | Id_uast.Lidapp linfo ->
-      let id = Uast_utils.leaf linfo.lid in
+  | Id_uast.Lidapp app ->
+      let id = Uast_utils.leaf app.lapp_qid in
       Env.find ns id.id_tag
   | _ -> assert false
 
 let map_pred ns lens =
   let ps =
     {
-      ps_name = lens.lid;
+      ps_name = lens.Id_uast.lid;
       ps_args = [ lens.locaml; lens.lmodel ];
-      ps_persistent = lens.lpersistent;
+      ps_persistent = lens.lkind <> Mutable;
     }
   in
   Env.add ns lens.lid.id_tag ps

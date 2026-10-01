@@ -125,7 +125,7 @@ struct
 
   let lifted_arg ns env is_pre arg =
     match arg with
-    | Id_uast.Unit -> { arg_spatial = None; arg_val = Unit }
+    | Tast.Unit -> { arg_spatial = None; arg_val = Unit }
     | Wildcard -> { arg_spatial = None; arg_val = Wildcard }
     | Ghost (id, ty) ->
         { arg_spatial = None; arg_val = Ghost { ts_id = id; ts_ty = ty } }

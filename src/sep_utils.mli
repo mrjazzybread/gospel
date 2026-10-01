@@ -23,7 +23,7 @@ val get_pred : namespace -> Id_uast.lens_desc -> Sast.psymbol
       If [s] is a type whose logical model is isomorphic to its OCaml
       representation or [s] is not in scope. *)
 
-val map_pred : namespace -> Tast.lens_info -> unit
+val map_pred : namespace -> Id_uast.lens_info -> unit
 (** [map_pred m tag s is_mutable l] maps [tag] to a representation predicate
     named [s] that takes arguments of type [l]. *)
 

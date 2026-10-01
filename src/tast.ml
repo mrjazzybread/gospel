@@ -83,20 +83,10 @@ type function_ = {
   fun_loc : Location.t;  (** Location *)
 }
 
-type lens_info = {
-  lid : Ident.t;
-      (* The name of the lens.  Invariant: The name is always capitalized *)
-  lpersistent : bool; (* Marks if the lens is persistent. *)
-  locaml : Id_uast.pty; (* The OCaml type this lens lifts *)
-  lovars : tvar list; (* The type parameters of the OCaml type *)
-  lmodel : Id_uast.pty; (* The logical model exposed by this lens *)
-  lgvars : tvar list;
-}
-
 type type_spec = {
   ty_invariant : (Id_uast.id * term list) option;
   ty_model : Id_uast.model;
-  ty_lenses : lens_info list;
+  ty_lenses : Id_uast.lens_info list;
   ty_text : string;
   ty_loc : Location.t;
 }
@@ -122,19 +112,40 @@ type s_type_declaration = {
 let mk_tdecl tname tparams tkind tmanifest tattributes tspec tloc =
   { tname; tparams; tkind; tmanifest; tattributes; tspec; tloc }
 
+type ocaml_sp_var = {
+  var_name : Id_uast.qualid; (* Variable name *)
+  ty_ocaml : Id_uast.pty; (* OCaml type of the variable. *)
+  ty_gospel_cons : Id_uast.pty * Id_uast.lens;
+      (* Lens used in the precondition. *)
+  ty_gospel_prod : Id_uast.pty * Id_uast.lens;
+      (* Lens used in post condition. *)
+  ro : bool;
+      (* Read only flag. If [false], the variable is modified
+           by the function.
+
+           Remark: If this [sp_var] value refers to a return
+           value, [ro] is [true]. *)
+}
+
+type sp_var =
+  | Wildcard
+  | Unit
+  | Ghost of Ident.t * Id_uast.pty (* Ghost variable *)
+  | OCaml of ocaml_sp_var
+
 type xpost_spec = {
   sp_exn : Id_uast.qualid;
-  sp_xargs : Id_uast.sp_var list;
-  sp_xrets : Id_uast.sp_var list;
-  sp_xtops : Id_uast.ocaml_sp_var list;
+  sp_xargs : sp_var list;
+  sp_xrets : sp_var list;
+  sp_xtops : ocaml_sp_var list;
   sp_xpost : term list;
   sp_xloc : Location.t;
 }
 
 type val_spec = {
-  sp_args : Id_uast.sp_var list;
-  sp_rets : Id_uast.sp_var list;
-  sp_tops : Id_uast.ocaml_sp_var list;
+  sp_args : sp_var list;
+  sp_rets : sp_var list;
+  sp_tops : ocaml_sp_var list;
   sp_pre : term list;
   sp_checks : term list;
   sp_post : term list;

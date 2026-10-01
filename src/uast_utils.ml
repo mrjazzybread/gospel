@@ -151,7 +151,35 @@ let qualid_loc = function Id_uast.Qid id | Qdot (_, id) -> id.id_loc
 let mk_info ?(mut = false) ?(alias = None) id =
   { Id_uast.app_qid = id; app_alias = alias; app_mut = mut }
 
-let mk_linfo lid lpersistent lmatch lotvars lmodel lgtvars =
-  { Id_uast.lid; lpersistent; lotvars; lgtvars; lmatch; lmodel }
+let mk_lens_info lid lkind locaml llens_params lmodel =
+  { Id_uast.lid; lkind; locaml; llens_params; lmodel }
+
+let mk_lens_app lapp_qid lapp_kind lapp_ocaml lapp_model lapp_expected_params
+    lapp_params =
+  {
+    Id_uast.lapp_qid;
+    lapp_kind;
+    lapp_ocaml;
+    lapp_model;
+    lapp_expected_params;
+    lapp_params;
+  }
 
 let bool_mutable = function Mutable -> true | Immutable -> false
+
+module Tbl = Ident.IdTable
+
+let pty_list_tvars l =
+  let tbl = Tbl.create 100 in
+  let rec pty_tvars = function
+    | Id_uast.PTtyvar id -> Tbl.add tbl id.id_tag id
+    | PTtyapp (_, l) | PTtuple l -> List.iter pty_tvars l
+    | PTarrow (t1, t2) ->
+        pty_tvars t1;
+        pty_tvars t2
+  in
+  List.iter pty_tvars l;
+  let seq = Tbl.to_seq_values tbl in
+  List.of_seq seq
+
+let pty_tvars ty = pty_list_tvars [ ty ]

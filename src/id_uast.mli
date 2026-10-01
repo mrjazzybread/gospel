@@ -75,17 +75,29 @@ and term_desc =
 
 (* Specification *)
 
-type linfo = {
-  lid : qualid;
-  lpersistent : bool;
-  lotvars : id list;
-  lgtvars : id list;
-  lmatch : pty;
-  lmodel : pty;
+type lens_kind = Persistent | Mutable
+
+type lens_info = {
+  lid : id;
+      (* The name of the lens.  Invariant: The name is always capitalized *)
+  lkind : lens_kind; (* The kind of lens *)
+  locaml : pty; (* The OCaml type this lens lifts *)
+  llens_params : lens_info list; (* The lens parameters this lens receives. *)
+  lmodel : pty; (* The logical model exposed by this lens *)
 }
 
-type lens_desc =
-  | Lidapp of linfo
+type lens_app = {
+  lapp_qid : qualid;
+  lapp_kind : lens_kind;
+  lapp_ocaml : pty;
+  lapp_model : pty;
+  lapp_expected_params : lens_info list;
+  lapp_params : lens_desc list;
+}
+
+and lens_desc =
+  | Lvar of id
+  | Lidapp of lens_app
   | Ltuple of lens_desc list
   | Larrow of lens_desc * lens_desc
 
@@ -94,8 +106,8 @@ type lens = { lens_desc : lens_desc; lens_loc : Location.t }
 type ocaml_sp_var = {
   var_name : qualid; (* Variable name *)
   ty_ocaml : pty; (* OCaml type of the variable. *)
-  ty_gospel_cons : pty * lens;
-  ty_gospel_prod : pty * lens; (* Gospel type of the variable. *)
+  ty_gospel_cons : lens; (* Lens used in the precondition. *)
+  ty_gospel_prod : lens; (* Lens used in post condition. *)
   ro : bool;
       (* Read only flag. If [false], the variable is modified
            by the function.

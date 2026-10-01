@@ -226,6 +226,8 @@ rule token = parse
       { FALSEPROP }
   | "'" (lident as id)
       { QUOTE_LIDENT id }
+  | "'" (uident as id)
+      { QUOTE_UIDENT id }
   | "`" (lident as id) "`"
       { BACKQUOTE_LIDENT id }
   | '_'
@@ -233,7 +235,7 @@ rule token = parse
   | lident as id
       { try Hashtbl.find keywords id with Not_found -> LIDENT id }
   | uident as id
-            { UIDENT id }
+      { UIDENT id }
   | "[]"
       { LEFTSQRIGHTSQ }
   | "["

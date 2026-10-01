@@ -65,7 +65,7 @@
 
 %token <string> LIDENT UIDENT
 %token <string> OP1 OP2 OP3 OP4 OPPREF
-%token <string> QUOTE_LIDENT
+%token <string> QUOTE_LIDENT QUOTE_UIDENT
 %token <string> BACKQUOTE_LIDENT
 %token <string> ATTRIBUTE
 
@@ -321,14 +321,14 @@ lens_tuple:
 lens_arg:
 | q = qualid
     { PTtyapp (q, []) }
-| v = quote_lident
+| v = quote_uident
     { PTtyvar v }
 | LEFTPAR ty = lens RIGHTPAR
     { ty }
-/* | ty = lens_arg q = qualid */
-/*     { PTtyapp (q, [ty]) } */
-/* | LEFTPAR ty = lens COMMA l = separated_nonempty_list(COMMA, lens)  RIGHTPAR id=qualid */
-/*     { PTtyapp (id, ty :: l) } */
+| ty = lens_arg q = qualid
+    { PTtyapp (q, [ty]) }
+| LEFTPAR ty = lens COMMA l = separated_nonempty_list(COMMA, lens)  RIGHTPAR id=qualid
+    { PTtyapp (id, ty :: l) }
 ;
 
 lens_app:
@@ -685,6 +685,10 @@ uident:
 
 quote_lident:
 | id = QUOTE_LIDENT  { mk_pid id $loc }
+;
+
+quote_uident:
+| id = QUOTE_UIDENT  { mk_pid id $loc }
 ;
 
 ident_rich:

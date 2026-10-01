@@ -56,9 +56,7 @@ let triple fmt t =
     (arg_quant ~is_ret:true) t.triple_rets triple_post t.triple_post
 
 let rep_pred fmt p =
-  pp fmt "@[Predicate %a%a :%a@]" Ident.pp p.Tast.lid
-    (list ~first:sp ~sep:sp Tast_printer.print_tv)
-    (p.lovars @ p.lgvars)
+  pp fmt "@[Predicate %a :%a@]" Ident.pp p.Id_uast.lid
     (list ~first:sp ~sep:arrow Tast_printer.print_ty)
     [ p.locaml; p.lmodel ]
 

@@ -204,13 +204,15 @@ let labelled_arg fmt arg =
 
 let rec lens_tuple fmt l =
   match l with
+  | Lvar v -> assert false
   | Lidapp _ -> lens fmt l
   | Ltuple _ | Larrow _ -> (parens lens) fmt l
 
 and print_arrow_lens fmt = list ~sep:arrow lens fmt
 
 and lens fmt = function
-  | Lidapp info -> qualid fmt info.lid
+  | Lvar _ -> assert false
+  | Lidapp info -> qualid fmt info.lapp_qid
   | Larrow ((Larrow _ as ty1), ty2) ->
       pp fmt "@[%a@]@[%a@]@[%a@]" (parens lens) ty1 arrow () lens ty2
   | Larrow (ty1, ty2) -> print_arrow_lens fmt [ ty1; ty2 ]

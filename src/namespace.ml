@@ -111,8 +111,8 @@ and mod_defs = {
 
      Invariant: the cardinality of [record_env] is smaller or equal than
      the cardinality of [type_env]. *)
-  lens_env : Tast.lens_info Env.t; (* Lens definitions *)
-  default_lens_env : Tast.lens_info IdTable.t;
+  lens_env : Id_uast.lens_info Env.t; (* Lens definitions *)
+  default_lens_env : Id_uast.lens_info IdTable.t;
   (* The default lens for each OCaml type. *)
   (* Environments for OCaml definitions *)
   ocaml_type_env : ty_info Env.t;
@@ -272,13 +272,13 @@ let get_exn_info env id =
   let id, info = Lookup_exn.unique_toplevel_qualid env id in
   (id, info.eargs)
 
-let mk_lens lid lpersistent locaml lovars lmodel lgvars =
-  { Tast.lid; lpersistent; locaml; lovars; lmodel; lgvars }
+let mk_lens lid lkind locaml llens_params lmodel =
+  { lid; lkind; locaml; llens_params; lmodel }
 
 (** The [Val] lens that can be applied to any argument *)
 let val_lens_info =
   let v = Ident.mk_id "a" in
-  mk_lens Constants.val_lens_id true (PTtyvar v) [ v ] Constants.ty_val []
+  mk_lens Constants.val_lens_id Persistent (PTtyvar v) [] Constants.ty_val
 
 let get_default_lens env qid =
   let open Ident in
@@ -286,9 +286,9 @@ let get_default_lens env qid =
   IdTable.find env.default_lens_env id.id_tag
 
 module Lookup_lens = Lookup (struct
-  type info = Tast.lens_info
+  type info = lens_info
 
-  let id_lookup info = info.Tast.lid
+  let id_lookup info = info.lid
   let env defs = defs.lens_env
   let err id = W.Unbound_lens id
 end)
@@ -317,6 +317,10 @@ end)
 
 let fun_info = Lookup_fun.unique_toplevel_qualid
 
+let fun_qualid env q =
+  let q, info = fun_info env q in
+  (q, info.fparams, info.fty)
+
 module Lookup_val = Lookup (struct
   type info = fun_info
 
@@ -327,28 +331,12 @@ end)
 
 let val_info = Lookup_val.unique_toplevel_qualid
 
-let ocaml_val_check ocaml_vals env q =
-  (* If there are no valid ocaml values, then no lookup is performed. *)
-  if IdTable.length ocaml_vals = 0 then None
-  else
-    try
-      (* Raises [W.Error] if [q] is not in the OCaml namespace. *)
-      let q, _ = val_info env q in
-      let pty = IdTable.find ocaml_vals (Uast_utils.leaf q).id_tag in
-      Some (q, pty)
-    with W.Error _ -> None
-
-let fun_qualid ocaml_vals env q =
-  match ocaml_val_check ocaml_vals env q with
-  | None ->
-      let q, info = fun_info env q in
-      (q, info.fparams, info.fty)
-  | Some (q, ty_gospel) -> (q, [], ty_gospel)
-
 let ocaml_val_qualid env q =
   let q, info = val_info env q in
-  (* assert (info.fparams = []); *)
   (q, info.fty)
+
+let ocaml_val_qualid_opt env q =
+  match ocaml_val_qualid env q with exception _ -> None | q, _ -> Some q
 
 (* [leaf q] returns an identifier string without its prefix. *)
 let leaf = function
@@ -513,7 +501,7 @@ let rec to_alias = function
 
 let add_lens info defs =
   let lenv = defs.lens_env in
-  { defs with lens_env = Env.add info.Tast.lid.Ident.id_str info lenv }
+  { defs with lens_env = Env.add info.lid.Ident.id_str info lenv }
 
 let add_lens env info = add_def (add_lens info) env
 

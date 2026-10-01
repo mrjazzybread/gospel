@@ -4,6 +4,7 @@ open Utils
 type kind =
   | Arity_mismatch of string * string * int * int
   | Bad_arity of string * int * int
+  | Bad_lens_arity of string list * int * int
   | Bad_mutable_annotation
   | Bad_type of string * string
   | Bad_subtype of string * string * string * string
@@ -24,6 +25,7 @@ type kind =
   | Duplicated_produces of string list
   | Duplicated_record_label of string
   | Duplicated_type_definition of string
+  | Expected_persistent_lens
   | Illegal_character of char
   | Illegal_escape of string * string option
   | Incompatible_field of string list * string list * string
@@ -75,6 +77,11 @@ let pp_kind ppf = function
         "The type constructor %s expected %d argument(s)@ but is applied to %d \
          argument(s) here"
         f expected got
+  | Bad_lens_arity (f, expected, got) ->
+      pf ppf
+        "The lens %a expected %d argument(s)@ but is applied to %d argument(s) \
+         here"
+        print_qid f expected got
   | Bad_mutable_annotation -> pf ppf "This type cannot be marked as mutable"
   | Bad_subtype (ty1, ty2, ty1_sub, ty2_sub) ->
       pf ppf
@@ -124,6 +131,7 @@ let pp_kind ppf = function
   | Duplicated_record_label l -> pf ppf "Two labels are named %s" l
   | Duplicated_type_definition s ->
       pf ppf "Multiple definitions of the type name %s@\n" s
+  | Expected_persistent_lens -> pf ppf "Expected a persistent lens"
   | Invalid_arg_number (expected, got) ->
       pf ppf "This header has %d argument%a but expected %d" got plural got
         expected

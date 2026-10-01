@@ -44,14 +44,12 @@ let ty_val = PTtyapp (mk_info ~mut:false (Qid val_id), [])
 let ty_unit = PTtyapp (mk_info ~mut:false (Qid unit_id), [])
 
 let lens_unit =
-  let lens_desc =
-    Lidapp (mk_linfo (Qid unit_lens_id) true ty_unit [] ty_unit [])
-  in
-  { lens_desc; lens_loc = Location.none }
+  let desc = mk_lens_app (Qid unit_lens_id) Persistent ty_unit ty_unit [] [] in
+  { lens_desc = Lidapp desc; lens_loc = Location.none }
 
 let lens_val =
   let id = Ident.mk_id "a" in
-  let lens_desc =
-    Lidapp (mk_linfo (Qid val_lens_id) true (PTtyvar id) [ id ] ty_val [])
+  let desc =
+    mk_lens_app (Qid val_lens_id) Persistent (PTtyvar id) ty_val [] []
   in
-  { lens_desc; lens_loc = Location.none }
+  { lens_desc = Lidapp desc; lens_loc = Location.none }

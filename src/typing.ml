@@ -12,11 +12,12 @@ module Env = Map.Make (String)
 open Id_uast
 module W = Warnings
 open Namespace
+open Uast_utils
 
 type local_env = {
   term_var : Ident.t Env.t;
   (* Local term variables e.g. names bound with a [let] or a quantifier *)
-  ocaml_vals : Id_uast.pty Ident.IdTable.t;
+  ocaml_vals : unit Ident.IdTable.t;
   (* When processing an OCaml value description, this table keeps
      track of the OCaml values that are allowed to be used within
      Gospel terms. *)
@@ -145,14 +146,22 @@ let unique_pty ~ocaml ~bind defs env pty =
     clause of the specification this term is in). If the variable is either not
     an OCaml variable or not allowed to be used in this term, we search the
     Gospel namespace. If no variable is found, an exception is raised. *)
-let unique_var env ocaml_vals defs q =
+let unique_var env defs q =
   match q with
-  | Parse_uast.Qid pid when Env.mem pid.pid_str env ->
-      Tlocal (Env.find pid.pid_str env)
-  | _ ->
+  | Parse_uast.Qid pid when Env.mem pid.pid_str env.term_var ->
+      Tlocal (Env.find pid.pid_str env.term_var)
+  | _ -> (
       (* If [q] is of the form [Qdot] it cannot be a local variable *)
-      let q, params, pty = fun_qualid ocaml_vals defs q in
-      Tvar (q, params, pty)
+      let ocaml_var =
+        Option.bind (ocaml_val_qualid_opt defs q) (fun q ->
+            if Tbl.mem env.ocaml_vals (Uast_utils.leaf q).id_tag then Some q
+            else None)
+      in
+      match ocaml_var with
+      | None ->
+          let q, params, pty = fun_qualid defs q in
+          Tvar (q, params, pty)
+      | Some q -> Tlocal (Uast_utils.leaf q))
 
 let preid pid old_env env =
   let id = Ident.from_preid pid in
@@ -212,7 +221,7 @@ let rec unique_post_term defs old_env env t =
     | TTrue -> TTrue
     | TFalse -> TFalse
     | Tconst c -> Tconst c
-    | Tvar q -> unique_var env.term_var env.ocaml_vals defs q
+    | Tvar q -> unique_var env defs q
     | Tlet (v, t1, t2) ->
         let env = ref env in
         let old_env = ref old_env in
@@ -455,17 +464,22 @@ let type_kind ~ocaml env tid tparams lenv = function
       (env, PTtype_record fields)
 
 let default_lens env pty =
+  let open Uast_utils in
   let rec default_lens = function
-    | PTtyvar _ -> Constants.lens_val.lens_desc
+    | PTtyvar v -> Lvar (Uast_utils.map_id String.capitalize_ascii v)
     | PTarrow (t1, t2) ->
         let arg = default_lens t1 in
         let ret = default_lens t2 in
         Larrow (arg, ret)
-    | PTtyapp (v, _) ->
+    | PTtyapp (v, l) ->
         let lens_info = Namespace.get_default_lens env v.app_qid in
-        Lidapp
-          (Uast_utils.mk_linfo (Qid lens_info.lid) lens_info.lpersistent
-             lens_info.locaml lens_info.lovars lens_info.lmodel lens_info.lgvars)
+        let lens_args = List.map default_lens l in
+
+        let desc =
+          Uast_utils.mk_lens_app (Qid lens_info.lid) lens_info.lkind
+            lens_info.locaml lens_info.lmodel lens_info.llens_params lens_args
+        in
+        Lidapp desc
     | PTtuple l -> Ltuple (List.map default_lens l)
   in
   { lens_desc = default_lens pty; lens_loc = Location.none }
@@ -494,28 +508,12 @@ let unique_tspec env model local_env self_ty lenses inv_ty tspec =
 
 let is_persistent l =
   let rec is_persistent = function
-    | Lidapp info -> info.lpersistent
+    | Lidapp app ->
+        app.lapp_kind <> Mutable && List.for_all is_persistent app.lapp_params
     | Ltuple l -> List.for_all is_persistent l
-    | Larrow _ -> true
+    | Larrow _ | Lvar _ -> true
   in
-  is_persistent l.lens_desc
-
-module Tbl = Ident.IdTable
-
-let pty_list_tvars l =
-  let tbl = Tbl.create 100 in
-  let rec pty_tvars = function
-    | PTtyvar id -> Tbl.add tbl id.id_tag id
-    | PTtyapp (_, l) | PTtuple l -> List.iter pty_tvars l
-    | PTarrow (t1, t2) ->
-        pty_tvars t1;
-        pty_tvars t2
-  in
-  List.iter pty_tvars l;
-  let seq = Tbl.to_seq_values tbl in
-  List.of_seq seq
-
-let pty_tvars ty = pty_list_tvars [ ty ]
+  is_persistent l
 
 (** [create_model env lenv tname tparams tspec] Processes the model field(s) of
     the type specification [tspec]. *)
@@ -528,7 +526,7 @@ let create_model tname env lenv tmanifest tspec =
     | Some ty ->
         let lens = default_lens (scope env) ty in
         let ty = Solver.apply_lens ty lens in
-        let mut = if is_persistent lens then Immutable else Mutable in
+        let mut = if is_persistent lens.lens_desc then Immutable else Mutable in
         Implicit (mut, ty)
   in
   match tspec with
@@ -547,6 +545,9 @@ let create_model tname env lenv tmanifest tspec =
           in
           Fields (Ident.mk_id tname, tvars, l))
 
+let mk_lens_params tvars =
+  List.map (fun v -> mk_lens v Mutable (PTtyvar v) [] (PTtyvar v)) tvars
+
 (** [update_model_env env self_ty tname tparams model_ty] Returns the default
     lens this model declaration introduces or [None] if there is no model.
     Additionally, also returns [env] updated with the returned lens, or
@@ -563,21 +564,20 @@ let update_model_env env self_ty tname tparams mut model_ty =
     else
       let lens_nm = capitalize_id lbl.pld_name in
       let field_params = pty_tvars lbl.pld_type in
-      Some (mk_lens lens_nm false self_ty tparams lbl.pld_type field_params)
+      let params = mk_lens_params field_params in
+      Some (mk_lens lens_nm Persistent self_ty params lbl.pld_type)
   in
+  let kind = if mut then Mutable else Persistent in
+  let lparams = mk_lens_params (pty_tvars self_ty) in
   function
   | No_model _ -> (None, [], env)
   | Implicit (_, model_ty) ->
-      let model_params = pty_tvars model_ty in
-      let linfo =
-        mk_lens (capitalize_id tname) (not mut) self_ty tparams model_ty
-          model_params
-      in
+      let linfo = mk_lens (capitalize_id tname) kind self_ty lparams model_ty in
       (Some linfo, [ linfo ], add_lens env linfo)
   | Fields (model_id, tvars, l) ->
       let model_ty = Option.get model_ty in
       let default =
-        mk_lens (capitalize_id tname) mut self_ty tparams model_ty tvars
+        mk_lens (capitalize_id tname) kind self_ty lparams model_ty
       in
       let lenses = List.filter_map field_lens l in
       let env = List.fold_left add_lens env lenses in
@@ -936,18 +936,32 @@ let mk_head head_id head_lens = { head_id; head_lens }
 
 type owned_variables = { global : top_owned list; header : head_owned list }
 
-let rec resolve_lens env = function
-  | Parse_uast.PTtyvar _ -> assert false
-  | PTtyapp (v, []) ->
-      let q, info = Namespace.get_lens_info env v in
-      let linfo =
-        Uast_utils.mk_linfo q info.lpersistent info.locaml info.lovars
-          info.lmodel info.lgvars
-      in
-      Lidapp linfo
-  | PTtyapp _ -> assert false
-  | PTtuple l -> Ltuple (List.map (resolve_lens env) l)
-  | PTarrow (t1, t2) -> Larrow (resolve_lens env t1, resolve_lens env t2)
+let resolve_lens lenv env lens =
+  let rec resolve_lens lens =
+    match lens with
+    | Parse_uast.PTtyvar pid ->
+        let tvar = String.uncapitalize_ascii pid.pid_str in
+        let id = Hashtbl.find lenv.type_vars tvar in
+        Lvar { id with id_str = pid.pid_str }
+    | PTtyapp (v, l) ->
+        let q, info = Namespace.get_lens_info env v in
+        let len_expected = List.length info.llens_params in
+        let len_provided = List.length l in
+        if len_expected <> len_provided then
+          W.error ~loc:(Uast_utils.qualid_loc q)
+            (W.Bad_lens_arity
+               (Uast_utils.flatten_ident q, len_expected, len_provided));
+
+        let lens_args = List.map resolve_lens l in
+        let desc =
+          Uast_utils.mk_lens_app q info.lkind info.locaml info.lmodel
+            info.llens_params lens_args
+        in
+        Lidapp desc
+    | PTtuple l -> Ltuple (List.map resolve_lens l)
+    | PTarrow (t1, t2) -> Larrow (resolve_lens t1, resolve_lens t2)
+  in
+  resolve_lens lens
 
 (** [resolve_vars defs vars dup_error l] traverses the list of variables [l] and
     returns the corresponding variable in [vars] or in the top level environment
@@ -957,7 +971,7 @@ let rec resolve_lens env = function
     Gospel exception. Additionally, if there are duplicates in [l], the
     [dup_error] function is called to produce an exception of type [W.error]
     and, naturally, raise the produced exception. *)
-let resolve_vars defs vars dup_error l =
+let resolve_vars defs lenv vars dup_error l =
   (* [resolve_var qid] finds the variable [qid] in [vars] list. *)
   let resolve_var (qid, lens) =
     let find pid = fun (x, _) -> x.Ident.id_str = pid.Preid.pid_str in
@@ -979,7 +993,7 @@ let resolve_vars defs vars dup_error l =
       | None -> default_lens defs ty
       | Some lens ->
           {
-            lens_desc = resolve_lens defs lens.Parse_uast.lens_desc;
+            lens_desc = resolve_lens lenv defs lens.Parse_uast.lens_desc;
             lens_loc = lens.lens_loc;
           }
     in
@@ -1036,7 +1050,7 @@ let duplicated_owned o1 o2 error =
     the following errors: - Two [modifies] clauses for the same variable. - Two
     [preserves] clauses for the same variable. - A [preserves] and a [modifies]
     clause for the same variable. *)
-let process_sugar_ownership defs spec vars =
+let process_sugar_ownership lenv defs spec vars =
   (* Functions that return an exception in case of a duplicated
      [modifies] or [preserves] clauses. *)
   let dup_mod id = W.Duplicated_modifies id in
@@ -1045,9 +1059,9 @@ let process_sugar_ownership defs spec vars =
   (* Name resolution for names in [modifies] and [preserves] clauses.
      Also checks if there are any duplicates. *)
   let preserved_vars =
-    resolve_vars defs vars dup_pres spec.Parse_uast.sp_preserves
+    resolve_vars lenv defs vars dup_pres spec.Parse_uast.sp_preserves
   in
-  let modified_vars = resolve_vars defs vars dup_mod spec.sp_modifies in
+  let modified_vars = resolve_vars lenv defs vars dup_mod spec.sp_modifies in
   (* Checks if there is a value that is both in a [preserves] and
      [modifies] clause. *)
   let () = duplicated_owned preserved_vars modified_vars pres_mod in
@@ -1060,7 +1074,7 @@ let process_sugar_ownership defs spec vars =
     OCaml type. Also checks if the variable appears in the [mod_and_pres] list,
     which should be the list of variables in [modifies] and [preserves] clauses.
     The [consumes] clause only impacts error messages. *)
-let process_ownership ~consumes defs modifies preserves own vars =
+let process_ownership ~consumes lenv defs modifies preserves own vars =
   (* Functions that return (not raise) an exception for errors in
      [consumes] or [produces] clauses.  *)
   let dup_error qid =
@@ -1069,7 +1083,7 @@ let process_ownership ~consumes defs modifies preserves own vars =
   let mod_error qid =
     if consumes then W.Desugared_consumes qid else W.Desugared_produces qid
   in
-  let owned_variables = resolve_vars defs vars dup_error own in
+  let owned_variables = resolve_vars lenv defs vars dup_error own in
   (* Checks if there is a variable also appears in a [modifies] or
      [preserves] clause. *)
   let () = duplicated_owned owned_variables modifies mod_error in
@@ -1115,15 +1129,13 @@ let add_values_env hd_args hd_rets lenv defs args rets consumes produces
         (* Creates the Gospel representation for this OCaml value
            paired with its lens. *)
         let ty_gospel arg =
-          if var_mem arg.head_id then
-            Some (Solver.apply_lens ty_ocaml arg.head_lens, arg.head_lens)
-          else None
+          if var_mem arg.head_id then Some arg.head_lens else None
         in
         let ty_gospel_default l =
           (* If this value is not consumed or produced, we use the val
              lens. *)
           let opt = List.find_map ty_gospel l in
-          Option.value ~default:(Constants.ty_val, Constants.lens_val) opt
+          Option.value ~default:Constants.lens_val opt
         in
 
         (* Checks if the function receives or returns ownership of
@@ -1245,21 +1257,19 @@ let global_values_list pre_tbl post_tbl consumes produces modifies preserves =
       (* Creates the Gospel representation for this OCaml value
            paired with its lens. *)
       let ty_gospel l =
-        if List.exists (mem top.top_qid) l then
-          Some (Solver.apply_lens top.top_pty top.top_lens, top.top_lens)
-        else None
+        if List.exists (mem top.top_qid) l then Some top.top_lens else None
       in
       let ty_gospel_default l =
         (* If this value is not consumed or produced, we use the val
              lens. *)
         let opt = ty_gospel l in
-        Option.value ~default:(Constants.ty_val, Constants.lens_val) opt
+        Option.value ~default:Constants.lens_val opt
       in
       let ty_gospel_cons = ty_gospel_default consumes in
       let ty_gospel_prod = ty_gospel_default produces in
       (* Populates the [pre_tbl] and [post_tbl]. *)
-      Tbl.add pre_tbl var_tag (fst ty_gospel_cons);
-      Tbl.add post_tbl var_tag (fst ty_gospel_prod);
+      Tbl.add pre_tbl var_tag ();
+      Tbl.add post_tbl var_tag ();
       {
         var_name = top.top_qid;
         ty_ocaml = top.top_pty;
@@ -1289,7 +1299,7 @@ let global_values_list pre_tbl post_tbl consumes produces modifies preserves =
 let process_produces defs lenv produces hd_args hd_rets consumes modifies
     preserves args rets =
   let produces =
-    process_ownership ~consumes:false defs modifies preserves produces
+    process_ownership ~consumes:false defs lenv modifies preserves produces
       (args @ rets)
   in
   (* Augment the [consumes], [produces] and [read_only] lists with all
@@ -1404,12 +1414,12 @@ let value_spec ~loc defs lenv name ocaml_ty spec =
   let rets = pair_hd_vars ret_types header.sp_hd_ret in
   (* Resolves the variables in [modifies] and [preserves] clauses. *)
   let modifies, preserves =
-    process_sugar_ownership defs spec.sp_pre_spec args
+    process_sugar_ownership defs lenv spec.sp_pre_spec args
   in
   (* Resolves the variables in [consumes] and [produces] clauses.
      Note how return values are not allowed to be consumed. *)
   let consumes =
-    process_ownership ~consumes:true defs modifies preserves
+    process_ownership ~consumes:true defs lenv modifies preserves
       spec.sp_pre_spec.sp_consumes args
   in
   let sp_args, sp_rets, tops, pre_env, post_env =

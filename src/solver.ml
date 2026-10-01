@@ -56,6 +56,15 @@ let rec map_constraints (f : 'a -> 'b co) (xs : 'a list) : 'b list co =
       let+ xs' = map_constraints f xs and+ x' = f x in
       x' :: xs'
 
+let rec map_constraints2 (f : 'a -> 'b -> 'c co) (l1 : 'a list) (l2 : 'b list) :
+    'c list co =
+  match (l1, l2) with
+  | [], [] -> pure []
+  | x :: t1, y :: t2 ->
+      let+ xs' = map_constraints2 f t1 t2 and+ x' = f x y in
+      x' :: xs'
+  | _ -> assert false
+
 (* The following functions are used to turn Gospel signatures into Inferno
    constraints that, when solved, will produce typed signatures. If the
    constraint is unsatisfiable, then Inferno will produce an exception which we
@@ -564,50 +573,189 @@ let axiom_cstr ax =
   let+ t = fmla ax.Id_uast.ax_term in
   mk_axiom ax.ax_name t ax.ax_loc ax.ax_text
 
-(** [sp_var arg] turns a value of type [sp_var] into a [tsymbol]. If [arg] is an
-    unnamed variable, return [None]. *)
-let sp_var = function
-  | Ghost (id, pty) -> [ mk_ts id pty ]
+(** Checks if a lens of kind [provided] lens can be used when we expected a lens
+    of kind [expected]. *)
+let match_lens_kind ~loc expected provided =
+  match (expected, provided) with
+  | Persistent, Persistent -> ()
+  | Mutable, _ -> ()
+  | _ -> W.error ~loc W.Expected_persistent_lens
+
+let rec match_lenses ~loc tovars tgvars (expected, provided) =
+  let open Uast_utils in
+  match provided with
+  | Lidapp app ->
+      match_lens_kind ~loc expected.lkind app.lapp_kind;
+      let@ provided_ocaml = pty_to_deep_rigid app.lapp_ocaml in
+      let@ expected_ocaml = pty_to_deep_flex tovars expected.locaml in
+      let@ provided_model = pty_to_deep_rigid app.lapp_model in
+      let@ expected_model = pty_to_deep_flex tgvars expected.lmodel in
+      let+ () = provided_ocaml -- expected_ocaml
+      and+ () = provided_model -- expected_model
+      and+ _ =
+        map_constraints
+          (match_lenses ~loc tovars tgvars)
+          (List.combine app.lapp_expected_params app.lapp_params)
+      in
+      ()
+  | _ -> assert false
+
+let pty_lens_cstr ~loc v ocaml_ty app =
+  let lovars = Uast_utils.pty_tvars app.lapp_ocaml in
+  let lgvars = Uast_utils.pty_tvars app.lapp_model in
+  let@ tovars = assoc_vars lovars in
+  let@ expected = pty_to_deep_flex tovars app.lapp_ocaml in
+  let@ provided = pty_to_deep_rigid ocaml_ty in
+  let@ tgvars = assoc_vars lgvars in
+  let@ model = pty_to_deep_flex tgvars app.lapp_model in
+  let lens_params = List.combine app.lapp_expected_params app.lapp_params in
+  let+ _ = map_constraints (match_lenses ~loc tovars tgvars) lens_params
+  and+ () = expected -- provided
+  and+ () = model -- v
+  and+ t = decode model in
+  t
+
+let rec lens_to_app l =
+  let lens_to_app = fun x -> Lidapp (lens_to_app x) in
+  match l with
+  | Lidapp app ->
+      { app with lapp_params = List.map lens_to_app app.lapp_params }
+  | Lvar id ->
+      let eid = Qid (Ident.mk_id ~loc:id.Ident.id_loc "Encode") in
+      Uast_utils.mk_lens_app eid Persistent (PTtyvar id) (PTtyvar id) [] []
+  | Ltuple l ->
+      let n = List.length l in
+      let id = Qid (Ident.mk_id ("Tuple" ^ string_of_int n)) in
+      let tvars = List.init n (fun x -> Ident.mk_id ("a" ^ string_of_int x)) in
+      let ty = PTtuple (List.map (fun t -> PTtyvar t) tvars) in
+      let expected_params =
+        List.map
+          (fun v ->
+            Uast_utils.mk_lens_info (Ident.mk_id "H") Mutable (PTtyvar v) []
+              (PTtyvar v))
+          tvars
+      in
+      Uast_utils.mk_lens_app id Persistent ty ty expected_params
+        (List.map lens_to_app l)
+  | Larrow (l1, l2) ->
+      let id = Qid (Ident.mk_id "Arrow") in
+      let tvar1 = PTtyvar (Ident.mk_id "A") in
+      let tvar2 = PTtyvar (Ident.mk_id "B") in
+      let ty = PTarrow (tvar1, tvar2) in
+      let expected_params =
+        [
+          Uast_utils.mk_lens_info (Ident.mk_id "A") Mutable tvar1 [] tvar1;
+          Uast_utils.mk_lens_info (Ident.mk_id "B") Mutable tvar2 [] tvar2;
+        ]
+      in
+      Uast_utils.mk_lens_app id Persistent ty ty expected_params
+        [ lens_to_app l1; lens_to_app l2 ]
+
+let apply_lens nm ocaml_ty lens =
+  Solver.correlate (lens.lens_loc.loc_start, lens.lens_loc.loc_end)
+  @@
+  let lens_app = lens_to_app lens.lens_desc in
+  pty_lens_cstr ~loc:lens.lens_loc nm ocaml_ty lens_app
+
+let sp_ocaml_var_apply_lens (model, model') v =
+  let+ pre_pty = apply_lens model v.Id_uast.ty_ocaml v.ty_gospel_cons
+  and+ post_pty = apply_lens model' v.ty_ocaml v.ty_gospel_prod in
+  {
+    var_name = v.var_name;
+    ty_ocaml = v.ty_ocaml;
+    ty_gospel_cons = (pre_pty, v.ty_gospel_cons);
+    ty_gospel_prod = (post_pty, v.ty_gospel_prod);
+    ro = v.ro;
+  }
+
+(** [sp_var_lens arg] in the case of OCaml values applies the corresponding
+    lenses and obtains the model of the variable in the pre and post condition.
+    In the cases where this is not an OCaml variable, this function creates an
+    "{
+          identity" constraint *)
+let sp_var_apply_lens modelv s =
+  match s with
+  | Id_uast.Unit -> pure Unit
+  | Wildcard -> pure Wildcard
+  | Ghost (id, pty) ->
+      let model, _ = modelv in
+      let@ v = pty_to_deep_rigid pty in
+      let+ () = model -- v in
+      Ghost (id, pty)
   | OCaml v ->
-      let id = match v.var_name with Qid id -> id | _ -> assert false in
-      (* TODO: Once we add explicit lenses we must differentiate
-         between the type in the pre and post condition. *)
-      let old_id = mk_ts id (fst v.ty_gospel_cons) in
-      let pre_id = mk_ts (Ident.mk_updated id) (fst v.ty_gospel_prod) in
-      [ old_id; pre_id ]
-  | _ -> []
+      let+ v = sp_ocaml_var_apply_lens modelv v in
+      OCaml v
+
+let sp_ocaml_var_to_tvar acc (model, model') v =
+  let id = Uast_utils.leaf v.Id_uast.var_name in
+  let pre_id = id in
+  let post_id = Ident.mk_updated id in
+  def pre_id model (def post_id model' acc)
+
+(** [sp_var arg] turns a value of type [sp_var] into either 0, 1 or 2 [tsymbol]s
+    depending on the argument. *)
+let sp_var_to_tvar acc modelv s =
+  match s with
+  | Id_uast.Unit | Wildcard -> acc
+  | Ghost (v, pty) ->
+      let model, _ = modelv in
+      def v model acc
+  | OCaml v -> sp_ocaml_var_to_tvar acc modelv v
 
 let xspec (spec : Id_uast.xpost_spec) =
-  let spec_cstr =
-    let+ sp_xpost = map_constraints fmla spec.sp_xpost in
-    mk_xpost spec.sp_exn spec.sp_xargs spec.sp_xrets spec.sp_xtops sp_xpost
-      spec.sp_xloc
+  let f =
+   fun _ k ->
+    let@ v1 = exist in
+    let@ v2 = exist in
+    k (v1, v2)
   in
-  let args = List.concat_map sp_var spec.sp_xargs in
-  let rets = List.concat_map sp_var spec.sp_xrets in
-  build_def (args @ rets) spec_cstr
+  let@ argsv = map_binders f spec.sp_xargs in
+  let@ retsv = map_binders f spec.sp_xrets in
+  let@ tops = map_binders f spec.sp_xtops in
+
+  let+ args = map_constraints2 sp_var_apply_lens argsv spec.sp_xargs
+  and+ rets = map_constraints2 sp_var_apply_lens retsv spec.sp_xrets
+  and+ topsv = map_constraints2 sp_ocaml_var_apply_lens tops spec.sp_xtops
+  and+ xpost =
+    let xpost = map_constraints fmla spec.sp_xpost in
+    let xpost = List.fold_left2 sp_var_to_tvar xpost argsv spec.sp_xargs in
+    let xpost = List.fold_left2 sp_var_to_tvar xpost retsv spec.sp_xrets in
+    List.fold_left2 sp_ocaml_var_to_tvar xpost tops spec.sp_xtops
+  in
+
+  mk_xpost spec.sp_exn args rets topsv xpost spec.sp_xloc
 
 (** Creates a constraint ensuring that the terms within [pre] and [post] are
     well typed. *)
 let spec_cstr (spec : Id_uast.val_spec) =
   (* Constraint that solves each pre and post condition. *)
-  let spec_cstr =
-    let+ sp_pre = map_constraints fmla spec.sp_pre
-    and+ sp_post = map_constraints fmla spec.sp_post
-    and+ sp_checks = map_constraints fmla spec.sp_checks
-    and+ xpost_spec = map_constraints xspec spec.sp_xpost in
-    Tast.mk_vspec spec.sp_args spec.sp_rets spec.sp_tops sp_pre sp_checks
-      sp_post xpost_spec spec.sp_diverge spec.sp_pure spec.sp_text spec.sp_loc
+  let f =
+   fun _ k ->
+    let@ v1 = exist in
+    let@ v2 = exist in
+    k (v1, v2)
   in
-  let args = List.concat_map sp_var spec.sp_args in
-  let rets = List.concat_map sp_var spec.sp_rets in
+  let@ argsv = map_binders f spec.sp_args in
+  let@ retsv = map_binders f spec.sp_rets in
+  let@ topsv = map_binders f spec.sp_tops in
 
-  (* Remark: Return values are added to the scope of both the pre and
-     post conditions, although return values are not allowed to be
-     used in the former.  This is fine since we have already performed
-     name resolution before calling the solver meaning that this case
-     will never happen. *)
-  build_def (args @ rets) spec_cstr
+  let+ args = map_constraints2 sp_var_apply_lens argsv spec.sp_args
+  and+ rets = map_constraints2 sp_var_apply_lens retsv spec.sp_rets
+  and+ tops = map_constraints2 sp_ocaml_var_apply_lens topsv spec.sp_tops
+  and+ pre, post, xspec, checks =
+    let fmlas =
+      let+ post = map_constraints fmla spec.sp_post
+      and+ pre = map_constraints fmla spec.sp_pre
+      and+ xspec = map_constraints xspec spec.sp_xpost
+      and+ checks = map_constraints fmla spec.sp_checks in
+      (post, pre, xspec, checks)
+    in
+    let fmlas = List.fold_left2 sp_var_to_tvar fmlas argsv spec.sp_args in
+    let fmlas = List.fold_left2 sp_var_to_tvar fmlas retsv spec.sp_rets in
+    List.fold_left2 sp_ocaml_var_to_tvar fmlas topsv spec.sp_tops
+  in
+  mk_vspec args rets tops pre post checks xspec spec.sp_diverge spec.sp_pure
+    spec.sp_text spec.sp_loc
 
 let axiom tvars ax =
   let ax, vars = typecheck tvars (axiom_cstr ax) in
@@ -644,28 +792,8 @@ let ty_inst ty tvars args =
   let _, t = solve (let0 c) in
   t
 
-let rec lens_cstr ocaml_ty lens =
-  match (ocaml_ty, lens) with
-  | _, Lidapp linfo ->
-      let@ ovars = assoc_vars linfo.lotvars in
-      let@ expected = pty_to_deep_flex ovars linfo.lmatch in
-      let@ provided = pty_to_deep_rigid ocaml_ty in
-      let@ model = pty_to_deep_flex [] linfo.lmodel in
-      let+ () = expected -- provided and+ t = decode model in
-      t
-  | PTtuple l1, Ltuple l2 ->
-      let+ l =
-        map_constraints (fun (x, y) -> lens_cstr x y) (List.combine l1 l2)
-      in
-      PTtuple l
-  | PTarrow (arg, ret), Larrow (larg, lret) ->
-      let+ arg = lens_cstr arg larg and+ ret = lens_cstr ret lret in
-      PTarrow (arg, ret)
-  | _ -> assert false (* TODO replace with W.error *)
-
-let apply_lens ocaml_ty lens =
-  let c = lens_cstr ocaml_ty lens.lens_desc in
-  let c =
-    Solver.correlate (lens.lens_loc.loc_start, lens.lens_loc.loc_end) @@ c
-  in
-  fst (typecheck [] c)
+let apply_lens t lens =
+  fst
+    (typecheck []
+       (let@ v = exist in
+        apply_lens v t lens))

@@ -77,7 +77,7 @@ type axiom = {
 
 (** Top level definitions *)
 type definition_node =
-  | Pred of Tast.lens_info
+  | Pred of Id_uast.lens_info
   | Type of type_decl
   | Triple of triple
   | Val of Tast.s_val_description

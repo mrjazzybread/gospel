@@ -8,19 +8,19 @@
 (*  (as described in file LICENSE enclosed).                              *)
 (**************************************************************************)
 
-val x : 'a ref
-val f1 : 'a -> unit
+val x : int ref
+val f1 : int -> unit
 (*@ f1 y
     modifies x
     requires x = y
     ensures x = y *)
 
-val f2 : unit -> 'a
+val f2 : unit -> int
 (*@ y = f2 ()
     preserves x
     ensures y = x *)
 
-val f3 : 'a -> unit
+val f3 : int -> unit
 (*@ f3 y
     consumes x
     requires x = x
@@ -28,7 +28,7 @@ val f3 : 'a -> unit
 
 module M : sig
   type t
-  (*@ mutable model : val *)
+  (*@ mutable model : integer *)
 
   val x : t
 end

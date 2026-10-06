@@ -12,33 +12,6 @@ open Ident
 open Sast
 open Tast
 module Env = Ident.IdTable
-module Set = Set.Make (String)
-
-type namespace = psymbol Env.t
-
-let empty_env () : namespace =
-  let env = Env.create 100 in
-  let val_ps =
-    { ps_name = Constants.val_lens_id; ps_args = []; ps_persistent = true }
-  in
-  let () = Env.add env Constants.val_lens_id.id_tag val_ps in
-  env
-
-let get_pred ns = function
-  | Id_uast.Lidapp app ->
-      let id = Uast_utils.leaf app.lapp_qid in
-      Env.find ns id.id_tag
-  | _ -> assert false
-
-let map_pred ns lens =
-  let ps =
-    {
-      ps_name = lens.Id_uast.lid;
-      ps_args = [ lens.locaml; lens.lmodel ];
-      ps_persistent = lens.lkind <> Mutable;
-    }
-  in
-  Env.add ns lens.lid.id_tag ps
 
 let change_id map id = Ident.mk_id (map id.id_str) ~loc:id.id_loc
 
@@ -87,8 +60,8 @@ let rec map_tvars changed tbl t =
 let rec map_sep_terms tbl t =
   let changed = ref false in
   let rec t_map = function
-    | Lift (v, t1, t2) ->
-        Lift (v, map_tvars changed tbl t1, map_tvars changed tbl t2)
+    | Lift (v, t1, l, t2) ->
+        Lift (v, map_tvars changed tbl t1, l, map_tvars changed tbl t2)
     | Logical t -> Logical (map_tvars changed tbl t)
     | Wand (t, l) -> Wand (List.map t_map t, List.map t_map l)
     | Quant (q, l, s) -> Quant (q, l, List.map t_map s)

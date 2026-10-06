@@ -9,7 +9,4 @@
 (**************************************************************************)
 
 val process_sigs :
-  (string -> string) ->
-  Sep_utils.namespace ->
-  Tast.s_signature_item list ->
-  Sast.definitions
+  (string -> string) -> Tast.s_signature_item list -> Sast.definitions

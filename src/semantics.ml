@@ -36,7 +36,7 @@ struct
 
   (** Translates a Gospel type declaration into 1-3 Separation Logic
       definitions. *)
-  let type_declaration ~ocaml ns t =
+  let type_declaration ~ocaml t =
     (* Creates a type declaration for the model. If the model has no
      named model fields, then this function returns None *)
     let model_decl model_type =
@@ -78,7 +78,6 @@ struct
         spec.ty_lenses
     in
     let pred_def = List.map (fun x -> Pred x) ty_lenses in
-    let () = List.iter (Sep_utils.map_pred ns) spec.ty_lenses in
     type_decl :: (model_decl +? pred_def)
 
   let is_present env v =
@@ -123,7 +122,7 @@ struct
     let arg_id = map_ocaml_id (Uast_utils.leaf arg.var_name) in
     mk_ts arg_id (map_ocaml_ty arg.ty_ocaml)
 
-  let lifted_arg ns env is_pre arg =
+  let lifted_arg env is_pre arg =
     match arg with
     | Tast.Unit -> { arg_spatial = None; arg_val = Unit }
     | Wildcard -> { arg_spatial = None; arg_val = Wildcard }
@@ -136,13 +135,15 @@ struct
           if is_pre then v.ty_gospel_cons else v.ty_gospel_prod
         in
         let arg_ts = mk_ts arg_log arg_typ in
-        let pred = get_pred ns lens.lens_desc in
         let arg_prog = to_prog v in
         let to_term v =
           mk_term (Tvar (Qid v.ts_id, [])) v.ts_ty Location.none
         in
+
         let arg_spatial =
-          let arg_pred = Lift (pred, to_term arg_prog, to_term arg_ts) in
+          let arg_pred =
+            Lift (assert false, to_term arg_prog, assert false, to_term arg_ts)
+          in
           Some { arg_pred; arg_log = arg_ts; ro }
         in
         let arg_val =
@@ -155,9 +156,9 @@ struct
         in
         { arg_spatial; arg_val }
 
-  let val_des des spec ns =
+  let val_des des spec =
     let env = Env.create 100 in
-    let lift is_old = List.map (lifted_arg ns env is_old) in
+    let lift is_old = List.map (lifted_arg env is_old) in
     let args = (lift true) spec.sp_args in
     let update_args = (lift false) spec.sp_args in
     let rets = (lift false) spec.sp_rets in
@@ -196,14 +197,14 @@ struct
 
   (** Transforms a single Gospel top level declaration into potentially several
       Separation Logic definitions *)
-  let rec signature_item_desc ns = function
-    | Tast.Sig_type l -> List.concat_map (type_declaration ns ~ocaml:true) l
-    | Sig_ghost_type l -> List.concat_map (type_declaration ns ~ocaml:false) l
+  let rec signature_item_desc = function
+    | Tast.Sig_type l -> List.concat_map (type_declaration ~ocaml:true) l
+    | Sig_ghost_type l -> List.concat_map (type_declaration ~ocaml:false) l
     | Sig_function f -> [ Function f ]
     | Sig_value v -> (
         let v = { v with vname = change_id M.map v.vname } in
         match v.vspec with
-        | Some spec -> [ Val v; val_des v spec ns ]
+        | Some spec -> [ Val v; val_des v spec ]
         | None -> [ Val v ])
     | Sig_axiom axiom ->
         let axiom =
@@ -219,20 +220,20 @@ struct
         match m.mdtype.mdesc with
         | Mod_signature s ->
             let nm = m.mdname in
-            let f s = signature_item ns s in
+            let f s = signature_item s in
             let defs = List.concat_map f s in
             [ Module (nm, defs) ])
     | Sig_ghost_open m -> [ Import m ]
     | _ -> []
 
-  and signature_item env s =
-    let sigs = signature_item_desc env s.sdesc in
+  and signature_item s =
+    let sigs = signature_item_desc s.sdesc in
     let sigs = List.map (fun sep -> { d_node = sep; d_loc = s.sloc }) sigs in
     sigs
 end
 
-let process_sigs map env file =
+let process_sigs map file =
   let module M = Semantics (struct
     let map = map
   end) in
-  List.concat_map (M.signature_item env) file
+  List.concat_map M.signature_item file

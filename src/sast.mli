@@ -11,8 +11,7 @@
 (** Defines a Separation Logic language that used to define the semantics of
     Gospel *)
 
-type psymbol = { ps_name : Ident.t; ps_persistent : bool }
-type lens_app = { id : Ident.t; args : lens_app list }
+type lens_app = { lqid : Id_uast.qualid; largs : lens_app list }
 
 type sep_terms = sep_term list
 (** Conjunction of Separation Logic terms *)
@@ -20,7 +19,7 @@ type sep_terms = sep_term list
 (** Separation Logic terms *)
 and sep_term =
   | Logical of Tast.term
-  | Lift of psymbol * Tast.term * lens_app list * Tast.term
+  | Lift of Id_uast.qualid * Tast.term * lens_app list * Tast.term
       (** Representation Predicate application *)
   | Wand of sep_terms * sep_terms
   | Quant of Parse_uast.quant * Tast.tsymbol list * sep_terms

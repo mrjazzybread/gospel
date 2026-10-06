@@ -183,3 +183,6 @@ let pty_list_tvars l =
   List.of_seq seq
 
 let pty_tvars ty = pty_list_tvars [ ty ]
+
+let map_id map id =
+  { id with Ident.id_str = map id.Ident.id_str; id_loc = id.id_loc }

@@ -211,7 +211,7 @@ let rec lens_tuple fmt l =
 and print_arrow_lens fmt = list ~sep:arrow lens fmt
 
 and lens fmt = function
-  | Lvar _ -> assert false
+  | Lvar v -> print_tv fmt v
   | Lidapp info -> qualid fmt info.lapp_qid
   | Larrow ((Larrow _ as ty1), ty2) ->
       pp fmt "@[%a@]@[%a@]@[%a@]" (parens lens) ty1 arrow () lens ty2
@@ -226,14 +226,9 @@ let labelled_args fmt = function
   | [ arg ] -> labelled_arg fmt arg
   | l -> list ~sep:comma ~first:lparens ~last:rparens labelled_arg fmt l
 
-let spec_header ~exn nm fmt spec =
-  if exn then
-    pp fmt "@[match %a %a with@]" Ident.pp nm
-      (list ~sep:sp labelled_arg)
-      spec.sp_args
-  else
-    pp fmt "@[let %a =@ %a %a@]" labelled_args spec.sp_rets Ident.pp nm
-      labelled_args spec.sp_args
+let spec_header nm fmt spec =
+  pp fmt "@[%a =@ %a %a@]" labelled_args spec.sp_rets Ident.pp nm labelled_args
+    spec.sp_args
 
 let spec_clauses clause_pp fmt (keyword, l) =
   let spec_clause fmt t = pp fmt "%s @[%a@]" keyword clause_pp t in
@@ -251,30 +246,20 @@ let pre_spec fmt spec =
     "diverges" (if' spec.sp_pure string) "pure"
 
 let post_spec fmt spec =
-  pp fmt "%a%a" (ownership ~prod:true)
+  pp fmt "%a@\n%a" (ownership ~prod:true)
     ("produces", filter_ocaml_values (spec.sp_args @ spec.sp_rets))
     condition (ensures spec.sp_post)
 
 let xpost_spec fmt spec =
-  pp fmt "@[<hov 2>|exception %a %a ->@\n%a%a@]" qualid spec.sp_exn
-    labelled_args spec.sp_xrets (ownership ~prod:true)
+  pp fmt "@[<hov 2>|raises %a %a@\n%a%a@]" qualid spec.sp_exn labelled_args
+    spec.sp_xrets (ownership ~prod:true)
     ("produces", filter_ocaml_values (spec.sp_xargs @ spec.sp_xrets))
     condition (ensures spec.sp_xpost)
 
-let ret_case spec fmt post =
-  pp fmt "@[<hov 2>|%a ->@\n%a@]@\n" labelled_args spec.sp_rets post_spec post
+let print_post fmt spec = pp fmt "%a@\n%a%a" post_spec spec xpost_spec
 
-let print_post nm fmt spec =
-  let spec_header ~exn = spec_header ~exn nm in
-  let is_xpost_empty = spec.sp_xspec = [] in
-  if is_xpost_empty then
-    pp fmt "@[%a in@\n%a@]" (spec_header ~exn:false) spec post_spec spec
-  else
-    pp fmt "%a@\n%a%a" (spec_header ~exn:true) spec (ret_case spec) spec
-      (list ~sep:newline xpost_spec)
-      spec.sp_xspec
-
-let val_spec nm fmt spec = pp fmt "@[%a%a@]" pre_spec spec (print_post nm) spec
+let val_spec nm fmt spec =
+  pp fmt "@[%a@\n%a@\n%a@]" (spec_header nm) spec pre_spec spec post_spec spec
 
 (* Value description *)
 

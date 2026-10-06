@@ -15,7 +15,7 @@ module Semantics (M : sig
   val map : string -> string
 end) =
 struct
-  let map_ocaml_id = change_id M.map
+  let map_ocaml_id = Uast_utils.map_id M.map
 
   let map_ocaml_qid = function
     | Qdot (pre, id) -> Qdot (pre, map_ocaml_id id)
@@ -113,14 +113,31 @@ struct
   let map_id env is_old nm =
     let needs_updated_var = (not is_old) && is_present env nm in
     let id = Uast_utils.leaf nm in
-    let id' = if needs_updated_var then change_id update_var id else id in
+    let id' =
+      if needs_updated_var then Uast_utils.map_id update_var id else id
+    in
 
     Env.add env id.id_tag (Qid id');
     id'
 
   let to_prog arg =
-    let arg_id = map_ocaml_id (Uast_utils.leaf arg.var_name) in
+    let arg_id =
+      Ident.mk_id (map_ocaml_id (Uast_utils.leaf arg.var_name)).id_str
+    in
     mk_ts arg_id (map_ocaml_ty arg.ty_ocaml)
+
+  let lens_nm = function
+    | Lidapp app -> app.lapp_qid
+    | Lvar v -> Qid (Uast_utils.map_id (fun x -> x ^ "'") v)
+    | _ -> assert false
+
+  let rec lens_params = function
+    | Lidapp app ->
+        List.map
+          (fun x -> { lqid = lens_nm x; largs = lens_params x })
+          app.lapp_params
+    | Lvar v -> []
+    | _ -> assert false
 
   let lifted_arg env is_pre arg =
     match arg with
@@ -134,6 +151,7 @@ struct
         let arg_typ, lens =
           if is_pre then v.ty_gospel_cons else v.ty_gospel_prod
         in
+        let lens = lens.lens_desc in
         let arg_ts = mk_ts arg_log arg_typ in
         let arg_prog = to_prog v in
         let to_term v =
@@ -142,7 +160,8 @@ struct
 
         let arg_spatial =
           let arg_pred =
-            Lift (assert false, to_term arg_prog, assert false, to_term arg_ts)
+            Lift
+              (lens_nm lens, to_term arg_prog, lens_params lens, to_term arg_ts)
           in
           Some { arg_pred; arg_log = arg_ts; ro }
         in
@@ -202,7 +221,7 @@ struct
     | Sig_ghost_type l -> List.concat_map (type_declaration ~ocaml:false) l
     | Sig_function f -> [ Function f ]
     | Sig_value v -> (
-        let v = { v with vname = change_id M.map v.vname } in
+        let v = { v with vname = Uast_utils.map_id M.map v.vname } in
         match v.vspec with
         | Some spec -> [ Val v; val_des v spec ]
         | None -> [ Val v ])

@@ -744,17 +744,17 @@ let spec_cstr (spec : Id_uast.val_spec) =
   and+ tops = map_constraints2 sp_ocaml_var_apply_lens topsv spec.sp_tops
   and+ pre, post, xspec, checks =
     let fmlas =
-      let+ post = map_constraints fmla spec.sp_post
-      and+ pre = map_constraints fmla spec.sp_pre
+      let+ pre = map_constraints fmla spec.sp_pre
+      and+ post = map_constraints fmla spec.sp_post
       and+ xspec = map_constraints xspec spec.sp_xpost
       and+ checks = map_constraints fmla spec.sp_checks in
-      (post, pre, xspec, checks)
+      (pre, post, xspec, checks)
     in
     let fmlas = List.fold_left2 sp_var_to_tvar fmlas argsv spec.sp_args in
     let fmlas = List.fold_left2 sp_var_to_tvar fmlas retsv spec.sp_rets in
     List.fold_left2 sp_ocaml_var_to_tvar fmlas topsv spec.sp_tops
   in
-  mk_vspec args rets tops pre post checks xspec spec.sp_diverge spec.sp_pure
+  mk_vspec args rets tops pre checks post xspec spec.sp_diverge spec.sp_pure
     spec.sp_text spec.sp_loc
 
 let axiom tvars ax =

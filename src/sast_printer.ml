@@ -1,14 +1,21 @@
 open Sast
 open Utils.Fmt
 
-let psymbol fmt p = Ident.pp fmt p.ps_name
+let qualid = Tast_printer.qualid
 
-let rec sep_terms fmt = list ~sep:star sep_term fmt
+let rec lens_app fmt l =
+  match l.largs with
+  | [] -> pp fmt "@[%a@]" qualid l.lqid
+  | _ -> pp fmt "@[%a %a@]" qualid l.lqid lens_apps l.largs
+
+and lens_apps fmt l = list ~sep:sp ~last:sp lens_app fmt l
+
+let rec sep_terms fmt = list ~sep:star ~last:sp sep_term fmt
 
 and sep_term fmt = function
   | Logical t -> Tast_printer.term fmt t
-  | Lift (p, arg1, _, arg2) ->
-      pp fmt "@[%a %a %a@]" psymbol p Tast_printer.print_arg arg1
+  | Lift (p, arg1, l, arg2) ->
+      pp fmt "@[%a %a %a%a@]" qualid p Tast_printer.print_arg arg1 lens_apps l
         Tast_printer.print_arg arg2
   | Wand (t1, t2) -> pp fmt "@[%a -* %a@]" sep_terms t1 sep_terms t2
   | Quant (q, l, t) ->
@@ -51,7 +58,9 @@ let triple_post fmt (ex, post) =
 let triple fmt t =
   pp fmt "@[Triple :@ %a%a@[<hov2>{ %a }@]@\n@[%a@]@\n@[<hov2>{ %a%a }@]@]"
     tvars_quant
-    (t.triple_otvars @ t.triple_gtvars)
+    (List.map
+       (fun x -> Uast_utils.map_id String.capitalize_ascii x)
+       t.triple_otvars)
     (arg_quant ~is_ret:false) t.triple_args sep_terms t.triple_pre triple_app t
     (arg_quant ~is_ret:true) t.triple_rets triple_post t.triple_post
 

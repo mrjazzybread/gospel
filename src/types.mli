@@ -33,6 +33,7 @@ val ty_arrow : ty -> ty -> ty
 (** [ty_arrow ty1 ty2] creates an arrow type where the argument is of type [ty1]
     and the result is [ty2]*)
 
+val print_tv : Format.formatter -> Ident.t -> unit
 val print_ty : Format.formatter -> Id_uast.pty -> unit
 
 (* The following functions are used to emit errors when it is necessary to print

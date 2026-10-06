@@ -13,8 +13,6 @@ open Sast
 open Tast
 module Env = Ident.IdTable
 
-let change_id map id = Ident.mk_id (map id.id_str) ~loc:id.id_loc
-
 let is_var v1 t =
   match t.t_node with
   | Tvar (v2, _) -> Ident.equal v1.ts_id (Uast_utils.leaf v2)
@@ -40,12 +38,11 @@ let check_term v t =
       if is_var v t1 then Some t2 else if is_var v t2 then Some t1 else None
   | _ -> None
 
-let rec map_tvars changed tbl t =
-  let f = map_tvars changed tbl in
+let rec map_tvars tbl t =
+  let f = map_tvars tbl in
   let t_node =
     match t.t_node with
     | Tvar (v, []) when Env.mem tbl (Uast_utils.leaf v).id_tag ->
-        let () = changed := true in
         Env.find tbl (Uast_utils.leaf v).id_tag
     | Tapply (t1, t2) -> Tapply (f t1, f t2)
     | Tif (t1, t2, t3) -> Tif (f t1, f t2, f t3)
@@ -58,16 +55,13 @@ let rec map_tvars changed tbl t =
   { t with t_node }
 
 let rec map_sep_terms tbl t =
-  let changed = ref false in
   let rec t_map = function
-    | Lift (v, t1, l, t2) ->
-        Lift (v, map_tvars changed tbl t1, l, map_tvars changed tbl t2)
-    | Logical t -> Logical (map_tvars changed tbl t)
+    | Lift (v, t1, l, t2) -> Lift (v, map_tvars tbl t1, l, map_tvars tbl t2)
+    | Logical t -> Logical (map_tvars tbl t)
     | Wand (t, l) -> Wand (List.map t_map t, List.map t_map l)
     | Quant (q, l, s) -> Quant (q, l, List.map t_map s)
   in
-  let t = t_map t in
-  if !changed then map_sep_terms tbl t else t
+  t_map t
 
 let inline (vl, tl) =
   let tbl = Env.create 10 in

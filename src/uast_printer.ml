@@ -169,7 +169,7 @@ let spec_header ~exn fmt header =
 
 let spec_clauses clause_pp fmt (keyword, l) =
   let spec_clause fmt t = pp fmt "%s @[%a@]" keyword clause_pp t in
-  list ~sep:newline spec_clause fmt l
+  list ~sep:newline ~last:newline spec_clause fmt l
 
 let condition = spec_clauses term
 let lens fmt ty = pp fmt "@ %@ %a" print_ty ty.lens_desc

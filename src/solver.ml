@@ -598,31 +598,41 @@ let rec match_lenses ~loc tovars tgvars (expected, provided) =
           (List.combine app.lapp_expected_params app.lapp_params)
       in
       ()
+  | Lvar tv ->
+      let@ provided = shallow (S.Tvar tv) in
+      let@ expected_ocaml = pty_to_deep_flex tgvars expected.locaml in
+      let@ expected_model = pty_to_deep_flex tgvars expected.lmodel in
+      let+ () = provided -- expected_ocaml
+      and+ () = provided -- expected_model in
+      ()
   | _ -> assert false
 
-let pty_lens_cstr ~loc v ocaml_ty app =
-  let lovars = Uast_utils.pty_tvars app.lapp_ocaml in
-  let lgvars = Uast_utils.pty_tvars app.lapp_model in
-  let@ tovars = assoc_vars lovars in
-  let@ expected = pty_to_deep_flex tovars app.lapp_ocaml in
-  let@ provided = pty_to_deep_rigid ocaml_ty in
-  let@ tgvars = assoc_vars lgvars in
-  let@ model = pty_to_deep_flex tgvars app.lapp_model in
-  let lens_params = List.combine app.lapp_expected_params app.lapp_params in
-  let+ _ = map_constraints (match_lenses ~loc tovars tgvars) lens_params
-  and+ () = expected -- provided
-  and+ () = model -- v
-  and+ t = decode model in
-  t
+let pty_lens_cstr ~loc v ocaml_ty = function
+  | Lidapp app ->
+      let lvars = Uast_utils.pty_tvars app.lapp_ocaml in
+      let@ tovars = assoc_vars lvars in
+      let@ provided = pty_to_deep_rigid ocaml_ty in
+      let@ expected = pty_to_deep_flex tovars app.lapp_ocaml in
+      let@ tgvars = assoc_vars lvars in
+      let@ model = pty_to_deep_flex tgvars app.lapp_model in
+      let lens_params = List.combine app.lapp_expected_params app.lapp_params in
+      let+ _ = map_constraints (match_lenses ~loc tovars tgvars) lens_params
+      and+ () = expected -- provided
+      and+ () = model -- v
+      and+ t = decode model in
+      t
+  | Lvar tv ->
+      let@ expected = shallow (S.Tvar tv) in
+      let@ provided = pty_to_deep_rigid ocaml_ty in
+      let+ () = provided -- expected and+ () = provided -- v in
+      PTtyvar (Uast_utils.map_id String.uncapitalize_ascii tv)
+  | _ -> assert false
 
 let rec lens_to_app l =
-  let lens_to_app = fun x -> Lidapp (lens_to_app x) in
   match l with
   | Lidapp app ->
-      { app with lapp_params = List.map lens_to_app app.lapp_params }
-  | Lvar id ->
-      let eid = Qid (Ident.mk_id ~loc:id.Ident.id_loc "Encode") in
-      Uast_utils.mk_lens_app eid Persistent (PTtyvar id) (PTtyvar id) [] []
+      Lidapp { app with lapp_params = List.map lens_to_app app.lapp_params }
+  | Lvar _ -> l
   | Ltuple l ->
       let n = List.length l in
       let id = Qid (Ident.mk_id ("Tuple" ^ string_of_int n)) in
@@ -635,8 +645,9 @@ let rec lens_to_app l =
               (PTtyvar v))
           tvars
       in
-      Uast_utils.mk_lens_app id Persistent ty ty expected_params
-        (List.map lens_to_app l)
+      Lidapp
+        (Uast_utils.mk_lens_app id Persistent ty ty expected_params
+           (List.map lens_to_app l))
   | Larrow (l1, l2) ->
       let id = Qid (Ident.mk_id "Arrow") in
       let tvar1 = PTtyvar (Ident.mk_id "A") in
@@ -648,8 +659,9 @@ let rec lens_to_app l =
           Uast_utils.mk_lens_info (Ident.mk_id "B") Mutable tvar2 [] tvar2;
         ]
       in
-      Uast_utils.mk_lens_app id Persistent ty ty expected_params
-        [ lens_to_app l1; lens_to_app l2 ]
+      Lidapp
+        (Uast_utils.mk_lens_app id Persistent ty ty expected_params
+           [ lens_to_app l1; lens_to_app l2 ])
 
 let apply_lens nm ocaml_ty lens =
   Solver.correlate (lens.lens_loc.loc_start, lens.lens_loc.loc_end)
@@ -671,8 +683,7 @@ let sp_ocaml_var_apply_lens (model, model') v =
 (** [sp_var_lens arg] in the case of OCaml values applies the corresponding
     lenses and obtains the model of the variable in the pre and post condition.
     In the cases where this is not an OCaml variable, this function creates an
-    "{
-          identity" constraint *)
+    "identity" constraint *)
 let sp_var_apply_lens modelv s =
   match s with
   | Id_uast.Unit -> pure Unit
@@ -744,17 +755,17 @@ let spec_cstr (spec : Id_uast.val_spec) =
   and+ tops = map_constraints2 sp_ocaml_var_apply_lens topsv spec.sp_tops
   and+ pre, post, xspec, checks =
     let fmlas =
-      let+ post = map_constraints fmla spec.sp_post
-      and+ pre = map_constraints fmla spec.sp_pre
+      let+ pre = map_constraints fmla spec.sp_pre
+      and+ post = map_constraints fmla spec.sp_post
       and+ xspec = map_constraints xspec spec.sp_xpost
       and+ checks = map_constraints fmla spec.sp_checks in
-      (post, pre, xspec, checks)
+      (pre, post, xspec, checks)
     in
     let fmlas = List.fold_left2 sp_var_to_tvar fmlas argsv spec.sp_args in
     let fmlas = List.fold_left2 sp_var_to_tvar fmlas retsv spec.sp_rets in
     List.fold_left2 sp_ocaml_var_to_tvar fmlas topsv spec.sp_tops
   in
-  mk_vspec args rets tops pre post checks xspec spec.sp_diverge spec.sp_pure
+  mk_vspec args rets tops pre checks post xspec spec.sp_diverge spec.sp_pure
     spec.sp_text spec.sp_loc
 
 let axiom tvars ax =

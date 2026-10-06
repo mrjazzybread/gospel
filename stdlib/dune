@@ -3,7 +3,7 @@
 ; definitions.
 
 (rule
- (targets gospelstdlib.gospel ocamlprimitives.gospel ocamlprimitives.sep)
+ (targets gospelstdlib.gospel ocamlprimitives.gospel)
  (deps
   (:check checklib.exe)
   gospelstdlib.mli

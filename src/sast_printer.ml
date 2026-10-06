@@ -7,7 +7,7 @@ let rec sep_terms fmt = list ~sep:star sep_term fmt
 
 and sep_term fmt = function
   | Logical t -> Tast_printer.term fmt t
-  | Lift (p, arg1, arg2) ->
+  | Lift (p, arg1, _, arg2) ->
       pp fmt "@[%a %a %a@]" psymbol p Tast_printer.print_arg arg1
         Tast_printer.print_arg arg2
   | Wand (t1, t2) -> pp fmt "@[%a -* %a@]" sep_terms t1 sep_terms t2

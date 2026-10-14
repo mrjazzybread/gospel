@@ -43,6 +43,7 @@ type t = {
   id_fixity : Preid.fixity;
   id_attrs : string list; (* Variable attributes *)
   id_loc : Location.t;
+  id_path : string list;
   id_old : bool;
   id_tag : Tag.t;
       (* Unique identifier. During typechecking, this is what
@@ -71,7 +72,7 @@ val is_primitive : t -> bool
 (** [is_primitive id] checks if the identifier [id] refers to a primitive Gospel
     name. *)
 
-val from_preid : Preid.t -> t
+val from_preid : string list -> Preid.t -> t
 (** [from_preid pid] Turns an identifier created during parsing into a uniquely
     tagged name. *)
 

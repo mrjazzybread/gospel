@@ -81,7 +81,7 @@ let rec check ~verbose ~comp tasts env = function
         if Filename.extension file = gospel_ext then
           (tasts, read_gospel_file file)
         else
-          let tast, mods = check_file ~verbose ~comp ~comp_dir ~env file in
+          let tast, mods = check_file ~verbose ~comp ~comp_dir env file in
           if verbose then (
             pp fmt "@[@\n*******************************@]@.";
             pp fmt "@[********** Typed GOSPEL *******@]@.";

@@ -56,6 +56,7 @@ type t = {
   id_fixity : Preid.fixity;
   id_attrs : string list;
   id_loc : Location.t;
+  id_path : string list;
   id_old : bool;
   id_tag : Tag.t;
 }
@@ -75,6 +76,7 @@ let mk_id ?loc:(id_loc = Location.none) ?(fixity = Preid.Normal) id_str =
     id_fixity = fixity;
     id_attrs = [];
     id_loc;
+    id_path = [];
     id_old = true;
     id_tag = Tag.gen_id ();
   }
@@ -83,12 +85,13 @@ let stdlib_id = mk_id "Gospelstdlib"
 let is_stdlib id = Tag.is_project id.id_tag stdlib_project
 let is_primitive id = Tag.is_project id.id_tag primitive_project
 
-let from_preid p =
+let from_preid path p =
   {
     id_str = p.Preid.pid_str;
     id_fixity = p.pid_fixity;
     id_attrs = p.pid_attrs;
     id_loc = p.pid_loc;
+    id_path = path;
     id_old = true;
     id_tag = Tag.gen_id ();
   }

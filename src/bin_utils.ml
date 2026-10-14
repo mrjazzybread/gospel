@@ -62,14 +62,14 @@ let read_gospel_file f =
 (** [check_file file] parses and type checks [file] and creates a corresponding
     [.gospel] file in the directory [comp_dir].
     @raise Warnings.Error if there is a parsing or typing error in [file]. *)
-let check_file ?(comp_dir = "") ?(env = Namespace.empty_env) ~verbose ~comp file
-    =
+let check_file ?(comp_dir = "") ~verbose ~comp env file =
   (* If the compilation directory does not have a slash, add one. *)
   let comp_dir =
     if comp_dir <> "" && comp_dir.[String.length comp_dir - 1] <> '/' then
       comp_dir ^ "/"
     else comp_dir
   in
+  let env = Namespace.submodule (path2file file) env in
   let module_nm, tast, mods = type_sigs ~verbose env file in
   if comp then (
     let out =

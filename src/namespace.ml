@@ -450,22 +450,24 @@ type env = {
          in scope if it has been previously defined or exposed through an
          [open]. Note that the [defs] field is not necessarily a subset of
          [scope] since opening modules can shadow previous definitions. *)
+  path : string list;
 }
 
 let defs e = e.defs
 let scope e = e.scope
+let path e = e.path
 
-let submodule env =
+let submodule mod_name env =
   let empty_defs =
     { empty_defs with default_lens_env = env.defs.default_lens_env }
   in
-  { env with defs = empty_defs }
+  { env with defs = empty_defs; path = mod_name :: env.path }
 
 (** [add_def f env] adds a new definition to the list of definitions and the
     scope. For every function that adds a definition into a [mod_defs] object,
     there should be another function that uses [add_def] to modify the set of
     top level definitions as well as the scope. *)
-let add_def f env = { defs = f env.defs; scope = f env.scope }
+let add_def f env = { env with defs = f env.defs; scope = f env.scope }
 
 let add_fun fid tvars fty defs =
   let info = { fid; fty; fparams = tvars } in
@@ -611,7 +613,11 @@ let fun_env =
 (** The empty environment. The only names that it contains with are primitive
     Gospel type definitions. *)
 let empty_env =
-  { defs = empty_defs; scope = { empty_defs with type_env; fun_env } }
+  {
+    defs = empty_defs;
+    scope = { empty_defs with type_env; fun_env };
+    path = [];
+  }
 
 (** The initial environment for every Gospel file. The only names in scope are
     primitive Gospel and OCaml type definitions and the definitions within the
@@ -650,4 +656,4 @@ let init_env ?ocamlprimitives gospelstdlib =
         in
         defs_union ~ocaml:true scope m
   in
-  { defs = empty_defs; scope }
+  { defs = empty_defs; scope; path = [] }

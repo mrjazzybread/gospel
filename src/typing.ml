@@ -82,7 +82,7 @@ let type_vars ~bind env pty =
         if bind then
           (* If we are allowed to add type variables to the scope, we add it to
              the environment. *)
-          let id = Ident.from_preid v in
+          let id = Ident.from_preid [] v in
           add_type_var id env
         else
           (* This case is only reached when the variable [pid] is unbound and we
@@ -164,7 +164,7 @@ let unique_var env defs q =
       | Some q -> Tlocal (Uast_utils.leaf q))
 
 let preid pid old_env env =
-  let id = Ident.from_preid pid in
+  let id = Ident.from_preid [] pid in
   let old_env', env' = add_spec_var id !old_env !env in
   old_env := old_env';
   env := env';
@@ -244,7 +244,7 @@ let rec unique_post_term defs old_env env t =
         let else_b = unique_term else_b in
         Tif (g, then_b, else_b)
     | Tset (v, t) ->
-        let v = Ident.from_preid v in
+        let v = Ident.from_preid [] v in
         let old_env, env = add_spec_var v old_env env in
         let t = unique_term_let old_env env t in
         Tset (v, t)
@@ -319,8 +319,8 @@ let fun_spec defs env spec =
     fun_loc = spec.fun_loc;
   }
 
-let function_ f defs =
-  let fun_name = Ident.from_preid f.Parse_uast.fun_name in
+let function_ f path defs =
+  let fun_name = Ident.from_preid path f.Parse_uast.fun_name in
   let fun_rec = f.fun_rec in
   let env = ref (empty_local_env ()) in
   let () = param_dups f.fun_params in
@@ -329,7 +329,7 @@ let function_ f defs =
   let fun_params =
     List.map
       (fun (pid, pty) ->
-        let id = Ident.from_preid pid in
+        let id = Ident.from_preid [] pid in
         (* Add the function parameters to the local environment. *)
         env := add_term_var id !env;
         (* Add the type variables in [pty] to the local environment. *)
@@ -352,8 +352,8 @@ let function_ f defs =
   in
   (f, vars)
 
-let axiom defs ax =
-  let ax_name = Ident.from_preid ax.Parse_uast.ax_name in
+let axiom path defs ax =
+  let ax_name = Ident.from_preid path ax.Parse_uast.ax_name in
   let local_env = empty_local_env () in
   let ax_term = unique_term defs local_env ax.ax_term in
   let ax_loc = ax.ax_loc in
@@ -362,12 +362,12 @@ let axiom defs ax =
 
 (** [tdecl_env l] creates a local environment that contains each type name
     defined in [l] that is not a type alias. *)
-let tdecl_env ~ocaml (l : Parse_uast.s_type_declaration list) =
+let tdecl_env path ~ocaml (l : Parse_uast.s_type_declaration list) =
   let open Parse_uast in
   let add_decl env t =
     (* Check if [t] is a type alias. *)
     if Option.is_none t.tmanifest then
-      let id = Ident.from_preid t.tname in
+      let id = Ident.from_preid path t.tname in
       add_type_nm ~ocaml id env
     else env
   in
@@ -444,7 +444,7 @@ let alias_order l =
     W.error ~loc error
 
 let field ~ocaml env lenv l =
-  let id = Ident.from_preid l.Parse_uast.pld_name in
+  let id = Ident.from_preid (path env) l.Parse_uast.pld_name in
   let pty = unique_pty ~ocaml ~bind:false (scope env) lenv l.pld_type in
   {
     Id_uast.pld_name = id;
@@ -488,7 +488,7 @@ let unique_tspec env model local_env self_ty lenses inv_ty tspec =
   (* [invariants [pid, l] processes a list of invariants for the give type
      where [pid] is a variable of type [self_ty]. *)
   let invariants (pid, l) =
-    let id = Ident.from_preid pid in
+    let id = Ident.from_preid [] pid in
     let self_ty =
       match inv_ty with
       | Some t -> t
@@ -543,7 +543,7 @@ let create_model tname env lenv tmanifest tspec =
           let tvars =
             pty_list_tvars (List.map (fun x -> x.Id_uast.pld_type) l)
           in
-          Fields (Ident.mk_id tname, tvars, l))
+          Fields (Uast_utils.map_id (fun x -> x) tname, tvars, l))
 
 let mk_lens_params tvars =
   List.map (fun v -> mk_lens v Mutable (PTtyvar v) [] (PTtyvar v)) tvars
@@ -555,10 +555,7 @@ let mk_lens_params tvars =
     into the type of its model. If there is one or more named model fields, the
     model will be a record containing each model field. *)
 let update_model_env env self_ty tname tparams mut model_ty =
-  let capitalize_id id =
-    let nm = String.capitalize_ascii id.Ident.id_str in
-    Ident.mk_id nm
-  in
+  let capitalize_id id = Uast_utils.map_id String.capitalize_ascii id in
   let field_lens lbl =
     if lbl.pld_mutable = Mutable then None
     else
@@ -652,7 +649,7 @@ let type_decl ~ocaml lenv env t =
      non-recursive type definition) we generate a new identifier. *)
   let tname =
     try Env.find t.Parse_uast.tname.pid_str lenv.type_nms
-    with Not_found -> Ident.from_preid t.tname
+    with Not_found -> Ident.from_preid (path env) t.tname
   in
   let () =
     (* Raise an error if two type parameters have the same name *)
@@ -661,7 +658,7 @@ let type_decl ~ocaml lenv env t =
     in
     Utils.duplicate Preid.eq error t.tparams
   in
-  let tparams = List.map Ident.from_preid t.tparams in
+  let tparams = List.map (Ident.from_preid []) t.tparams in
   (* Keep the local definitions within [lenv] but refresh the type variables
      table so that it is independent of the other type definitions we are processing *)
   let lenv = { lenv with type_vars = Hashtbl.create 100 } in
@@ -674,7 +671,7 @@ let type_decl ~ocaml lenv env t =
 
   let env, tkind = type_kind ~ocaml env tname tparams lenv t.tkind in
   let model =
-    if ocaml then create_model tname.id_str env lenv tmanifest t.tspec
+    if ocaml then create_model tname env lenv tmanifest t.tspec
     else No_model Immutable
   in
 
@@ -772,7 +769,7 @@ let tdecl_list ~ocaml env l =
   (* Create a local environment with the non-aliased type names introduced by
      [l]. *)
   let () = tdecl_duplicates l in
-  let lenv = tdecl_env ~ocaml l in
+  let lenv = tdecl_env ~ocaml (path env) l in
 
   (* List with the aliases in the order in which they must be processed. *)
   let order = alias_order l in
@@ -809,8 +806,8 @@ let tdecl_list ~ocaml env l =
   in
   (env, defs_og_order)
 
-let process_exception exn defs =
-  let exn_id = Ident.from_preid exn.Parse_uast.exn_id in
+let process_exception exn path defs =
+  let exn_id = Ident.from_preid path exn.Parse_uast.exn_id in
   let lenv = empty_local_env () in
   let exn_args =
     List.map (unique_pty ~ocaml:true ~bind:true (scope defs) lenv) exn.exn_args
@@ -919,7 +916,7 @@ let rec pair_hd_vars types vars =
           if is_unit ty then pair_hd_vars types ids
           else Types.invalid_header_unit ~loc ty
       | Lvar s ->
-          let id = Ident.from_preid s in
+          let id = Ident.from_preid [] s in
           (id, ty) :: pair_hd_vars types ids
       | Lghost _ ->
           (* Ghost values are handled in the previous branch*)
@@ -1116,7 +1113,7 @@ let add_values_env hd_args hd_rets lenv defs args rets consumes produces
     | Parse_uast.Lwild -> (Wildcard, pre_env, post_env)
     | Lunit _ -> (Unit, pre_env, post_env)
     | Lghost (pid, pty) ->
-        let id = Ident.from_preid pid in
+        let id = Ident.from_preid [] pid in
         let pty = unique_pty ~ocaml:false ~bind:true defs lenv pty in
         let pre_env, post_env = add_spec_var id (Some pre_env) post_env in
         (Ghost (id, pty), Option.get pre_env, post_env)
@@ -1460,7 +1457,7 @@ let ocaml_val env v =
   let gospel_tvars = Option.fold ~none:[] ~some:snd vspec in
   let v =
     {
-      Tast.vname = Ident.from_preid v.vname;
+      Tast.vname = Ident.from_preid (path env) v.vname;
       vtype;
       vattributes = v.vattributes;
       votvars = ocaml_tvars;
@@ -1475,10 +1472,10 @@ let ocaml_val env v =
 
 let rec process_module env m =
   (* TODO figure out when this is None *)
-  let id = Ident.from_preid m.Parse_uast.mdname in
+  let id = Ident.from_preid (path env) m.Parse_uast.mdname in
   (* Since we are now at the beginning of a new module, we create an environment
          with the same variables in scope, but with no module definitions. *)
-  let sub_mod_env = submodule env in
+  let sub_mod_env = submodule id.id_str env in
   let mdesc, mod_defs =
     match m.mdtype.mdesc with
     | Mod_signature m ->
@@ -1513,21 +1510,21 @@ and signature s env =
         (Tast.Sig_type t, env)
     | Sig_module m -> process_module env m
     | Sig_attribute att -> (Sig_attribute att, env)
-    | Sig_exception exn -> process_exception exn env
+    | Sig_exception exn -> process_exception exn (path env) env
     | _ -> assert false
   in
   ({ Tast.sdesc; sloc = s.sloc }, env)
 
 and gospel_sig env = function
   | Parse_uast.Sig_function f ->
-      let f, vars = function_ f (scope env) in
+      let f, vars = function_ f (path env) (scope env) in
       let f, fun_ty = Solver.function_ vars f in
       let env = add_fun env f.fun_name f.fun_tvars fun_ty in
       (Tast.Sig_function f, env)
   | Sig_axiom ax ->
       (* Since axioms cannot be referenced, the environment is not
             modified.*)
-      let ax, vars = axiom (scope env) ax in
+      let ax, vars = axiom (path env) (scope env) ax in
       let ax = Solver.axiom vars ax in
       (Sig_axiom ax, env)
   | Sig_ghost_type t ->

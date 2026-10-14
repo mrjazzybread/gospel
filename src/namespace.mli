@@ -25,6 +25,8 @@ val defs : env -> mod_defs
 (** Gets the set of definitions contained within the submodule we are currently
     processing. *)
 
+val path : env -> string list
+
 (* Records containing the information necessary regarding each top level
     definitions *)
 type mod_info = { mid : Ident.t; mdefs : mod_defs }
@@ -179,6 +181,6 @@ val init_env : ?ocamlprimitives:mod_defs -> mod_defs -> env
     representations. Besides the one used to type check the Gospel standard
     library, every environment should have these definitions in scope. *)
 
-val submodule : env -> env
+val submodule : string -> env -> env
 (** Returns a new environment for processing a submodule. The variables in scope
     remain the same and the set of definitions is empty. *)

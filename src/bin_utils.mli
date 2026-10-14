@@ -27,9 +27,9 @@ val read_gospel_file : string -> Namespace.mod_defs
 
 val check_file :
   ?comp_dir:string ->
-  ?env:Namespace.env ->
   verbose:bool ->
   comp:bool ->
+  Namespace.env ->
   string ->
   Tast.s_signature * Namespace.mod_defs
 (** [check_file comp_dir env comp verbose file] receives an [.mli] file name and

@@ -39,6 +39,8 @@ type triple_val =
 
 type triple = {
   triple_name : Ident.t;  (** Name of the function. *)
+  triple_persistent : Ident.t list;
+      (** Higher order lenses that are persistent. *)
   triple_otvars : Ident.t list;  (** The function's type arguments. *)
   triple_gtvars : Ident.t list;
   triple_args : triple_val list;  (** The function's arguments. *)

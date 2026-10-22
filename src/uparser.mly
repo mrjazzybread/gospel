@@ -30,6 +30,7 @@
     sp_modifies = [];
     sp_preserves = [];
     sp_consumes = [];
+    sp_persistent = [];
     sp_diverge = false;
     sp_pure = false;
   }
@@ -85,7 +86,7 @@
 %token REC AND
 %token INVARIANT
 %token IF IN
-%token OLD NOT
+%token OLD NOT PERSISTENT
 %token THEN TRUE MODIFIES DIVERGES PURE
 %token TRUEPROP FALSEPROP
 %token OPEN
@@ -350,6 +351,8 @@ val_spec_pre:
   { { bd with sp_consumes = cs @ bd.sp_consumes } }
 | REQUIRES t=term bd=val_spec_pre_empty
   { { bd with sp_pre = t :: bd.sp_pre } }
+| REQUIRES PERSISTENT v=quote_lident+ bd=val_spec_pre_empty
+  { { bd with sp_persistent = v @ bd.sp_persistent } }
 | CHECKS t=term bd=val_spec_pre_empty
   { { bd with sp_pre = t :: bd.sp_checks } }
 | PURE bd=val_spec_pre_empty

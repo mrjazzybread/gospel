@@ -41,6 +41,7 @@
 	"not", NOT;
         "old", OLD;
 	"open", OPEN;
+	"persistent", PERSISTENT;
         "predicate", PREDICATE;
 	"preserves", PRESERVES;
 	"produces", PRODUCES;

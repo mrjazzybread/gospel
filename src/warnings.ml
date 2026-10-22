@@ -50,6 +50,7 @@ type kind =
   | Unbound_record_label of string list
   | Unbound_type of string list
   | Unbound_type_variable of string
+  | Unbound_type_variable_persistent of string
   | Unbound_variable of string list
   | Unsupported of string
   | Unterminated_comment
@@ -181,6 +182,8 @@ let pp_kind ppf = function
   | Repeated_ret_case ->
       pf ppf "The non-exceptional case of this match is repeated"
   | Syntax_error -> pf ppf "Syntax error"
+  | Unbound_type_variable_persistent s ->
+      pf ppf "The type variable %s is not bound in this expression" s
   | Unbound_exception s -> pf ppf "Unbound exception %a" print_qid s
   | Unbound_module s -> pf ppf "Unbound module %a" print_qid s
   | Unbound_record_label s -> pf ppf "Unbound record label %a" print_qid s

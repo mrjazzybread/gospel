@@ -93,6 +93,7 @@ type pre_spec = {
   sp_consumes : own list;
   sp_modifies : own list;
   sp_preserves : own list;
+  sp_persistent : id list;
   sp_diverge : bool;
   sp_pure : bool;
 }

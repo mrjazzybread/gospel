@@ -565,14 +565,15 @@ let update_model_env env self_ty tname tparams mut model_ty =
       Some (mk_lens lens_nm Persistent self_ty params lbl.pld_type)
   in
   let kind = if mut then Mutable else Persistent in
-  let lparams = mk_lens_params (pty_tvars self_ty) in
   function
   | No_model _ -> (None, [], env)
   | Implicit (_, model_ty) ->
+      let lparams = mk_lens_params (pty_tvars model_ty) in
       let linfo = mk_lens (capitalize_id tname) kind self_ty lparams model_ty in
       (Some linfo, [ linfo ], add_lens env linfo)
   | Fields (model_id, tvars, l) ->
       let model_ty = Option.get model_ty in
+      let lparams = mk_lens_params (pty_tvars model_ty) in
       let default =
         mk_lens (capitalize_id tname) kind self_ty lparams model_ty
       in
@@ -1219,11 +1220,21 @@ let type_val_spec spec defs args rets tops xspec pre_env post_env =
   let post =
     List.map (unique_post_term defs pre_env post_env) spec.sp_post_spec.sp_post
   in
+  let persistent =
+    List.map
+      (fun x ->
+        let v = x.Preid.pid_str in
+        try Hashtbl.find pre_env.type_vars v
+        with Not_found ->
+          W.error ~loc:x.pid_loc (W.Unbound_type_variable_persistent v))
+      spec.sp_pre_spec.sp_persistent
+  in
   let spec =
     {
       sp_args = args;
       sp_rets = rets;
       sp_tops = tops;
+      sp_persistent = persistent;
       sp_pre = pre;
       sp_checks = checks;
       sp_post = post;

@@ -204,6 +204,7 @@ struct
     let def =
       {
         triple_name = des.vname;
+        triple_persistent = spec.sp_persistent;
         triple_args = List.map to_prog_arg args;
         triple_rets = List.map to_prog_arg rets;
         triple_pre;

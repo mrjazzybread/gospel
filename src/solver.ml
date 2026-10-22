@@ -765,8 +765,8 @@ let spec_cstr (spec : Id_uast.val_spec) =
     let fmlas = List.fold_left2 sp_var_to_tvar fmlas retsv spec.sp_rets in
     List.fold_left2 sp_ocaml_var_to_tvar fmlas topsv spec.sp_tops
   in
-  mk_vspec args rets tops pre checks post xspec spec.sp_diverge spec.sp_pure
-    spec.sp_text spec.sp_loc
+  mk_vspec args rets tops spec.sp_persistent pre checks post xspec
+    spec.sp_diverge spec.sp_pure spec.sp_text spec.sp_loc
 
 let axiom tvars ax =
   let ax, vars = typecheck tvars (axiom_cstr ax) in

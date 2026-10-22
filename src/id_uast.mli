@@ -135,6 +135,7 @@ type val_spec = {
   sp_args : sp_var list;
   sp_rets : sp_var list;
   sp_tops : ocaml_sp_var list;
+  sp_persistent : id list;
   sp_pre : term list;
   sp_checks : term list;
   sp_post : term list;

@@ -25,10 +25,6 @@ let parse_ocaml file =
   Location.init lb file;
   parse_ocaml_lb lb
 
-module B = Ast_builder.Make (struct
-  let loc = Location.none
-end)
-
 let parse_gospel = Uattr2spec.signature
 
 let parse_ocaml_gospel path =

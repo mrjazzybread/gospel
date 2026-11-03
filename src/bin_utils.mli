@@ -25,13 +25,26 @@ val read_gospel_file : string -> Namespace.mod_defs
     [file] creating a [mod_defs] value with the compiled definitions. This
     function fails if [file] is not a valid [.gospel] file. *)
 
-val check_file :
+val check_mli :
   ?comp_dir:string ->
   verbose:bool ->
   comp:bool ->
   Namespace.env ->
   string ->
   Tast.s_signature * Namespace.mod_defs
+(** [check_mli comp_dir env comp verbose file] receives an [.mli] file name and
+    type checks it under [env]. If the file is correctly type checked, we create
+    a [.gospel] file in directory [comp_dir] if the [comp] is [true]. If the
+    [verbose] flag is [true], we print the term to the standard output.
+    @raise Warnings.Error
+      If there is a parsing or type checking error within [file]. *)
+
+val check_ml :
+  ?comp_dir:string ->
+  comp:bool ->
+  Namespace.env ->
+  string ->
+  Tast.s_structure * Namespace.mod_defs
 (** [check_file comp_dir env comp verbose file] receives an [.mli] file name and
     type checks it under [env]. If the file is correctly type checked, we create
     a [.gospel] file in directory [comp_dir] if the [comp] is [true]. If the

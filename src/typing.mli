@@ -56,3 +56,8 @@ val signatures :
 (** [signature env sigs] type checks the list of top level signatures [sigs] and
     returns a map containing all the definitions within the module as well as a
     typed copy of the definitions in [sigs]. *)
+
+val structures :
+  Namespace.env ->
+  Parse_uast.s_structure ->
+  Tast.s_structure * Namespace.mod_defs

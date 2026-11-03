@@ -129,6 +129,7 @@
 
 %start <Parse_uast.gospel_signature> top
 %start <Parse_uast.val_spec> val_spec
+%start <Parse_uast.val_spec> let_spec
 %start <Parse_uast.type_spec> type_spec
 %%
 
@@ -201,6 +202,13 @@ val_spec:
 | h=val_spec_header pre=val_spec_pre_empty post=val_spec_post_empty exn=val_spec_exn_empty EOF
   { mk_spec (Some h) pre post exn }
 ;
+
+
+
+let_spec:
+| pre=val_spec_pre_empty post=val_spec_post_empty exn=val_spec_exn_empty EOF
+  { mk_spec None pre post exn }
+
 
 val_spec_exn_empty:
 | (* epsilon *)

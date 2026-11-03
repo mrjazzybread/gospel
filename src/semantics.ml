@@ -215,17 +215,9 @@ struct
     in
     Triple (Sep_utils.inline_def def)
 
-  (** Transforms a single Gospel top level declaration into potentially several
-      Separation Logic definitions *)
-  let rec signature_item_desc = function
-    | Tast.Sig_type l -> List.concat_map (type_declaration ~ocaml:true) l
+  let gospel_signature = function
     | Sig_ghost_type l -> List.concat_map (type_declaration ~ocaml:false) l
     | Sig_function f -> [ Function f ]
-    | Sig_value v -> (
-        let v = { v with vname = Uast_utils.map_id M.map v.vname } in
-        match v.vspec with
-        | Some spec -> [ Val v; val_des v spec ]
-        | None -> [ Val v ])
     | Sig_axiom axiom ->
         let axiom =
           {
@@ -236,6 +228,17 @@ struct
           }
         in
         [ Axiom axiom ]
+    | Sig_ghost_open m -> [ Import m ]
+
+  (** Transforms a single Gospel top level declaration into potentially several
+      Separation Logic definitions *)
+  let rec signature_item_desc = function
+    | Tast.Sig_type l -> List.concat_map (type_declaration ~ocaml:true) l
+    | Sig_value v -> (
+        let v = { v with vname = Uast_utils.map_id M.map v.vname } in
+        match v.vspec with
+        | Some spec -> [ Val v; val_des v spec ]
+        | None -> [ Val v ])
     | Sig_module m -> (
         match m.mdtype.mdesc with
         | Mod_signature s ->
@@ -243,12 +246,19 @@ struct
             let f s = signature_item s in
             let defs = List.concat_map f s in
             [ Module (nm, defs) ])
-    | Sig_ghost_open m -> [ Import m ]
+    | Sig_gospel (g, _) -> gospel_signature g
     | _ -> []
 
   and signature_item s =
     let sigs = signature_item_desc s.sdesc in
     let sigs = List.map (fun sep -> { d_node = sep; d_loc = s.sloc }) sigs in
+    sigs
+
+  let rec structure_item_desc _ = assert false
+
+  let structure_item s =
+    let strs = structure_item_desc s.str_desc in
+    let sigs = List.map (fun sep -> { d_node = sep; d_loc = s.str_loc }) strs in
     sigs
 end
 
@@ -257,3 +267,9 @@ let process_sigs map file =
     let map = map
   end) in
   List.concat_map M.signature_item file
+
+let process_imps map file =
+  let module M = Semantics (struct
+    let map = map
+  end) in
+  List.concat_map M.structure_item file

@@ -239,3 +239,33 @@ and s_module_declaration = {
   (* ... [@@id1] [@@id2] *)
   mdloc : Location.t;
 }
+
+type value_binding = {
+  pvb_nm : id;
+  pvb_spec : (pty * val_spec) option;
+  pvb_attributes : attributes;
+  pvb_loc : Location.t;
+}
+
+type s_structure_item_desc =
+  | Str_let of value_binding
+  (*
+          val x: T
+          external x: T = "s1" ... "sn"
+         *)
+  | Str_type of s_type_declaration list
+  (* type t1 = ... and ... and tn = ... *)
+  | Str_exception of exception_decl
+  (* exception C of T *)
+  | Str_open of qualid
+  (* open X *)
+  | Str_attribute of attribute
+  (* [@@@id] *)
+  | Str_gospel of gospel_signature * string
+
+type s_structure_item = {
+  str_desc : s_structure_item_desc;
+  str_loc : Location.t;
+}
+
+type s_structure = s_structure_item list

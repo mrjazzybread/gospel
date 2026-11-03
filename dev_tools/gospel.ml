@@ -29,7 +29,7 @@ let error msg file =
 
 let invalid_extension s =
   let ext = Filename.extension s in
-  not (ext = ".mli" || ext = gospel_ext)
+  not (ext = ".mli" || ext = ".ml" || ext = gospel_ext)
 
 (** Checks for errors in the list of file names the user provides to the Gospel
     type checker. No parsing or typechecking is done at this stage. *)
@@ -69,6 +69,8 @@ let read_gospel_file f =
 let path2module p =
   Filename.basename p |> Filename.chop_extension |> String.capitalize_ascii
 
+type gospel_file = Mli of Tast.s_signature | Ml of Tast.s_structure
+
 let rec check ~verbose ~comp tasts env = function
   | [] -> tasts
   | file :: t ->
@@ -77,17 +79,26 @@ let rec check ~verbose ~comp tasts env = function
       let () = Ident.Tag.set_project_name file in
       let module_nm = path2module file in
       let id = Ident.mk_id module_nm in
+      let ext = Filename.extension file in
       let tasts, mods =
-        if Filename.extension file = gospel_ext then
-          (tasts, read_gospel_file file)
-        else
-          let tast, mods = check_file ~verbose ~comp ~comp_dir env file in
+        if ext = gospel_ext then (tasts, read_gospel_file file)
+        else if ext = ".mli" then (
+          let tast, mods = check_mli ~verbose ~comp ~comp_dir env file in
           if verbose then (
             pp fmt "@[@\n*******************************@]@.";
             pp fmt "@[********** Typed GOSPEL *******@]@.";
             pp fmt "@[*******************************@]@.";
             pp fmt "@[%a@]@." (Tast_printer.signature ~verbose) tast);
-          let file = { fname = file; fmodule = module_nm; fdefs = tast } in
+          let file = { fname = file; fmodule = module_nm; fdefs = Mli tast } in
+          (file :: tasts, mods))
+        else
+          let tast, mods = check_ml ~comp ~comp_dir env file in
+          if verbose then (
+            pp fmt "@[@\n*******************************@]@.";
+            pp fmt "@[********** Typed GOSPEL *******@]@.";
+            pp fmt "@[*******************************@]@.";
+            pp fmt "@[%a@]@." (Tast_printer.structure ~verbose) tast);
+          let file = { fname = file; fmodule = module_nm; fdefs = Ml tast } in
           (file :: tasts, mods)
       in
       check ~comp ~verbose tasts (Namespace.add_mod env id mods) t
@@ -125,7 +136,13 @@ let sep ~map ~verbose files =
   let tast = tast files ~comp:false ~verbose:false in
   List.map
     (fun x ->
-      let sdef = Semantics.process_sigs map x.fdefs in
-      if verbose then Sast_printer.definitions fmt sdef;
-      { x with fdefs = sdef })
+      match x.fdefs with
+      | Mli s ->
+          let sdef = Semantics.process_sigs map s in
+          if verbose then Sast_printer.definitions fmt sdef;
+          { x with fdefs = sdef }
+      | Ml imp ->
+          let sdef = Semantics.process_imps map imp in
+          if verbose then Sast_printer.definitions fmt sdef;
+          { x with fdefs = sdef })
     tast

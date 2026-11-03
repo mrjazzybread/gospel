@@ -10,3 +10,6 @@
 
 val process_sigs :
   (string -> string) -> Tast.s_signature_item list -> Sast.definitions
+
+val process_imps :
+  (string -> string) -> Tast.s_structure_item list -> Sast.definitions

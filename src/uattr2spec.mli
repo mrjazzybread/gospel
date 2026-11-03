@@ -11,3 +11,6 @@
 val signature : filename:string -> Ppxlib.signature -> Parse_uast.s_signature
 (** Parses the specifications contained in the attributes of the input parsetree
     and returns an annotated parsetree with Gospel specifications. *)
+
+val implementation :
+  filename:string -> Ppxlib.structure -> Parse_uast.s_structure

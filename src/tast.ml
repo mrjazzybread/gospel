@@ -172,6 +172,12 @@ type s_val_description = {
   vloc : Location.t;
 }
 
+type gospel_signature =
+  | Sig_ghost_open of Id_uast.qualid
+  | Sig_function of function_
+  | Sig_axiom of axiom
+  | Sig_ghost_type of s_type_declaration list
+
 type s_module_type_desc = Mod_signature of s_signature
 
 and s_module_declaration = {
@@ -190,14 +196,11 @@ and s_module_type = {
 
 and s_signature_item_desc =
   | Sig_value of s_val_description
-  | Sig_function of function_
-  | Sig_axiom of axiom
   | Sig_module of s_module_declaration
-  | Sig_ghost_type of s_type_declaration list
   | Sig_type of s_type_declaration list
-  | Sig_ghost_open of Id_uast.qualid
   | Sig_exception of Id_uast.exception_decl
   | Sig_attribute of Ppxlib.attribute
+  | Sig_gospel of gospel_signature * string
 
 and s_signature_item = { sdesc : s_signature_item_desc; sloc : Location.t }
 and s_signature = s_signature_item list
@@ -244,3 +247,18 @@ let mk_vspec sp_args sp_rets sp_tops sp_persistent sp_pre sp_checks sp_post
     sp_text;
     sp_loc;
   }
+
+type s_structure_item_desc =
+  | Str_let of s_val_description
+  | Str_val of Ident.t
+  | Str_type of s_type_declaration list
+  | Str_exception of Id_uast.exception_decl
+  | Str_attribute of Ppxlib.attribute
+  | Str_gospel of gospel_signature * string
+
+and s_structure_item = {
+  str_desc : s_structure_item_desc;
+  str_loc : Location.t;
+}
+
+and s_structure = s_structure_item list

@@ -283,17 +283,20 @@ let mod_open fmt q = pp fmt "@[open %a@]" qualid q
 
 (* Top level signatures *)
 
+let gospel_signature fmt = function
+  | Sig_function f -> function_ fmt f
+  | Sig_axiom ax -> axiom fmt ax
+  | Sig_ghost_type t -> tdecl_list ~ghost:true fmt t
+  | Sig_ghost_open q -> mod_open fmt q
+
 let rec signature_item fmt x =
   match x.sdesc with
   | Sig_value v -> s_val_description fmt v
-  | Sig_function f -> function_ fmt f
-  | Sig_axiom ax -> axiom fmt ax
   | Sig_type t -> tdecl_list ~ghost:false fmt t
-  | Sig_ghost_type t -> tdecl_list ~ghost:true fmt t
   | Sig_module m -> module_decl fmt m
   | Sig_exception e -> exception_decl fmt e
-  | Sig_ghost_open q -> mod_open fmt q
   | Sig_attribute _ -> string fmt "[@@@ attribute]"
+  | Sig_gospel (g, _) -> gospel_signature fmt g
 
 and module_decl fmt m =
   let (Mod_signature l) = m.mdtype.mdesc in
@@ -307,3 +310,5 @@ and signature fmt x =
 let signature ~verbose fmt x =
   if verbose then ty_flag := Bindings;
   signature fmt x
+
+let structure ~verbose fmt x = assert false

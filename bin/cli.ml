@@ -11,7 +11,7 @@
 open Cmdliner
 
 let file s = List.mem (Filename.extension s) [ ".mli"; ".ml" ]
-let intf s = List.mem (Filename.extension s) [ ".mli"; ".gospel" ]
+let intf s = List.mem (Filename.extension s) [ ".mli"; ".ml"; ".gospel" ]
 
 let test test =
   let parse s =

@@ -11,9 +11,9 @@
 open Gospel_checker
 
 type 'a file = { fname : string; fmodule : string; fdefs : 'a }
+type gospel_file = Mli of Tast.s_signature | Ml of Tast.s_structure
 
-val tast :
-  verbose:bool -> comp:bool -> string list -> Tast.s_signature file list
+val tast : verbose:bool -> comp:bool -> string list -> gospel_file file list
 (** [tast ~verbose files] receives a list of file names that are either [.mli]
     (OCaml interfaces) or [.gospel] (compiled Gospel modules). Each [.mli] file
     is type checked in a context where all files previous to it are visible in

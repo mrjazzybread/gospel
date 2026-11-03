@@ -822,7 +822,7 @@ let process_exception exn path defs =
       exn_loc = exn.exn_loc;
     }
   in
-  (Tast.Sig_exception exn, env)
+  (exn, env)
 
 (* -------------------------------------------------------------------------- *)
 
@@ -1477,7 +1477,7 @@ let ocaml_val env v =
       vloc = v.vloc;
     }
   in
-  (Tast.Sig_value v, add_ocaml_val env v.vname ocaml_tvars vtype)
+  (v, add_ocaml_val env v.vname ocaml_tvars vtype)
 
 (* -------------------------------------------------------------------------- *)
 
@@ -1514,14 +1514,20 @@ let rec process_module env m =
 and signature s env =
   let sdesc, env =
     match s.Parse_uast.sdesc with
-    | Sig_gospel (s, _) -> gospel_sig env s
-    | Sig_val v -> ocaml_val env v
+    | Sig_gospel (s, txt) ->
+        let s, env = gospel_sig env s in
+        (Tast.Sig_gospel (s, txt), env)
+    | Sig_val v ->
+        let v, env = ocaml_val env v in
+        (Tast.Sig_value v, env)
     | Sig_type t ->
         let env, t = tdecl_list ~ocaml:true env t in
         (Tast.Sig_type t, env)
     | Sig_module m -> process_module env m
     | Sig_attribute att -> (Sig_attribute att, env)
-    | Sig_exception exn -> process_exception exn (path env) env
+    | Sig_exception exn ->
+        let exn, env = process_exception exn (path env) env in
+        (Tast.Sig_exception exn, env)
     | _ -> assert false
   in
   ({ Tast.sdesc; sloc = s.sloc }, env)
@@ -1557,4 +1563,52 @@ and signatures l env =
 
 let signatures env l =
   let l, env = signatures l env in
+  (l, Namespace.defs env)
+
+let ocaml_let env v =
+  match v.Parse_uast.pvb_spec with
+  | None -> None
+  | Some (typ, spec) ->
+      let v =
+        {
+          Parse_uast.vname = v.pvb_nm;
+          vtype = typ;
+          vattributes = v.pvb_attributes;
+          vspec = Some spec;
+          vloc = v.pvb_loc;
+        }
+      in
+      Some (ocaml_val env v)
+
+let rec structure s env =
+  let str_desc, env =
+    match s.Parse_uast.str_desc with
+    | Str_gospel (s, txt) ->
+        let s, env = gospel_sig env s in
+        (Tast.Str_gospel (s, txt), env)
+    | Str_let v -> (
+        match ocaml_let env v with
+        | None -> (Tast.Str_val (Ident.from_preid (path env) v.pvb_nm), env)
+        | Some (v, env) -> (Tast.Str_let v, env))
+    | Str_type t ->
+        let env, t = tdecl_list ~ocaml:true env t in
+        (Tast.Str_type t, env)
+    | Str_attribute att -> (Str_attribute att, env)
+    | Str_exception exn ->
+        let exn, env = process_exception exn (path env) env in
+        (Tast.Str_exception exn, env)
+    | _ -> assert false
+  in
+  ({ Tast.str_desc; str_loc = s.str_loc }, env)
+
+and structures l env =
+  match l with
+  | [] -> ([], env)
+  | s :: t ->
+      let s, env = structure s env in
+      let t, env = structures t env in
+      (s :: t, env)
+
+let structures env l =
+  let l, env = structures l env in
   (l, Namespace.defs env)

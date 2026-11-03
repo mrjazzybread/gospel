@@ -344,3 +344,5 @@ and signature fmt x =
   Format.pp_open_hovbox fmt 2;
   newline fmt ();
   list ~sep:(newline ++ newline) signature_item fmt x
+
+let structure _ _ = assert false

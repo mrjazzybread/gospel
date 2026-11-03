@@ -19,15 +19,30 @@ let pp = Format.fprintf
 let type_sigs ~verbose env file =
   let module W = Warnings in
   try
-    let ocaml = parse_ocaml file in
     let module_nm = path2file file in
-    let sigs = parse_gospel ~filename:file ocaml in
+    let sigs = parse_signature file in
     if verbose then (
       pp fmt "@[@\n*******************************@]@.";
       pp fmt "@[********** Parsed file ********@]@.";
       pp fmt "@[*******************************@]@.";
       pp fmt "@[%a@]@." Uast_printer.signature sigs);
     let tast, env = signatures env sigs in
+    (module_nm, tast, env)
+  with W.Error e ->
+    Fmt.epr "%a@." W.pp e;
+    exit 1
+
+let type_impls ~verbose env file =
+  let module W = Warnings in
+  try
+    let module_nm = path2file file in
+    let strs = parse_implementation file in
+    if verbose then (
+      pp fmt "@[@\n*******************************@]@.";
+      pp fmt "@[********** Parsed file ********@]@.";
+      pp fmt "@[*******************************@]@.";
+      pp fmt "@[%a@]@." Uast_printer.structure strs);
+    let tast, env = structures env strs in
     (module_nm, tast, env)
   with W.Error e ->
     Fmt.epr "%a@." W.pp e;
@@ -59,10 +74,10 @@ let read_gospel_file f =
      Issue : If two files have the same name but are in different
      sub-directories, this will write them to the same file. *)
 
-(** [check_file file] parses and type checks [file] and creates a corresponding
+(** [check_mli file] parses and type checks [file] and creates a corresponding
     [.gospel] file in the directory [comp_dir].
     @raise Warnings.Error if there is a parsing or typing error in [file]. *)
-let check_file ?(comp_dir = "") ~verbose ~comp env file =
+let check_mli ?(comp_dir = "") ~verbose ~comp env file =
   (* If the compilation directory does not have a slash, add one. *)
   let comp_dir =
     if comp_dir <> "" && comp_dir.[String.length comp_dir - 1] <> '/' then
@@ -71,6 +86,26 @@ let check_file ?(comp_dir = "") ~verbose ~comp env file =
   in
   let env = Namespace.submodule (path2file file) env in
   let module_nm, tast, mods = type_sigs ~verbose env file in
+  if comp then (
+    let out =
+      open_out_bin (Format.sprintf "%s%s%s" comp_dir module_nm gospel_ext)
+    in
+    Marshal.to_channel out mods [];
+    close_out out);
+  (tast, mods)
+
+(** [check_ml file] parses and type checks [file] and creates a corresponding
+    [.gospel] file in the directory [comp_dir].
+    @raise Warnings.Error if there is a parsing or typing error in [file]. *)
+let check_ml ?(comp_dir = "") ~comp env file =
+  (* If the compilation directory does not have a slash, add one. *)
+  let comp_dir =
+    if comp_dir <> "" && comp_dir.[String.length comp_dir - 1] <> '/' then
+      comp_dir ^ "/"
+    else comp_dir
+  in
+  let env = Namespace.submodule (path2file file) env in
+  let module_nm, tast, mods = type_impls ~verbose:false env file in
   if comp then (
     let out =
       open_out_bin (Format.sprintf "%s%s%s" comp_dir module_nm gospel_ext)

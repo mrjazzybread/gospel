@@ -11,9 +11,6 @@
 (** This file is used to introduce OCaml primitive types into the scope and pair
     them with their respective [model] fields. *)
 
-type unit
-(*@ model : unit *)
-
 type int
 (*@ model : integer *)
 

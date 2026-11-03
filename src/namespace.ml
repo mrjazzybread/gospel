@@ -651,9 +651,23 @@ let init_env ?ocamlprimitives gospelstdlib =
         let unit_info =
           { tid = Constants.unit_id; tparams = []; talias = None }
         in
-        let m =
-          { m with ocaml_type_env = Env.add "unit" unit_info m.ocaml_type_env }
+        let unit_lens_info =
+          {
+            lid = Constants.unit_lens_id;
+            lkind = Persistent;
+            locaml = Constants.ty_unit;
+            llens_params = [];
+            lmodel = Constants.ty_unit;
+          }
         in
+        let m =
+          {
+            m with
+            ocaml_type_env = Env.add "unit" unit_info m.ocaml_type_env;
+            lens_env = Env.add "Unit" unit_lens_info m.lens_env;
+          }
+        in
+        IdTable.add m.default_lens_env Constants.unit_id.id_tag unit_lens_info;
         defs_union ~ocaml:true scope m
   in
   { defs = empty_defs; scope; path = [] }

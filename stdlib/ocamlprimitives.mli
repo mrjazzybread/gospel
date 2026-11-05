@@ -44,3 +44,5 @@ type 'a ref
     model : 'a *)
 
 type floatarray
+
+exception Not_found

@@ -93,7 +93,7 @@
 
 %token LET PREDICATE
 %token WITH
-%token TYPE RAISES
+%token TYPE RAISES LENS
 
 (* symbols *)
 
@@ -103,7 +103,7 @@
 %token LEFTSQ LTGT DISJ RIGHTBRC COLONRIGHTBRC RIGHTPAR RIGHTSQ SEMICOLON
 %token LEFTSQRIGHTSQ
 %token STAR UNDERSCORE
-%token EMPTY
+%token EMPTY LENSARROW
 (* priorities *)
 
 %nonassoc IN
@@ -144,6 +144,11 @@ top_:
   { Sig_ghost_type tdecl }
 | OPEN q=uqualid
   { Sig_ghost_open q }
+| LENS l=lens_decl
+  { Sig_lens l }
+
+lens_decl: n=uident COLON ot=ty LENSARROW gt=ty
+ { { lname = n; locaml = ot; lmodel = gt } }
 
 decl_params:
 | (* epsilon *)

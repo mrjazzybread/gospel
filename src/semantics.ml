@@ -229,6 +229,7 @@ struct
         in
         [ Axiom axiom ]
     | Sig_ghost_open m -> [ Import m ]
+    | Sig_lens_decl l -> [ Pred l ]
 
   (** Transforms a single Gospel top level declaration into potentially several
       Separation Logic definitions *)

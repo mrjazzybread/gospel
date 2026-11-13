@@ -177,6 +177,7 @@ type gospel_signature =
   | Sig_function of function_
   | Sig_axiom of axiom
   | Sig_ghost_type of s_type_declaration list
+  | Sig_lens_decl of Id_uast.lens_info
 
 type s_module_type_desc = Mod_signature of s_signature
 

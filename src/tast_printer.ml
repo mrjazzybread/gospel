@@ -281,6 +281,10 @@ let exception_decl fmt e =
 
 let mod_open fmt q = pp fmt "@[open %a@]" qualid q
 
+let lens_decl fmt l =
+  pp fmt "@[lens %a@ : %a ▷ %a@]" Ident.pp l.Id_uast.lid print_ty l.locaml
+    print_ty l.lmodel
+
 (* Top level signatures *)
 
 let gospel_signature fmt = function
@@ -288,6 +292,7 @@ let gospel_signature fmt = function
   | Sig_axiom ax -> axiom fmt ax
   | Sig_ghost_type t -> tdecl_list ~ghost:true fmt t
   | Sig_ghost_open q -> mod_open fmt q
+  | Sig_lens_decl l -> lens_decl fmt l
 
 let rec signature_item fmt x =
   match x.sdesc with

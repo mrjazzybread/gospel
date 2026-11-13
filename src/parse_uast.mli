@@ -191,11 +191,14 @@ type s_type_declaration = {
   tloc : Location.t;
 }
 
+type lens_declaration = { lname : id; locaml : pty; lmodel : pty }
+
 type gospel_signature =
   | Sig_function of function_
   | Sig_axiom of axiom
   | Sig_ghost_type of s_type_declaration list
   | Sig_ghost_open of qualid
+  | Sig_lens of lens_declaration
 
 type exception_decl = {
   exn_id : id;

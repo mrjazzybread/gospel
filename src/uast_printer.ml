@@ -307,6 +307,11 @@ let tdecl_list ~ghost =
 
 let mod_open fmt q = pp fmt "@[open %a@]" qualid q
 
+(* Lens declarations *)
+let lens_decl fmt l =
+  pp fmt "@[lens %a : %a@ ▷ %a@]" Preid.pp l.lname print_ty l.locaml print_ty
+    l.lmodel
+
 (* Gospel Signatures *)
 
 let gospel_signature fmt = function
@@ -314,6 +319,7 @@ let gospel_signature fmt = function
   | Sig_axiom ax -> axiom fmt ax
   | Sig_ghost_type l -> tdecl_list ~ghost:true fmt l
   | Sig_ghost_open q -> mod_open fmt q
+  | Sig_lens l -> lens_decl fmt l
 
 (* Exceptional declarations *)
 

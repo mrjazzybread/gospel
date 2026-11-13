@@ -1481,6 +1481,24 @@ let ocaml_val env v =
 
 (* -------------------------------------------------------------------------- *)
 
+let add_lens env l =
+  let mod_defs = scope env in
+  let lenv = empty_local_env () in
+  let ocaml_ty =
+    unique_pty ~ocaml:true ~bind:true mod_defs lenv l.Parse_uast.locaml
+  in
+  let model_ty = unique_pty ~ocaml:false ~bind:false mod_defs lenv l.lmodel in
+  let params = mk_lens_params (pty_tvars model_ty) in
+  let linfo =
+    mk_lens
+      (Ident.from_preid (path env) l.Parse_uast.lname)
+      Mutable ocaml_ty params model_ty
+  in
+  let env = add_lens env linfo in
+  (Tast.Sig_lens_decl linfo, env)
+
+(* -------------------------------------------------------------------------- *)
+
 let rec process_module env m =
   (* TODO figure out when this is None *)
   let id = Ident.from_preid (path env) m.Parse_uast.mdname in
@@ -1550,6 +1568,7 @@ and gospel_sig env = function
   | Sig_ghost_open q ->
       let q, env = Namespace.gospel_open env q in
       (Sig_ghost_open q, env)
+  | Sig_lens l -> add_lens env l
 
 (** [signatures l env] Processes a list of top level signatures along with the
     current environment. *)

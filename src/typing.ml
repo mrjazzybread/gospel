@@ -1210,7 +1210,7 @@ let valid_pure loc args tops xspec ~diverge ~pure =
   if pure && diverge then W.error ~loc W.Pure_diverges;
   if pure && raises then W.error ~loc W.Pure_raises
 
-let type_val_spec spec defs args rets tops xspec pre_env post_env =
+let type_val_spec spec defs args rets tops xspec pre_env post_env otvars =
   let pre =
     List.map (unique_term defs pre_env) spec.Parse_uast.sp_pre_spec.sp_pre
   in
@@ -1245,7 +1245,8 @@ let type_val_spec spec defs args rets tops xspec pre_env post_env =
       sp_loc = spec.sp_loc;
     }
   in
-  Solver.spec (get_tvars pre_env) spec
+  let spec, tvars = Solver.spec (get_tvars pre_env) spec in
+  { spec with sp_gtvars = tvars; sp_otvars = otvars }
 
 (** [global_values pre_tbl post_tbl consumes produces modifies preserves]
     returns the list of top level variables that are used in ownership clauses.
@@ -1383,7 +1384,7 @@ let type_xspec defs lenv modifies preserves consumes hd_args args xspec =
     Note: Exceptional specifications are type checked the same way as normal
     post conditions, the only thing that changes is the list of produced
     variables as well as the list of return values. *)
-let value_spec ~loc defs lenv name ocaml_ty spec =
+let value_spec ~loc defs lenv name ocaml_ty otvars spec =
   (* From the function's type, get the types of the values' arguments *)
   let arg_types, ret_types = Uast_utils.args_to_list ocaml_ty in
   (* Create a header if the user did not provide one. *)
@@ -1455,7 +1456,7 @@ let value_spec ~loc defs lenv name ocaml_ty spec =
       ~diverge:spec.sp_pre_spec.sp_diverge spec.sp_xpost_spec
   in
   (* Type checks the pre and post conditions. *)
-  type_val_spec spec defs sp_args sp_rets tops sp_xspec pre_env post_env
+  type_val_spec spec defs sp_args sp_rets tops sp_xspec pre_env post_env otvars
 
 let ocaml_val env v =
   let lenv = empty_local_env () in
@@ -1463,21 +1464,32 @@ let ocaml_val env v =
   let vtype = unique_ocaml_pty v.Parse_uast.vtype in
   let ocaml_tvars = get_tvars lenv in
   let vspec =
-    Option.map (value_spec ~loc:v.vloc (scope env) lenv v.vname vtype) v.vspec
+    Option.map
+      (value_spec ~loc:v.vloc (scope env) lenv v.vname vtype ocaml_tvars)
+      v.vspec
   in
-  let gospel_tvars = Option.fold ~none:[] ~some:snd vspec in
   let v =
     {
       Tast.vname = Ident.from_preid (path env) v.vname;
       vtype;
       vattributes = v.vattributes;
-      votvars = ocaml_tvars;
-      vgtvars = gospel_tvars;
-      vspec = Option.map fst vspec;
+      vspec;
       vloc = v.vloc;
     }
   in
   (v, add_ocaml_val env v.vname ocaml_tvars vtype)
+
+let floating_spec env s =
+  match s.Parse_uast.sp_header with
+  | Some h ->
+      let scope = scope env in
+      let q, pty = Namespace.ocaml_val_qualid scope (Qid h.sp_hd_nm) in
+      let lenv = empty_local_env () in
+      let tvars = pty_tvars pty in
+      let () = List.iter (fun x -> add_type_var x lenv) tvars in
+      let s = value_spec ~loc:s.sp_loc scope lenv h.sp_hd_nm pty tvars s in
+      (s, q)
+  | None -> (* Floating specifications always have headers*) assert false
 
 (* -------------------------------------------------------------------------- *)
 
@@ -1569,6 +1581,9 @@ and gospel_sig env = function
       let q, env = Namespace.gospel_open env q in
       (Sig_ghost_open q, env)
   | Sig_lens l -> add_lens env l
+  | Sig_spec s ->
+      let s, q = floating_spec env s in
+      (Sig_spec (q, s), env)
 
 (** [signatures l env] Processes a list of top level signatures along with the
     current environment. *)

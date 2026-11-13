@@ -293,6 +293,7 @@ let gospel_signature fmt = function
   | Sig_ghost_type t -> tdecl_list ~ghost:true fmt t
   | Sig_ghost_open q -> mod_open fmt q
   | Sig_lens_decl l -> lens_decl fmt l
+  | Sig_spec (nm, s) -> val_spec (Uast_utils.leaf nm) fmt s
 
 let rec signature_item fmt x =
   match x.sdesc with

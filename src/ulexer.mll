@@ -50,6 +50,7 @@
 	"raises", RAISES;
         "rec", REC;
         "requires", REQUIRES;
+	"spec", SPEC;
         "then", THEN;
         "true", TRUE;
 	"type", TYPE;

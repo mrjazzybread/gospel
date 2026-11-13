@@ -93,7 +93,7 @@
 
 %token LET PREDICATE
 %token WITH
-%token TYPE RAISES LENS
+%token TYPE RAISES LENS SPEC
 
 (* symbols *)
 
@@ -146,6 +146,12 @@ top_:
   { Sig_ghost_open q }
 | LENS l=lens_decl
   { Sig_lens l }
+| SPEC
+    h=val_spec_header
+    pre=val_spec_pre_empty
+    post=val_spec_post_empty
+    exn=val_spec_exn_empty
+  { Sig_spec (mk_spec (Some h) pre post exn) }
 
 lens_decl: n=uident COLON ot=ty LENSARROW gt=ty
  { { lname = n; locaml = ot; lmodel = gt } }

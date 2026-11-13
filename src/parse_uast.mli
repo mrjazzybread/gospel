@@ -199,6 +199,7 @@ type gospel_signature =
   | Sig_ghost_type of s_type_declaration list
   | Sig_ghost_open of qualid
   | Sig_lens of lens_declaration
+  | Sig_spec of val_spec
 
 type exception_decl = {
   exn_id : id;

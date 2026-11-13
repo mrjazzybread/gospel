@@ -146,6 +146,10 @@ type val_spec = {
   sp_args : sp_var list;
   sp_rets : sp_var list;
   sp_tops : ocaml_sp_var list;
+  sp_otvars : tvar list;
+  (* OCaml type variables. *)
+  sp_gtvars : tvar list;
+  (* Gospel type variables. *)
   sp_persistent : Ident.t list;
   sp_pre : term list;
   sp_checks : term list;
@@ -161,10 +165,6 @@ type s_val_description = {
   vname : Ident.t;
   vtype : ty;
   (* OCaml type of the value *)
-  votvars : tvar list;
-  (* OCaml type variables. *)
-  vgtvars : tvar list;
-  (* Gospel type variables. *)
   vattributes : Ppxlib.attributes;
   (* ... [@@id1] [@@id2] *)
   vspec : val_spec option;
@@ -174,6 +174,7 @@ type s_val_description = {
 
 type gospel_signature =
   | Sig_ghost_open of Id_uast.qualid
+  | Sig_spec of Id_uast.qualid * val_spec
   | Sig_function of function_
   | Sig_axiom of axiom
   | Sig_ghost_type of s_type_declaration list
@@ -238,6 +239,8 @@ let mk_vspec sp_args sp_rets sp_tops sp_persistent sp_pre sp_checks sp_post
     sp_args;
     sp_rets;
     sp_tops;
+    sp_otvars = [];
+    sp_gtvars = [];
     sp_persistent;
     sp_pre;
     sp_checks;

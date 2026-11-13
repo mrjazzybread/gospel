@@ -208,8 +208,8 @@ struct
         triple_args = List.map to_prog_arg args;
         triple_rets = List.map to_prog_arg rets;
         triple_pre;
-        triple_otvars = des.votvars;
-        triple_gtvars = des.vgtvars;
+        triple_otvars = spec.sp_otvars;
+        triple_gtvars = spec.sp_gtvars;
         triple_post;
       }
     in
@@ -230,6 +230,7 @@ struct
         [ Axiom axiom ]
     | Sig_ghost_open m -> [ Import m ]
     | Sig_lens_decl l -> [ Pred l ]
+    | Sig_spec _ -> assert false
 
   (** Transforms a single Gospel top level declaration into potentially several
       Separation Logic definitions *)

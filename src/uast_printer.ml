@@ -320,6 +320,7 @@ let gospel_signature fmt = function
   | Sig_ghost_type l -> tdecl_list ~ghost:true fmt l
   | Sig_ghost_open q -> mod_open fmt q
   | Sig_lens l -> lens_decl fmt l
+  | Sig_spec s -> val_spec fmt s
 
 (* Exceptional declarations *)
 

@@ -664,7 +664,9 @@ let init_env ?ocamlprimitives gospelstdlib =
           {
             m with
             ocaml_type_env = Env.add "unit" unit_info m.ocaml_type_env;
-            lens_env = Env.add "Unit" unit_lens_info m.lens_env;
+            lens_env =
+              Env.add "Unit" unit_lens_info m.lens_env
+              |> Env.add "Val" val_lens_info;
           }
         in
         IdTable.add m.default_lens_env Constants.unit_id.id_tag unit_lens_info;
